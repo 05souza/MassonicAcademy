@@ -1,0 +1,6 @@
+{
+  "name": "Masonic Academy",
+  "description": "Painel de controle de cursos e inteligência tática, integrando cursos da linha RM, tendências de EBITDA de segmentos e fluxos com links de imagem customizados.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

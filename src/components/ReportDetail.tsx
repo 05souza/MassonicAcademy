@@ -1,0 +1,782 @@
+import React, { useState, useEffect } from 'react';
+import { ExecutiveReport, AccessUser, Questionnaire } from '../types';
+import { 
+  X, Calendar, Shield, User, FileText, Download, Share2, 
+  Plus, CheckCircle2, Link as LinkIcon, Image as ImageIcon, Sparkles,
+  ExternalLink, Lock, Upload, HelpCircle
+} from 'lucide-react';
+import InlineEditable from './InlineEditable';
+import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { compressImage } from '../utils';
+
+interface ReportDetailProps {
+  report: ExecutiveReport;
+  onClose: () => void;
+  onUpdateImage: (reportId: string, imageUrl: string) => void;
+  isAdmin: boolean;
+  onUpdateReportField: (reportId: string, field: keyof ExecutiveReport, newValue: any) => void;
+  currentUser?: AccessUser | null;
+  onToggleCompletion?: () => void;
+  onGoToQuestionnaire?: (quizId: string) => void;
+}
+
+export default function ReportDetail({ 
+  report, 
+  onClose, 
+  onUpdateImage,
+  isAdmin,
+  onUpdateReportField,
+  currentUser,
+  onToggleCompletion,
+  onGoToQuestionnaire
+}: ReportDetailProps) {
+  const [completedMaterials, setCompletedMaterials] = useState<Record<string, boolean>>(() => {
+    try {
+      const emailKey = currentUser?.email || 'guest';
+      const saved = localStorage.getItem(`masonic_completed_${emailKey}_${report.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
+
+  useEffect(() => {
+    const localQuizzes = localStorage.getItem('masonic_questionnaires_v1');
+    if (localQuizzes) {
+      setQuestionnaires(JSON.parse(localQuizzes));
+    }
+    
+    const { db } = initializeFirebase();
+    if (db) {
+      import('firebase/firestore').then(({ collection, getDocs }) => {
+        getDocs(collection(db, 'questionnaires'))
+          .then((quizSnap) => {
+            if (!quizSnap.empty) {
+              const cloudQuizzes: Questionnaire[] = [];
+              quizSnap.forEach(docSnap => {
+                cloudQuizzes.push(docSnap.data() as Questionnaire);
+              });
+              setQuestionnaires(cloudQuizzes);
+              localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(cloudQuizzes));
+            }
+          })
+          .catch((err) => {
+            console.warn('Error fetching questionnaires directly in details view:', err);
+          });
+      });
+    }
+  }, []);
+
+  // Load Completion Status from Firestore if connected
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    const emailKey = currentUser.email.toLowerCase().trim();
+    const { db } = initializeFirebase();
+    if (db) {
+      const docId = `${emailKey}___${report.id}`.replace(/\./g, '_');
+      const docRef = doc(db, 'completions', docId);
+      getDoc(docRef)
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && data.completed) {
+              setCompletedMaterials(data.completed);
+              localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(data.completed));
+            }
+          }
+        })
+        .catch((err) => {
+          console.error('Falha ao sincronizar progresso inicial do aluno:', err);
+        });
+    }
+  }, [currentUser, report.id]);
+
+  const toggleMaterialCompletion = async (materialKey: string) => {
+    const newVal = !completedMaterials[materialKey];
+    const updated = {
+      ...completedMaterials,
+      [materialKey]: newVal
+    };
+    setCompletedMaterials(updated);
+    const emailKey = currentUser?.email || 'guest';
+    const emailKeyClean = emailKey.toLowerCase().trim();
+    localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(updated));
+    if (onToggleCompletion) {
+      onToggleCompletion();
+    }
+
+    // Sync completion state to Cloud Firestore
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        const docId = `${emailKeyClean}___${report.id}`.replace(/\./g, '_');
+        await setDoc(doc(db, 'completions', docId), cleanObjectForFirestore({
+          userEmail: emailKeyClean,
+          reportId: report.id,
+          completed: updated,
+          lastUpdated: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.error('Falha ao salvar progresso do aluno na nuvem:', err);
+      }
+    }
+  };
+
+  const requiredMaterials = [
+    { key: 'material1', link: report.material1Link, label: 'Material 1' },
+    { key: 'material2', link: report.material2Link, label: 'Material 2' },
+    { key: 'material3', link: report.material3Link, label: 'Material 3' },
+    ...(report.linkedQuestionnaireId ? [{ key: 'linked_questionnaire', link: report.linkedQuestionnaireId, label: 'Questionário' }] : [])
+  ].filter(m => !!m.link);
+
+  const onlyMaterials = [
+    { key: 'material1', link: report.material1Link, label: 'Material 1' },
+    { key: 'material2', link: report.material2Link, label: 'Material 2' },
+    { key: 'material3', link: report.material3Link, label: 'Material 3' },
+  ].filter(m => !!m.link);
+
+  const materialsCompleted = onlyMaterials.every(m => completedMaterials[m.key]);
+
+  const allCompleted = requiredMaterials.every(m => completedMaterials[m.key]);
+
+  const handleExport = (type: 'pdf' | 'csv') => {
+    alert(`[SIMULAÇÃO] Exportando "${report.title}" como ${type.toUpperCase()}...`);
+  };
+
+  return (
+    <div id="report-detail-drawer" className="fixed inset-0 z-50 flex justify-end">
+      {/* Background overlay */}
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-all pointer-events-auto"
+      />
+
+      {/* Main Drawer Container */}
+      <div className="relative w-full max-w-2xl bg-[#06273A] text-[#d4e5f2] h-full flex flex-col shadow-2xl border-l-2 border-[#D4AF37] z-10 overflow-hidden font-sans">
+        
+        {/* Drawer Header */}
+        <div className="p-4 bg-[#04141D] border-b border-[#1c2c36] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {report.thumbnailUrl ? (
+              <img
+                src={report.thumbnailUrl}
+                alt="Miniatura"
+                referrerPolicy="no-referrer"
+                className="w-18 h-18 sm:w-[72px] sm:h-[72px] rounded object-cover border border-[#1c2c36]/80 grow-0 shrink-0 shadow-md animate-fade-in"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <Shield className="w-10 h-10 text-[#f2ca50]" />
+            )}
+            <div className="text-left">
+              <span className="block text-[9px] font-mono text-[#f2ca50] uppercase tracking-wider flex items-center gap-1.5 flex-wrap">
+                <InlineEditable
+                  value={report.department}
+                  isAdmin={isAdmin}
+                  onSave={(val) => onUpdateReportField(report.id, 'department', val)}
+                  className="font-mono text-[9px] text-[#f2ca50] uppercase tracking-wider"
+                />
+                {report.nivelCurso && (
+                  <span className="bg-[#E9C349]/10 border border-[#E9C349]/20 text-[#E9C349] px-1 rounded text-[8.5px] uppercase font-black tracking-wide leading-none py-0.5 select-none font-mono">
+                    Grau {report.nivelCurso}
+                  </span>
+                )}
+              </span>
+              <h2 className="font-sans font-bold text-sm md:text-base leading-tight text-[#d4e5f2] max-w-sm truncate">
+                <InlineEditable
+                  value={report.title}
+                  isAdmin={isAdmin}
+                  onSave={(val) => onUpdateReportField(report.id, 'title', val)}
+                  className="font-sans font-bold text-sm md:text-base leading-tight text-[#d4e5f2] max-w-sm truncate"
+                />
+              </h2>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-[#99907c] hover:text-[#d4e5f2] p-1.5 rounded-full hover:bg-[#0c354d] transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Drawer Body - Scrollable content */}
+        <div id="drawer-body-scroll" className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* Quick Info Grid / Ficha Técnica do Curso */}
+          <div className="bg-[#04141d]/50 p-5 rounded-xl border border-[#1c2c36]/40 space-y-4">
+            <h3 className="text-xs font-mono text-[#E9C349] tracking-wider uppercase border-b border-[#1c2c36]/30 pb-2 font-bold mb-3">
+              Ficha Técnica do Curso
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Curso */}
+              <div className="col-span-1 sm:col-span-2">
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Curso</span>
+                <span className="text-sm font-sans font-bold text-[#d4e5f2] block mt-1">
+                  <InlineEditable
+                    value={report.title}
+                    isAdmin={isAdmin}
+                    onSave={(val) => onUpdateReportField(report.id, 'title', val)}
+                    className="text-sm font-sans font-bold text-[#d4e5f2]"
+                  />
+                </span>
+              </div>
+
+              {/* Líder / Responsável Ativo */}
+              <div>
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Instrutor</span>
+                <span className="text-xs font-sans font-medium text-[#d4e5f2] flex items-center gap-1.5 mt-1">
+                  <User className="w-3.5 h-3.5 text-[#66d9cc] shrink-0" />
+                  <InlineEditable
+                    value={report.owner}
+                    isAdmin={isAdmin}
+                    onSave={(val) => onUpdateReportField(report.id, 'owner', val)}
+                    className="text-xs font-sans font-medium text-[#d4e5f2]"
+                  />
+                </span>
+              </div>
+
+              {/* Categoria */}
+              <div>
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Categoria</span>
+                <span className="text-xs font-sans font-medium text-[#d4e5f2] flex items-center gap-1.5 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-[#E9C349]" />
+                  <InlineEditable
+                    value={report.category}
+                    isAdmin={isAdmin}
+                    onSave={(val) => onUpdateReportField(report.id, 'category', val)}
+                    className="text-xs font-sans font-medium text-[#d4e5f2]"
+                  />
+                </span>
+              </div>
+
+              {/* Grau Requerido */}
+              <div>
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">Grau Requerido</span>
+                <span className="text-xs font-mono font-extrabold text-[#E9C349] flex items-center gap-1.5 mt-1">
+                  <Shield className="w-3.5 h-3.5 text-[#26a69a]" />
+                  Grau {report.nivelCurso || 1}
+                </span>
+              </div>
+
+              {/* Questionário Vinculado */}
+              <div>
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">Questionário Vinculado</span>
+                <span className="text-xs font-sans font-medium text-[#d4e5f2] flex items-center gap-1.5 mt-1.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-[#E9C349]" />
+                  {report.linkedQuestionnaireId ? (
+                    questionnaires.find(q => q.id === report.linkedQuestionnaireId)?.title || 'Questionário Vinculado'
+                  ) : (
+                    <span className="text-[#99907c] italic font-mono text-[11px]">Nenhum vinculado</span>
+                  )}
+                </span>
+              </div>
+
+              {/* Breve Resumo Executivo */}
+              <div className="col-span-1 sm:col-span-2">
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Resumo do Conteúdo</span>
+                <div className="text-xs font-mono italic text-[#d4e5f2]/85 bg-[#04141d] p-3 rounded border-l-2 border-[#E9C349] mt-1.5">
+                  <InlineEditable
+                    value={report.summary}
+                    isAdmin={isAdmin}
+                    type="textarea"
+                    onSave={(val) => onUpdateReportField(report.id, 'summary', val)}
+                    className="font-mono italic text-xs text-[#d4e5f2]/85 leading-relaxed block"
+                    as="span"
+                  />
+                </div>
+              </div>
+                      {/* Miniatura do Curso */}
+              {isAdmin && (
+                <div className="col-span-1 sm:col-span-2">
+                  <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider mb-1.5 font-bold">Miniatura do Curso <span className="text-[#E9C349] font-sans font-medium text-[9.5px] lowercase normal-case">(Sugestão: 128x128px ou proporção quadrado 1:1)</span></span>
+                  <div className="flex flex-col gap-2.5 bg-[#04141d]/50 p-3 rounded-lg border border-[#1c2c36]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 h-24 rounded overflow-hidden border border-[#1c2c36] bg-[#04141d] flex items-center justify-center shrink-0 shadow-md">
+                        {report.thumbnailUrl ? (
+                          <img
+                            src={report.thumbnailUrl}
+                            alt="Miniatura do Curso"
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <ImageIcon className="w-7 h-7 text-gray-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-[9px] font-mono text-gray-500 uppercase">Status da Imagem</span>
+                        <p className="text-[10px] font-mono text-[#a5b8c7] truncate hover:text-[#E9C349] cursor-help" title={report.thumbnailUrl || 'Nenhuma imagem cadastrada'}>
+                          {report.thumbnailUrl ? (report.thumbnailUrl.startsWith('data:image/') ? 'Arquivo local cadastrado' : report.thumbnailUrl) : 'Nenhuma imagem cadastrada'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 pt-2 border-t border-[#1c2c36]/40">
+                      {/* URL Option */}
+                      <div className="space-y-1">
+                        <span className="block text-[8px] font-mono text-gray-500 uppercase">Substituir por URL</span>
+                        <input
+                          type="url"
+                          placeholder="Cole o link da imagem..."
+                          value={report.thumbnailUrl?.startsWith('data:image/') ? '' : (report.thumbnailUrl || '')}
+                          onChange={(e) => {
+                            onUpdateReportField(report.id, 'thumbnailUrl', e.target.value);
+                          }}
+                          className="w-full bg-[#04141d] border border-[#1c2c36] text-[10px] px-2 py-1 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                        />
+                      </div>
+
+                      {/* Local File Selector */}
+                      <div className="space-y-1">
+                        <span className="block text-[8px] font-mono text-gray-500 uppercase">Substituir por Arquivo</span>
+                        <div
+                          onClick={() => document.getElementById(`detail-thumbnail-picker-${report.id}`)?.click()}
+                          className="w-full bg-[#11212b] border border-[#1c2c36] hover:border-[#E8C349]/50 text-[10px] py-1 px-2.5 rounded text-[#d4e5f2] cursor-pointer text-center flex items-center justify-center gap-1.5 transition-all select-none"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-[#99907c]" />
+                          <span>Enviar do PC (Máx 2MB)</span>
+                          <input
+                            id={`detail-thumbnail-picker-${report.id}`}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+
+                              if (file.size > 10 * 1024 * 1024) {
+                                alert("Imagem muito grande! O tamanho máximo permitido é de 10MB.");
+                                return;
+                              }
+
+                              const reader = new FileReader();
+                              reader.onload = async (event) => {
+                                if (event.target?.result) {
+                                  try {
+                                    const base64Str = event.target.result as string;
+                                    // Compressing thumbnail image to 800x600 for performance and database storage sizing
+                                    const compressed = await compressImage(base64Str, 800, 600, 0.75);
+                                    onUpdateReportField(report.id, 'thumbnailUrl', compressed);
+                                  } catch (err) {
+                                    console.error("Error compressing image:", err);
+                                    onUpdateReportField(report.id, 'thumbnailUrl', event.target.result as string);
+                                  }
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Última Atualização */}
+              <div>
+                <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Última Atualização</span>
+                <span className="text-xs font-sans font-medium text-[#d4e5f2] flex items-center gap-1.5 mt-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#66d9cc] shrink-0" />
+                  <InlineEditable
+                    value={report.lastUpdated}
+                    isAdmin={isAdmin}
+                    onSave={(val) => onUpdateReportField(report.id, 'lastUpdated', val)}
+                    className="text-xs font-sans font-medium text-[#d4e5f2]"
+                  />
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Link Personalizado do Botão ACESSAR (URL) - Visível apenas para Administradores de acordo com a solicitação */}
+          {isAdmin && report.customAccessUrl && (
+            <div className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <ExternalLink className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Link Personalizado do Botão ACESSAR (URL)</span>
+                  <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.customAccessUrl}>
+                    {report.customAccessUrl}
+                  </span>
+                </div>
+              </div>
+              <a
+                href={report.customAccessUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-2 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+              >
+                ACESSAR <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+              </a>
+            </div>
+          )}
+
+          {/* Link do Material 1 / Referência Direta (URL) */}
+          {report.material1Link && (
+            <div id={`detail-material1-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 1 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material1Link}>
+                        {report.material1Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 1</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material1')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material1']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material1'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material1Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                >
+                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Link do Material 2 / Referência Direta (URL) */}
+          {report.material2Link && (
+            <div id={`detail-material2-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 2 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material2Link}>
+                        {report.material2Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 2</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material2')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material2']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material2'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material2Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                >
+                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Link do Material 3 / Referência Direta (URL) */}
+          {report.material3Link && (
+            <div id={`detail-material3-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 3 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material3Link}>
+                        {report.material3Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 3</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material3')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material3']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material3'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material3Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                >
+                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Seção de Questionário Vinculado */}
+          {report.linkedQuestionnaireId && (
+            (() => {
+              const userAccessLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || (isAdmin ? '33' : '1')), 10) : 1;
+              const linkedQuiz = questionnaires.find(q => q.id === report.linkedQuestionnaireId);
+              if (!linkedQuiz) return null;
+              const quizDegreeRequired = linkedQuiz.degreeRequired || 1;
+              const isQuizBlocked = userAccessLevel < quizDegreeRequired;
+
+              return (
+                <div id="linked-quiz-promo-block" className="bg-[#0c1d27] border-2 border-dashed border-[#E9C349]/50 rounded-xl p-5 space-y-4 shadow-lg animate-fade-in text-left">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-[#E9C349]/10 p-2.5 rounded-lg border border-[#E9C349]/35 shrink-0">
+                      <HelpCircle className="w-5 h-5 text-[#E9C349]" />
+                    </div>
+                    <div className="text-left">
+                      <span className="block text-[10px] font-mono text-[#66d9cc] uppercase tracking-wider font-extrabold font-bold">Avaliação Oficial do Curso</span>
+                      <h4 className="font-sans font-bold text-sm text-[#d4e5f2] mt-0.5">{linkedQuiz.title}</h4>
+                      <p className="text-[11px] text-[#99907c] mt-1 leading-relaxed">
+                        Este curso possui um questionário online associado. Responda às questões e atinja a pontuação mínima de <strong className="text-[#E9C349]">{linkedQuiz.approvalScore}%</strong> para aprovação!
+                      </p>
+                    </div>
+                  </div>
+
+                  {isQuizBlocked ? (
+                    <div className="flex items-start gap-2 bg-rose-950/40 border border-rose-900/60 text-rose-300 p-3 rounded-lg text-[10.5px] leading-relaxed font-mono">
+                      <Shield className="w-4 h-4 text-rose-400 shrink-0 mt-0.5 animate-pulse" />
+                      <span>
+                        <strong className="text-rose-400">Acesso Bloqueado:</strong> Este questionário exige no mínimo o <strong>Nível de Acesso (Grau {quizDegreeRequired})</strong>. Seu grau atual cadastrado é <strong>{userAccessLevel}</strong>. Por favor, faça a instrução regulamentar para receber a outorga correspondente.
+                      </span>
+                    </div>
+                  ) : !materialsCompleted ? (
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full bg-[#11212b]/50 text-[#99907c]/60 font-sans font-extrabold text-xs uppercase py-3 rounded-lg border border-[#1c2c36]/90 flex items-center justify-center gap-2 select-none cursor-not-allowed opacity-60"
+                        title="Conclua todos os materiais acima para habilitar o questionário"
+                      >
+                        <Lock className="w-4 h-4 text-[#99907c]/60" /> Questionário Bloqueado
+                      </button>
+
+                      <div className="flex items-start gap-2 bg-[#11212b]/30 border border-[#1c2c36]/50 text-[#99907c] p-2.5 rounded-lg text-[10.5px] leading-relaxed font-mono">
+                        <Lock className="w-3.5 h-3.5 text-[#E9C349] shrink-0 mt-0.5 animate-pulse" />
+                        <span>
+                          Para habilitar o questionário, marque todos os materiais de estudo acima como <strong className="text-[#66d9cc]">CONCLUÍDOS</strong>.
+                        </span>
+                      </div>
+
+                      {/* Flag de Concluído do Questionário (Disabled) */}
+                      <div className="flex items-center justify-between gap-3 bg-[#04141d]/20 border border-[#1c2c36]/40 p-3 rounded-lg opacity-40">
+                        <div className="text-left">
+                          <span className="block text-[10.5px] font-mono text-[#99907c] font-semibold leading-tight">Marcar Como Concluído</span>
+                          <span className="text-[9px] font-mono text-[#99907c]">Concluir voluntariamente o questionário deste título</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border border-[#1c2c36] bg-[#04141d] text-[#99907c]/60 cursor-not-allowed select-none shrink-0"
+                        >
+                          <span className="w-3.5 h-3.5 rounded border border-[#99907c]/40 flex items-center justify-center text-[8px]" />
+                          <span>CONCLUIR</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <button
+                        type="button"
+                        onClick={() => onGoToQuestionnaire && onGoToQuestionnaire(report.linkedQuestionnaireId!)}
+                        className="w-full bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-xs uppercase py-3 rounded-lg hover:bg-[#ffe088] tracking-widest active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 select-none shadow-md border-none"
+                      >
+                        <ExternalLink className="w-4 h-4" /> Realizar Questionário de Avaliação
+                      </button>
+
+                      {/* Flag de Concluído do Questionário */}
+                      <div className="flex items-center justify-between gap-3 bg-[#04141d]/60 border border-[#1c2c36]/90 p-3 rounded-lg">
+                        <div className="text-left">
+                          <span className="block text-[10.5px] font-mono text-[#d4e5f2] font-semibold leading-tight">Marcar Como Concluído</span>
+                          <span className="text-[9px] font-mono text-[#99907c]">Concluir voluntariamente o questionário deste título</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleMaterialCompletion('linked_questionnaire')}
+                          className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none shrink-0 ${
+                            completedMaterials['linked_questionnaire']
+                              ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                              : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                          }`}
+                        >
+                          {completedMaterials['linked_questionnaire'] ? (
+                            <>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                              <span>CONCLUÍDO</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                              <span>CONCLUIR</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          )}
+
+          {/* Link da Prova do Conteúdo / Referência Direta (URL) */}
+          {report.additionalLink && (!report.conteudoSemProva || isAdmin) && (
+            allCompleted ? (
+              <div className="bg-[#05281b]/30 border border-[#185347]/45 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 animate-fadeIn">
+                <div className="flex items-center gap-2 min-w-0">
+                  <LinkIcon className="w-4 h-4 text-[#66d9cc] shrink-0" />
+                  <div className="text-left min-w-0">
+                    <div className="flex items-center gap-2 max-w-full flex-wrap">
+                      <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Link da Prova do Conteúdo / Referência Direta (URL)</span>
+                      {report.conteudoSemProva && (
+                        <span className="bg-red-950/80 border border-red-800 text-red-400 font-mono text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider shrink-0">
+                          Conteúdo sem prova
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-mono text-[#66d9cc] block truncate max-w-xs md:max-w-md" title={report.additionalLink}>
+                      {report.additionalLink}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                  <button
+                    onClick={() => toggleMaterialCompletion('proof')}
+                    className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                      completedMaterials['proof']
+                        ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                        : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                    }`}
+                  >
+                    {completedMaterials['proof'] ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                        <span>CONCLUÍDO</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                        <span>CONCLUIR</span>
+                      </>
+                    )}
+                  </button>
+                  <a
+                    href={report.additionalLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-mono font-bold text-[#66d9cc] hover:underline flex items-center gap-1.5 bg-[#11212b] px-3.5 py-1.5 rounded border border-[#1c2c36] shrink-0"
+                  >
+                    PROVA DO CONTEÚDO <ExternalLink className="w-3.5 h-3.5 text-[#E9C349]" />
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#1c1811]/30 border border-[#3e3422]/45 rounded-xl p-4 flex flex-col items-stretch gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="bg-[#E9C349]/10 p-2 rounded-lg border border-[#E9C349]/20 shrink-0">
+                    <Lock className="w-4 h-4 text-[#E9C349]" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-[10px] font-mono text-[#E9C349] uppercase tracking-wider font-bold">PROVA DO CONTEÚDO (BLOQUEADA)</span>
+                    <p className="text-xs text-[#d4e5f2]/80 mt-1 leading-normal">
+                      Este link só será liberado após você marcar todos os materiais/conteúdos deste curso como <strong className="text-[#66d9cc] font-mono font-bold">CONCLUÍDOS</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-[#1c2c36]/40 text-[11px] font-mono text-[#99907c]">
+                  <div>
+                    Progresso: <span className="text-[#E9C349] font-bold">{requiredMaterials.filter(m => completedMaterials[m.key]).length} de {requiredMaterials.length}</span> concluídos
+                  </div>
+                  <button
+                    disabled
+                    title="Conclua todos os materiais para acessar"
+                    className="text-xs font-mono font-bold text-[#99907c]/60 bg-[#11212b]/50 px-4 py-2 rounded border border-[#1c2c36] flex items-center gap-1.5 cursor-not-allowed select-none opacity-60"
+                  >
+                    PROVA DO CONTEÚDO <Lock className="w-3.5 h-3.5 text-[#99907c]/60" />
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
+
+
+        </div>
+
+        {/* Drawer footer */}
+        <div className="p-4 bg-[#04141D] border-t border-[#1c2c36] flex items-center justify-between text-xs font-mono text-[#99907c]">
+          <span>© 2026 Masonic Academy</span>
+          <span className="flex items-center gap-1">
+            <Shield className="w-3.5 h-3.5 text-[#26a69a]" /> Protegido por criptografia
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
