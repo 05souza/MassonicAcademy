@@ -105,7 +105,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_ALERTS;
   });
   
-  const [sortBy, setSortBy] = useState<'titulo' | 'grau' | 'atualizacao'>('titulo');
+  const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('id');
 
   // Simulated active user & accesses database
   const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
@@ -958,7 +958,16 @@ export default function App() {
     }
     return true;
   }).sort((a, b) => {
-    if (sortBy === 'titulo') {
+    if (sortBy === 'id') {
+      const idxA = INITIAL_REPORTS.findIndex(r => r.id === a.id);
+      const idxB = INITIAL_REPORTS.findIndex(r => r.id === b.id);
+      if (idxA !== -1 && idxB !== -1) {
+        return idxA - idxB;
+      }
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.id.localeCompare(b.id);
+    } else if (sortBy === 'titulo') {
       return a.title.localeCompare(b.title);
     } else if (sortBy === 'grau') {
       return (a.nivelCurso || 0) - (b.nivelCurso || 0);
@@ -1227,6 +1236,7 @@ export default function App() {
                   <div className="flex items-center gap-1.5">
                     <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Ordenar por:</span>
                     {[
+                      { id: 'id', label: 'ID' },
                       { id: 'titulo', label: 'Título' },
                       { id: 'grau', label: 'Grau' },
                       { id: 'atualizacao', label: 'Última Atualização' }
