@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { ExecutiveReport, AccessUser, Questionnaire } from '../types';
+import { ExecutiveReport, AccessUser, Questionnaire, Book } from '../types';
 import { getFirebaseConfig, saveFirebaseConfig } from '../firebase';
 import { 
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
   X, Search, Layers, FileText, Sliders, BarChart3, ChevronRight, HelpCircle,
-  Upload, Database, Phone, Home, Compass, MapPin
+  Upload, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen
 } from 'lucide-react';
 import { compressImage } from '../utils';
 
@@ -25,6 +25,16 @@ interface ProfileViewProps {
   onUpdateAccessUser: (user: AccessUser) => void;
   onDeleteAccessUser: (userId: string) => void;
   currentUser?: AccessUser | null;
+  
+  // Theme selection props
+  theme?: 'dark' | 'light';
+  onThemeChange?: (theme: 'dark' | 'light') => void;
+
+  // Books Props
+  books?: Book[];
+  onAddBook?: (newBook: Book) => void;
+  onUpdateBook?: (updatedBook: Book) => void;
+  onDeleteBook?: (bookId: string) => void;
 }
 
 export default function ProfileView({ 
@@ -39,7 +49,13 @@ export default function ProfileView({
   onAddAccessUser,
   onUpdateAccessUser,
   onDeleteAccessUser,
-  currentUser
+  currentUser,
+  theme = 'dark',
+  onThemeChange,
+  books = [],
+  onAddBook,
+  onUpdateBook,
+  onDeleteBook
 }: ProfileViewProps) {
   const getInitials = (name: string) => {
     return name
@@ -63,7 +79,7 @@ export default function ProfileView({
   const isStandardUser = currentUser?.tipoUsuario === 'padrao';
 
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books'>('profile');
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile') {
@@ -399,6 +415,138 @@ export default function ProfileView({
       }
     });
   }, []);
+
+  // Book CRUD states
+  const [bookFormId, setBookFormId] = useState('');
+  const [bookFormTitle, setBookFormTitle] = useState('');
+  const [bookFormAuthor, setBookFormAuthor] = useState('');
+  const [bookFormCategory, setBookFormCategory] = useState('');
+  const [bookFormCategories, setBookFormCategories] = useState<string[]>([]);
+  const [bookFormNivelAcesso, setBookFormNivelAcesso] = useState<number>(1);
+  const [bookFormStatus, setBookFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [bookFormTags, setBookFormTags] = useState('');
+  const [bookFormThumbnailUrl, setBookFormThumbnailUrl] = useState('');
+  const [bookFormLink, setBookFormLink] = useState('');
+  
+  const [isCreatingNewBook, setIsCreatingNewBook] = useState(true);
+  const [editBookId, setEditBookId] = useState<string | null>(null);
+  const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [bookFormError, setBookFormError] = useState<string | null>(null);
+  const [bookFormSuccess, setBookFormSuccess] = useState<string | null>(null);
+  const [bookThumbnailUploadError, setBookThumbnailUploadError] = useState<string | null>(null);
+
+  const handleSelectBookToEdit = (book: Book) => {
+    setIsCreatingNewBook(false);
+    setEditBookId(book.id);
+    setBookFormId(book.id);
+    setBookFormTitle(book.title);
+    setBookFormAuthor(book.author);
+    setBookFormCategory(book.category);
+    setBookFormCategories(book.categories && book.categories.length > 0 ? book.categories : [book.category]);
+    setBookFormNivelAcesso(book.nivelAcesso);
+    setBookFormStatus(book.status);
+    setBookFormTags(book.tags.join(', '));
+    setBookFormThumbnailUrl(book.thumbnailUrl);
+    setBookFormLink(book.link);
+    setBookFormError(null);
+    setBookFormSuccess(null);
+  };
+
+  const handleStartCreateNewBook = () => {
+    setIsCreatingNewBook(true);
+    setEditBookId(null);
+    
+    // Generate unique ID
+    const generatedId = `livro-${Date.now().toString().slice(-6)}`;
+    setBookFormId(generatedId);
+    setBookFormTitle('');
+    setBookFormAuthor('');
+    setBookFormCategory('Filosofia');
+    setBookFormCategories(['Filosofia']);
+    setBookFormNivelAcesso(1);
+    setBookFormStatus('Ativo');
+    setBookFormTags('');
+    setBookFormThumbnailUrl('');
+    setBookFormLink('');
+    setBookFormError(null);
+    setBookFormSuccess(null);
+  };
+
+  const handleSaveBook = (e: React.FormEvent) => {
+    e.preventDefault();
+    setBookFormError(null);
+    setBookFormSuccess(null);
+
+    if (!bookFormId.trim()) {
+      setBookFormError('O ID do livro é obrigatório.');
+      return;
+    }
+    if (!bookFormTitle.trim()) {
+      setBookFormError('O Título do livro é obrigatório.');
+      return;
+    }
+    if (!bookFormAuthor.trim()) {
+      setBookFormError('O Autor do livro é obrigatório.');
+      return;
+    }
+    if (bookFormCategories.length === 0) {
+      setBookFormError('Selecione pelo menos uma categoria.');
+      return;
+    }
+    if (!bookFormLink.trim()) {
+      setBookFormError('O Link do livro é obrigatório.');
+      return;
+    }
+
+    const processedTags = bookFormTags
+      .split(',')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+
+    const savedBook: Book = {
+      id: bookFormId.trim(),
+      title: bookFormTitle.trim(),
+      author: bookFormAuthor.trim(),
+      category: bookFormCategories[0],
+      categories: bookFormCategories,
+      nivelAcesso: Number(bookFormNivelAcesso),
+      status: bookFormStatus,
+      tags: processedTags,
+      thumbnailUrl: bookFormThumbnailUrl.trim(),
+      link: bookFormLink.trim()
+    };
+
+    try {
+      if (isCreatingNewBook) {
+        if (books.some(b => b.id === savedBook.id)) {
+          setBookFormError(`Um livro com o ID "${savedBook.id}" já existe.`);
+          return;
+        }
+        if (onAddBook) {
+          onAddBook(savedBook);
+          setBookFormSuccess('Livro cadastrado com sucesso!');
+        }
+      } else {
+        if (onUpdateBook) {
+          onUpdateBook(savedBook);
+          setBookFormSuccess('Livro atualizado com sucesso!');
+        }
+      }
+    } catch (err: any) {
+      setBookFormError(err.message || 'Erro ao salvar o livro.');
+    }
+  };
+
+  const handleDeleteBookAction = (bookId: string) => {
+    if (confirm('Tem certeza de que deseja excluir este livro da biblioteca?')) {
+      if (onDeleteBook) {
+        onDeleteBook(bookId);
+        if (editBookId === bookId) {
+          handleStartCreateNewBook();
+        }
+      }
+    }
+  };
 
   // CRUD logic handlers
   const handleSelectToEdit = (rep: ExecutiveReport) => {
@@ -766,6 +914,19 @@ export default function ProfileView({
             >
               <Database className="w-3.5 h-3.5 text-[#E9C349]" /> BANCO DE DADOS CLOUD (FIREBASE)
             </button>
+            <button
+              onClick={() => {
+                setActiveSubTab('books');
+                handleStartCreateNewBook();
+              }}
+              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'books'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE LIVROS ({books.length})
+            </button>
           </>
         )}
       </div>
@@ -920,6 +1081,46 @@ export default function ProfileView({
                 </div>
               </form>
             )}
+          </div>
+
+          {/* Tema do Portal Card */}
+          <div id="theme-selector-card" className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4">
+            <div className="flex items-center gap-2 border-b border-[#1c2c36]/60 pb-2.5">
+              <Sliders className="w-4 h-4 text-[#E9C349]" />
+              <h3 className="font-sans font-bold text-xs text-[#d4e5f2] uppercase tracking-wider">Aparência & Tema</h3>
+            </div>
+            <p className="text-[10.5px] font-mono text-[#9cbfd5] leading-relaxed">
+              Personalize o ambiente de ensino da Masonic Academy. Escolha o tema que melhor se adapta à sua leitura.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => onThemeChange?.('dark')}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-lg border-2 transition-all cursor-pointer ${
+                  theme === 'dark'
+                    ? 'border-[#E9C349] bg-[#04141d] text-[#E9C349]'
+                    : 'border-[#1c2c36] bg-[#0c1d27] text-[#99907c] hover:border-[#99907c]/40 hover:text-[#d4e5f2]'
+                }`}
+              >
+                <Moon className="w-5 h-5 mb-1.5" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Tema Escuro</span>
+                <span className="text-[8px] font-mono opacity-80 mt-0.5">Foco & Conforto visual</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => onThemeChange?.('light')}
+                className={`flex flex-col items-center justify-center p-3.5 rounded-lg border-2 transition-all cursor-pointer ${
+                  theme === 'light'
+                    ? 'border-[#E9C349] bg-[#04141d] text-[#E9C349]'
+                    : 'border-[#1c2c36] bg-[#0c1d27] text-[#99907c] hover:border-[#99907c]/40 hover:text-[#d4e5f2]'
+                }`}
+              >
+                <Sun className="w-5 h-5 mb-1.5" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Tema Claro</span>
+                <span className="text-[8px] font-mono opacity-80 mt-0.5">Leitura sob luz do dia</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2291,6 +2492,404 @@ export default function ProfileView({
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'books' && (
+        // Books CRUD Management Sub-tab
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* LEFT PANEL: Books List */}
+          <div className="lg:col-span-4 bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] space-y-4">
+            <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3 flex-wrap gap-2">
+              <div>
+                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Livros</h3>
+                <p className="text-[10px] font-mono text-[#99907c] mt-0.5">Selecione para editar dados</p>
+              </div>
+              <button
+                onClick={handleStartCreateNewBook}
+                className="bg-[#66D9CC] text-[#02332e] text-[10px] font-mono font-bold px-3 py-1.5 rounded hover:bg-[#83f7eb] transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" /> Incluir
+              </button>
+            </div>
+
+            {/* Quick search input */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Pesquisar livros..."
+                value={bookSearchQuery}
+                onChange={(e) => setBookSearchQuery(e.target.value)}
+                className="w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] placeholder-[#536573] focus:outline-none focus:border-[#E9C349] font-sans"
+              />
+              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+            </div>
+
+            {/* Books List Grid/Scroll */}
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+              {books
+                .filter(b => {
+                  const query = bookSearchQuery.toLowerCase();
+                  const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
+                  return b.title.toLowerCase().includes(query) || 
+                         b.author.toLowerCase().includes(query) || 
+                         b.id.toLowerCase().includes(query) ||
+                         bookCats.some(cat => cat.toLowerCase().includes(query));
+                })
+                .map(book => {
+                  const isSelected = editBookId === book.id;
+                  const bookCats = book.categories && book.categories.length > 0 ? book.categories : [book.category];
+                  return (
+                    <div
+                      key={book.id}
+                      onClick={() => handleSelectBookToEdit(book)}
+                      className={`p-3 rounded-lg border transition-all duration-150 cursor-pointer text-left flex items-start gap-2.5 ${
+                        isSelected 
+                          ? 'bg-[#E9C349]/10 border-[#E9C349] shadow-md' 
+                          : 'bg-[#05151e]/60 border-[#1c2c36] hover:bg-[#11212b]/40 hover:border-[#1ea296]/30'
+                      }`}
+                    >
+                      {/* Mini thumbnail */}
+                      {book.thumbnailUrl ? (
+                        <img
+                          src={book.thumbnailUrl}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-10 h-10 object-cover rounded border border-[#1c2c36]"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=100&q=80';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-[#0c1d27] rounded border border-[#1c2c36] flex items-center justify-center shrink-0">
+                          <BookOpen className="w-4 h-4 text-[#99907c]" />
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-mono text-[8px] text-[#E9C349] uppercase tracking-wider truncate shrink-0 max-w-[120px]">
+                            {bookCats.join(', ')}
+                          </span>
+                          <span className="font-mono text-[8px] bg-[#E9C349]/10 text-[#E9C349] border border-[#E9C349]/20 px-1 rounded-sm shrink-0 uppercase font-bold">
+                            Grau {book.nivelAcesso}
+                          </span>
+                        </div>
+                        <h4 className="font-sans font-bold text-xs text-[#d4e5f2] leading-tight truncate">
+                          {book.title}
+                        </h4>
+                        <div className="flex items-center justify-between text-[10px] font-mono text-[#99907c] pt-0.5">
+                          <span className="truncate">Por: {book.author}</span>
+                          <span className={`text-[9px] font-bold ${book.status === 'Ativo' ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {book.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              {books.length === 0 && (
+                <div className="p-8 text-center text-xs font-mono text-[#99907c]">
+                  Nenhum livro cadastrado.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: Edit / Create Form */}
+          <div className="lg:col-span-8 bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4">
+            <div className="border-b border-[#1c2c36] pb-3 flex justify-between items-center flex-wrap gap-2">
+              <div>
+                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">
+                  {isCreatingNewBook ? 'Cadastrar Novo Livro' : `Editando Livro: ${bookFormTitle || bookFormId}`}
+                </h3>
+                <p className="text-[10px] font-mono text-[#99907c] mt-0.5">
+                  {isCreatingNewBook ? 'Adicione um novo título à biblioteca' : 'Modifique os metadados do título selecionado'}
+                </p>
+              </div>
+              {!isCreatingNewBook && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteBookAction(bookFormId)}
+                  className="bg-red-950/40 hover:bg-red-950 hover:text-red-300 text-rose-400 text-[10px] font-mono font-bold px-3 py-1.5 rounded border border-red-900/30 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Excluir Livro
+                </button>
+              )}
+            </div>
+
+            {/* Error & Success indicators */}
+            {bookFormError && (
+              <div className="bg-rose-950/30 border border-rose-500/30 text-rose-300 p-3 rounded text-xs font-mono">
+                ⚠️ {bookFormError}
+              </div>
+            )}
+            {bookFormSuccess && (
+              <div className="bg-emerald-950/30 border border-[#1ea296]/30 text-[#66d9cc] p-3 rounded text-xs font-mono">
+                ✓ {bookFormSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveBook} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* ID Field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Identificador Único (ID)</label>
+                  <input
+                    type="text"
+                    required
+                    disabled={!isCreatingNewBook}
+                    placeholder="ex: livro-manual-aprendiz"
+                    value={bookFormId}
+                    onChange={(e) => setBookFormId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                    className="w-full bg-[#04141d] disabled:bg-[#081721] disabled:text-[#99907c]/60 disabled:cursor-not-allowed border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                  />
+                </div>
+
+                {/* Status Field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Status do Título</label>
+                  <select
+                    value={bookFormStatus}
+                    onChange={(e) => setBookFormStatus(e.target.value as any)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                  >
+                    <option value="Ativo">Ativo (Visível na Biblioteca)</option>
+                    <option value="Inativo">Inativo (Oculto)</option>
+                  </select>
+                </div>
+
+                {/* Title Field */}
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Título do Livro</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: A ADMINISTRAÇÃO DA LOJA NO RITO ADONHIRAMITA"
+                    value={bookFormTitle}
+                    onChange={(e) => setBookFormTitle(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                  />
+                </div>
+
+                {/* Author Field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Autor / Responsável</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: José Castellani"
+                    value={bookFormAuthor}
+                    onChange={(e) => setBookFormAuthor(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                  />
+                </div>
+
+                {/* Category Field */}
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-2 uppercase tracking-wider">
+                    Categorias / Rito (Selecione uma ou mais)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#04141d] border border-[#1c2c36] rounded p-3">
+                    {[
+                      'Adonhiramita',
+                      'Adonhiramita-Rituais',
+                      'História do Brasil',
+                      'Filosofia',
+                      'Simbologia',
+                      'Maçonaria',
+                      'Cabala',
+                      'Rituais'
+                    ].map((cat) => {
+                      const isChecked = bookFormCategories.includes(cat);
+                      return (
+                        <label
+                          key={cat}
+                          className={`flex items-center gap-2 p-2 rounded border transition-all cursor-pointer select-none text-xs ${
+                            isChecked
+                              ? 'bg-[#E9C349]/10 border-[#E9C349] text-[#f2ca50]'
+                              : 'bg-[#05151e]/40 border-[#1c2c36]/60 text-[#99907c] hover:text-[#d4e5f2] hover:border-[#1c2c36]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setBookFormCategories(prev => prev.filter(c => c !== cat));
+                              } else {
+                                setBookFormCategories(prev => [...prev, cat]);
+                              }
+                            }}
+                            className="rounded bg-[#05151e] border-[#1c2c36] text-[#E9C349] focus:ring-0 w-3.5 h-3.5 accent-[#E9C349] cursor-pointer"
+                          />
+                          <span className="truncate">{cat}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Level of access required (Grau) */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Grau de Acesso Requerido (Nível de Acesso)</label>
+                  <select
+                    value={bookFormNivelAcesso}
+                    onChange={(e) => setBookFormNivelAcesso(Number(e.target.value))}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                  >
+                    {Array.from({ length: 33 }, (_, i) => i + 1).map((g) => (
+                      <option key={g} value={g}>
+                        Grau {g} {g === 1 ? '(Aprendiz)' : g === 2 ? '(Companheiro)' : g === 3 ? '(Mestre)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tags Field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Tags do Título (Separadas por vírgulas)</label>
+                  <input
+                    type="text"
+                    placeholder="ex: Adonhiramita, Administração, Manual, Simbolismo"
+                    value={bookFormTags}
+                    onChange={(e) => setBookFormTags(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                  />
+                </div>
+
+                {/* Document / Book Link */}
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link Completo do Documento / PDF</label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://exemplo.com/documento.pdf"
+                      value={bookFormLink}
+                      onChange={(e) => setBookFormLink(e.target.value)}
+                      className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 pl-9 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                    />
+                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+                  </div>
+                </div>
+
+                {/* Cover Image URL / File Upload */}
+                <div className="md:col-span-2 space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link da Capa do Livro (Miniatura)</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="https://images.unsplash.com/photo-..."
+                        value={bookFormThumbnailUrl}
+                        onChange={(e) => setBookFormThumbnailUrl(e.target.value)}
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 pl-9 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                      />
+                      <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+                    </div>
+                  </div>
+
+                  {/* Thumbnail dropzone file selector with base64 compression */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center bg-[#05151e]/60 p-4 rounded-lg border border-[#1c2c36]/60">
+                    <div className="space-y-1.5 text-left">
+                      <span className="block text-[10px] font-mono text-[#E9C349] uppercase tracking-wider font-bold">Upload Local da Capa</span>
+                      <p className="text-[10px] text-[#99907c] leading-relaxed">
+                        Selecione uma imagem local para comprimir e embutir de forma otimizada para o banco Firestore.
+                      </p>
+                      
+                      <label className="inline-flex items-center gap-1.5 bg-[#11212b] border border-[#1c2c36] hover:border-[#E9C349]/40 hover:bg-[#1c2c36]/80 text-[#d4e5f2] px-3 py-1.5 rounded text-xs font-mono font-bold cursor-pointer transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Carregar Capa</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            if (file.size > 10 * 1024 * 1024) {
+                              setBookThumbnailUploadError("Imagem muito grande (máx 10MB).");
+                              return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = async (event) => {
+                              if (event.target?.result) {
+                                try {
+                                  const base64Str = event.target.result as string;
+                                  const compressed = await compressImage(base64Str, 600, 800, 0.75); // 3:4 ratio target
+                                  setBookFormThumbnailUrl(compressed);
+                                  setBookThumbnailUploadError(null);
+                                } catch (err) {
+                                  console.error("Error compressing image:", err);
+                                  setBookFormThumbnailUrl(event.target.result as string);
+                                  setBookThumbnailUploadError(null);
+                                }
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      
+                      {bookThumbnailUploadError && (
+                        <p className="text-[9px] font-mono text-red-400 bg-red-950/20 px-2 py-1 rounded border border-red-900/45 leading-tight">
+                          ⚠️ {bookThumbnailUploadError}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-center">
+                      {bookFormThumbnailUrl ? (
+                        <div className="relative group">
+                          <img
+                            src={bookFormThumbnailUrl}
+                            alt="Visualização da Capa"
+                            referrerPolicy="no-referrer"
+                            className="w-24 h-32 object-cover rounded border border-[#1c2c36] shadow-md bg-[#04141d]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setBookFormThumbnailUrl('')}
+                            className="absolute -top-1.5 -right-1.5 bg-red-950 border border-red-500 text-red-400 hover:text-white p-1 rounded-full shadow hover:bg-red-900 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-24 h-32 border border-dashed border-[#1c2c36] rounded flex flex-col items-center justify-center text-[#99907c] p-2 text-center bg-[#04141d]/40">
+                          <BookOpen className="w-6 h-6 opacity-40 mb-1" />
+                          <span className="text-[9px] font-mono">Sem Visualização</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form buttons */}
+              <div className="pt-4 border-t border-[#1c2c36] flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={handleStartCreateNewBook}
+                  className="bg-[#11212b] border border-[#1c2c36] hover:bg-[#1c2c36] text-[#d4e5f2] text-xs font-mono font-bold px-4 py-2.5 rounded transition-all cursor-pointer"
+                >
+                  Cancelar / Novo
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] text-xs font-mono font-bold px-6 py-2.5 rounded shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Check className="w-4 h-4 text-[#241a00]" />
+                  <span>{isCreatingNewBook ? 'Cadastrar Livro' : 'Salvar Alterações'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

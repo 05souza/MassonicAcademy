@@ -91,3 +91,16 @@ export interface QuestionnaireSettings {
   googleSheetsUrl: string;
 }
 
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  category: string;
+  categories?: string[];
+  nivelAcesso: number;
+  status: 'Ativo' | 'Inativo';
+  tags: string[];
+  thumbnailUrl: string;
+  link: string;
+}
+

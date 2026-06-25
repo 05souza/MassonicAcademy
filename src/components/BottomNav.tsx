@@ -1,8 +1,8 @@
-import { Home, Bell, User, HelpCircle, BookOpen } from 'lucide-react';
+import { Home, Bell, User, HelpCircle, BookOpen, Info } from 'lucide-react';
 
 interface BottomNavProps {
-  activeTab: 'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual';
-  onChangeTab: (tab: 'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual') => void;
+  activeTab: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual';
+  onChangeTab: (tab: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual') => void;
   unreadAlertsCount: number;
   showProfileButton?: boolean;
   isAdminUser?: boolean;
@@ -15,8 +15,9 @@ export default function BottomNav({
   showProfileButton = true,
   isAdminUser = false
 }: BottomNavProps) {
-  const tabs: Array<{ id: 'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual'; label: string; icon: any; badgeCount?: number }> = [
+  const tabs: Array<{ id: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual'; label: string; icon: any; badgeCount?: number }> = [
     { id: 'inicio', label: 'Início', icon: Home },
+    { id: 'biblioteca', label: 'Biblioteca', icon: BookOpen },
     ...(isAdminUser ? [
       { id: 'questionarios' as const, label: 'Questionários', icon: HelpCircle }
     ] : []),
@@ -24,7 +25,7 @@ export default function BottomNav({
       { id: 'alertas' as const, label: 'Alertas', icon: Bell, badgeCount: unreadAlertsCount }
     ] : []),
     ...(showProfileButton ? [{ id: 'perfil' as const, label: 'Perfil', icon: User }] : []),
-    { id: 'manual', label: 'Manual', icon: BookOpen }
+    { id: 'manual', label: 'Manual', icon: Info }
   ];
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { INITIAL_REPORTS, INITIAL_ALERTS } from './data';
-import { ExecutiveReport, SystemAlert, AccessUser } from './types';
+import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
+import { ExecutiveReport, SystemAlert, AccessUser, Book } from './types';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import Header from './components/Header';
@@ -13,6 +13,7 @@ import ProfileView from './components/ProfileView';
 import LoginGate from './components/LoginGate';
 import QuestionnairesView from './components/QuestionnairesView';
 import UserManualView from './components/UserManualView';
+import LibraryView from './components/LibraryView';
 import { Search, Info, LogIn, ChevronRight, BookOpen, Layers, Shield, Image as ImageIcon, LayoutGrid, List, Upload } from 'lucide-react';
 import InlineEditable from './components/InlineEditable';
 import { compressImage } from './utils';
@@ -48,7 +49,7 @@ export const isAdmin = (email: string | undefined): boolean => {
 
 export default function App() {
   // Navigation tabs of bottom bar
-  const [activeTab, setActiveTab] = useState<'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual'>('inicio');
+  const [activeTab, setActiveTab] = useState<'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual'>('inicio');
 
   // Dynamic Dashboard Title & Stats
   const [dashboardTitle, setDashboardTitle] = useState(() => localStorage.getItem('masonic_dashboard_title') || 'Portal de Ensino');
@@ -104,8 +105,23 @@ export default function App() {
     const saved = localStorage.getItem('masonic_alerts_v1');
     return saved ? JSON.parse(saved) : INITIAL_ALERTS;
   });
+
+  const [books, setBooks] = useState<Book[]>(() => {
+    const saved = localStorage.getItem('masonic_books_v5');
+    return saved ? JSON.parse(saved) : INITIAL_BOOKS;
+  });
   
   const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('id');
+
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('masonic_theme_v1') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    document.body.className = theme;
+    document.documentElement.className = theme;
+    localStorage.setItem('masonic_theme_v1', theme);
+  }, [theme]);
 
   // Simulated active user & accesses database
   const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
@@ -223,17 +239,49 @@ export default function App() {
     let unsubAlerts: () => void = () => {};
     let unsubUsers: () => void = () => {};
     let unsubBanner: () => void = () => {};
+    let unsubBooks: () => void = () => {};
 
     const loadInitialData = async () => {
       const { db } = initializeFirebase();
       if (db) {
         try {
+          // One-time migration to seed the new 150+ books cleanly to Firestore (v5)
+          const hasClearedV5 = localStorage.getItem('masonic_books_cleared_v5') === 'true';
+          if (!hasClearedV5) {
+            localStorage.setItem('masonic_books_cleared_v5', 'true');
+            try {
+              const booksCol = collection(db, 'books');
+              const currentBooksSnapshot = await getDocs(booksCol);
+              
+              // Delete existing records in parallel
+              const deletePromises = currentBooksSnapshot.docs.map(docSnap => 
+                deleteDoc(doc(db, 'books', docSnap.id))
+              );
+              await Promise.all(deletePromises);
+              
+              // Seed clean INITIAL_BOOKS in chunks of 20 to avoid rate limit or timeout errors
+              const chunkSize = 20;
+              for (let i = 0; i < INITIAL_BOOKS.length; i += chunkSize) {
+                const chunk = INITIAL_BOOKS.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(book => 
+                  setDoc(doc(db, 'books', book.id), cleanObjectForFirestore(book))
+                ));
+              }
+              
+              localStorage.setItem('masonic_books_v5', JSON.stringify(INITIAL_BOOKS));
+              setBooks(INITIAL_BOOKS);
+            } catch (e) {
+              console.error('Error during one-time books v5 migration:', e);
+            }
+          }
+
           let reportsReady = false;
           let alertsReady = false;
           let usersReady = false;
+          let booksReady = false;
 
           const checkReady = () => {
-            if (reportsReady && alertsReady && usersReady) {
+            if (reportsReady && alertsReady && usersReady && booksReady) {
               setIsSessionLoaded(true);
             }
           };
@@ -395,6 +443,40 @@ export default function App() {
             console.error('Erro de permissão ou rede no onSnapshot settings/general:', err);
           });
 
+          // 5. Fetch books in real-time
+          const booksCol = collection(db, 'books');
+          unsubBooks = onSnapshot(booksCol, (booksSnapshot) => {
+            if (booksSnapshot.empty) {
+              // If completely empty on Firestore, fallback to local INITIAL_BOOKS
+              // but DO NOT write to Firestore inside onSnapshot to avoid loops
+              setBooks(INITIAL_BOOKS);
+              localStorage.setItem('masonic_books_v5', JSON.stringify(INITIAL_BOOKS));
+            } else {
+              const loadedBooks: Book[] = [];
+              booksSnapshot.forEach(docSnap => {
+                loadedBooks.push(docSnap.data() as Book);
+              });
+              setBooks(loadedBooks);
+              localStorage.setItem('masonic_books_v5', JSON.stringify(loadedBooks));
+            }
+            booksReady = true;
+            checkReady();
+          }, (err) => {
+            console.error('Erro de permissão ou rede no onSnapshot books:', err);
+            const saved = localStorage.getItem('masonic_books_v5');
+            if (saved) {
+              try {
+                setBooks(JSON.parse(saved));
+              } catch (e) {
+                setBooks(INITIAL_BOOKS);
+              }
+            } else {
+              setBooks(INITIAL_BOOKS);
+            }
+            booksReady = true;
+            checkReady();
+          });
+
           return; // Skip local storage fallback
         } catch (err) {
           console.error('Falha de inicialização em tempo real do Firestore:', err);
@@ -405,6 +487,7 @@ export default function App() {
       const savedReports = localStorage.getItem('masonic_reports_v1');
       const savedAlerts = localStorage.getItem('masonic_alerts_v1');
       const savedAccessUsers = localStorage.getItem('masonic_access_users_v1');
+      const savedBooks = localStorage.getItem('masonic_books_v5');
 
       if (savedReports) {
         setReports(JSON.parse(savedReports));
@@ -418,6 +501,13 @@ export default function App() {
       } else {
         setAlerts(INITIAL_ALERTS);
         localStorage.setItem('masonic_alerts_v1', JSON.stringify(INITIAL_ALERTS));
+      }
+
+      if (savedBooks) {
+        setBooks(JSON.parse(savedBooks));
+      } else {
+        setBooks(INITIAL_BOOKS);
+        localStorage.setItem('masonic_books_v5', JSON.stringify(INITIAL_BOOKS));
       }
 
       if (savedAccessUsers) {
@@ -470,6 +560,7 @@ export default function App() {
       unsubAlerts();
       unsubUsers();
       unsubBanner();
+      unsubBooks();
     };
   }, []);
 
@@ -558,6 +649,26 @@ export default function App() {
     }
   };
 
+  const syncBookToCloud = async (book: Book) => {
+    const { db } = initializeFirebase();
+    if (!db) return;
+    try {
+      await setDoc(doc(db, 'books', book.id), cleanObjectForFirestore(book));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `books/${book.id}`);
+    }
+  };
+
+  const deleteBookFromCloud = async (id: string) => {
+    const { db } = initializeFirebase();
+    if (!db) return;
+    try {
+      await deleteDoc(doc(db, 'books', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `books/${id}`);
+    }
+  };
+
   // Sync state helpers
   const saveReportsState = (updated: ExecutiveReport[]) => {
     const cleaned = updated.map(r => cleanObjectForFirestore(r));
@@ -573,6 +684,12 @@ export default function App() {
   const saveAccessUsersState = (updated: AccessUser[]) => {
     setAccessUsers(updated);
     localStorage.setItem('masonic_access_users_v1', JSON.stringify(updated));
+  };
+
+  const saveBooksState = (updated: Book[]) => {
+    const cleaned = updated.map(b => cleanObjectForFirestore(b));
+    setBooks(cleaned);
+    localStorage.setItem('masonic_books_v5', JSON.stringify(cleaned));
   };
 
   const handleUpdateStatField = (idx: number, field: string, newValue: string) => {
@@ -806,6 +923,62 @@ export default function App() {
     }
   };
 
+  const handleAddBook = (newBook: Book) => {
+    const updated = [...books, newBook];
+    saveBooksState(updated);
+    syncBookToCloud(newBook);
+    
+    // Auto add a system alert logging the inclusion
+    const newAlert: SystemAlert = {
+      id: `alert-add-book-${Date.now()}`,
+      title: 'Novo Livro Cadastrado',
+      description: `O livro "${newBook.title}" foi adicionado com sucesso à biblioteca por Daniel Luciano.`,
+      time: 'Agora mesmo',
+      type: 'update',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
+  const handleUpdateBook = (updatedBook: Book) => {
+    const updated = books.map(b => b.id === updatedBook.id ? updatedBook : b);
+    saveBooksState(updated);
+    syncBookToCloud(updatedBook);
+
+    // Auto add a system alert logging the revision
+    const newAlert: SystemAlert = {
+      id: `alert-edit-book-${Date.now()}`,
+      title: 'Livro da Biblioteca Atualizado',
+      description: `Os metadados do livro "${updatedBook.title}" foram revisados por Daniel Luciano.`,
+      time: 'Agora mesmo',
+      type: 'update',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
+  const handleDeleteBook = (bookId: string) => {
+    const bookToDelete = books.find(b => b.id === bookId);
+    if (!bookToDelete) return;
+    const updated = books.filter(b => b.id !== bookId);
+    saveBooksState(updated);
+    deleteBookFromCloud(bookId);
+
+    // Auto add a system alert logging the deletion
+    const newAlert: SystemAlert = {
+      id: `alert-del-book-${Date.now()}`,
+      title: 'Livro Removido da Biblioteca',
+      description: `O livro "${bookToDelete.title}" foi excluído da biblioteca.`,
+      time: 'Agora mesmo',
+      type: 'critical',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
   // Mark all alarms as read
   const handleMarkAllAlertsRead = () => {
     const updated = alerts.map(a => {
@@ -990,6 +1163,8 @@ export default function App() {
     switch (activeTab) {
       case 'inicio':
         return dashboardTitle;
+      case 'biblioteca':
+        return 'Biblioteca de Estudos';
       case 'alertas':
         return 'Central de Alertas';
       case 'perfil':
@@ -1304,6 +1479,15 @@ export default function App() {
 
 
 
+        {/* --- BIBLIOTECA VIEW --- */}
+        {activeTab === 'biblioteca' && currentUser && (
+          <LibraryView
+            books={books}
+            currentUser={currentUser}
+            isAdmin={isAdmin(currentUser.email)}
+          />
+        )}
+
         {/* --- ALERTAS VIEW --- */}
         {activeTab === 'alertas' && isAdmin(currentUser.email) && (
           <AlertsView
@@ -1338,6 +1522,12 @@ export default function App() {
             onUpdateAccessUser={handleUpdateAccessUser}
             onDeleteAccessUser={handleDeleteAccessUser}
             currentUser={currentUser}
+            theme={theme}
+            onThemeChange={setTheme}
+            books={books}
+            onAddBook={handleAddBook}
+            onUpdateBook={handleUpdateBook}
+            onDeleteBook={handleDeleteBook}
           />
         )}
 

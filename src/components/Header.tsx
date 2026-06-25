@@ -11,7 +11,8 @@ import {
   Home, 
   User, 
   HelpCircle, 
-  Bell 
+  Bell,
+  Info 
 } from 'lucide-react';
 import { AccessUser } from '../types';
 
@@ -27,8 +28,8 @@ interface HeaderProps {
   onSelectUser: (user: AccessUser) => void;
   accessUsers: AccessUser[];
   onLogout?: () => void;
-  activeTab?: 'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual';
-  onChangeTab?: (tab: 'inicio' | 'alertas' | 'perfil' | 'questionarios' | 'manual') => void;
+  activeTab?: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual';
+  onChangeTab?: (tab: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual') => void;
   isAdminUser?: boolean;
 }
 
@@ -161,12 +162,13 @@ export default function Header({
               <span className="text-[10px] font-mono text-[#99907c] font-black uppercase tracking-wider block mb-2 px-2">Navegação Principal</span>
               {[
                 { id: 'inicio' as const, label: 'Início', icon: Home },
+                { id: 'biblioteca' as const, label: 'Biblioteca', icon: BookOpen },
                 ...(isAdminUser ? [
                   { id: 'questionarios' as const, label: 'Questionários', icon: HelpCircle },
                   { id: 'alertas' as const, label: 'Alertas', icon: Bell }
                 ] : []),
                 { id: 'perfil' as const, label: 'Meu Perfil', icon: User },
-                { id: 'manual' as const, label: 'Manual de Uso', icon: BookOpen }
+                { id: 'manual' as const, label: 'Manual de Uso', icon: Info }
               ].map((navInfo) => {
                 const Icon = navInfo.icon;
                 const isSelected = activeTab === navInfo.id;
