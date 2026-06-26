@@ -26,7 +26,11 @@ interface FAQItem {
   category: 'aluno' | 'admin' | 'geral';
 }
 
-export default function UserManualView() {
+interface UserManualViewProps {
+  isAdmin?: boolean;
+}
+
+export default function UserManualView({ isAdmin = false }: UserManualViewProps) {
   const [activeManualSection, setActiveManualSection] = useState<'geral' | 'aluno' | 'admin' | 'faq'>('geral');
   const [faqSearchQuery, setFaqSearchQuery] = useState('');
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
@@ -148,7 +152,7 @@ export default function UserManualView() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2' : ''} gap-5`}>
               <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
                 <h4 className="text-xs font-mono font-bold text-[#E9C349] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#E9C349]" />
@@ -160,15 +164,17 @@ export default function UserManualView() {
                 </p>
               </div>
 
-              <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
-                <h4 className="text-xs font-mono font-bold text-[#66d9cc] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
-                  Funcionamento Offline & Cloud
-                </h4>
-                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                  Trabalhamos com bancos de dados unificados no <strong>Firebase Firestore</strong> para garantir dados sincronizados entre múltiplos dispositivos, além de uma robusta contingência local persistida no navegador do usuário.
-                </p>
-              </div>
+              {isAdmin && (
+                <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
+                  <h4 className="text-xs font-mono font-bold text-[#66d9cc] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
+                    Funcionamento Offline & Cloud
+                  </h4>
+                  <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
+                    Trabalhamos com bancos de dados unificados no <strong>Firebase Firestore</strong> para garantir dados sincronizados entre múltiplos dispositivos, além de uma robusta contingência local persistida no navegador do usuário.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Architecture Flow Visual */}

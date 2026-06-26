@@ -1533,7 +1533,7 @@ export default function App() {
 
         {/* --- MANUAL VIEW --- */}
         {activeTab === 'manual' && (
-          <UserManualView />
+          <UserManualView isAdmin={isAdmin(currentUser?.email)} />
         )}
 
       </main>
