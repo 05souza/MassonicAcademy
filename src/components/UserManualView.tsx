@@ -122,7 +122,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
           { id: 'aluno', label: '🎓 Área do Aluno', color: 'border-[#66d9cc]' },
           { id: 'admin', label: '👑 Painel Master', color: 'border-[#e07553]' },
           { id: 'faq', label: '💬 Perguntas Frequentes', color: 'border-blue-400' }
-        ].map(tab => (
+        ].filter(tab => tab.id !== 'admin' || isAdmin).map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveManualSection(tab.id as any)}
@@ -287,7 +287,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
         )}
 
         {/* SECTION: PAINEL MASTER */}
-        {activeManualSection === 'admin' && (
+        {activeManualSection === 'admin' && isAdmin && (
           <div className="space-y-6">
             <div className="border-b border-[#1c2c36]/50 pb-3">
               <h3 className="text-base font-sans font-black text-[#d4e5f2] flex items-center gap-1.5 uppercase tracking-wide">

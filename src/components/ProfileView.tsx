@@ -116,6 +116,8 @@ export default function ProfileView({
   const [selfPotencia, setSelfPotencia] = useState('');
   const [selfCidadeLoja, setSelfCidadeLoja] = useState('');
   const [selfPassword, setSelfPassword] = useState('');
+  const [selfEmail, setSelfEmail] = useState('');
+  const [selfAvatarUrl, setSelfAvatarUrl] = useState('');
   
   const [userCrudError, setUserCrudError] = useState<string | null>(null);
   const [userCrudSuccess, setUserCrudSuccess] = useState<string | null>(null);
@@ -1143,9 +1145,22 @@ export default function ProfileView({
         <div className="max-w-md mx-auto space-y-4">
           {/* Hero Profile Card */}
           <div className="bg-[#0c1d27] rounded-xl p-6 border border-[#1c2c36] flex flex-col items-center text-center relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#E9C349] to-[#66D9CC] text-[#04141D] flex items-center justify-center text-2xl font-mono font-bold border-2 border-[#1c2c36] shadow-lg mb-4">
-              {initials}
-            </div>
+            {currentUser?.avatarUrl ? (
+              <img 
+                src={currentUser.avatarUrl} 
+                alt={nameToDisplay}
+                referrerPolicy="no-referrer"
+                className="w-20 h-20 rounded-full object-cover border-2 border-[#E9C349] shadow-lg mb-4"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).onerror = null;
+                  (e.target as HTMLImageElement).src = ''; 
+                }}
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#E9C349] to-[#66D9CC] text-[#04141D] flex items-center justify-center text-2xl font-mono font-bold border-2 border-[#1c2c36] shadow-lg mb-4">
+                {initials}
+              </div>
+            )}
             <h2 className="font-sans font-bold text-base text-[#d4e5f2] tracking-tight">{nameToDisplay}</h2>
             <p className="font-mono text-[10px] text-[#E9C349] mt-0.5">{emailToDisplay}</p>
             {isStandardUser && (
@@ -1192,6 +1207,8 @@ export default function ProfileView({
                       setSelfPotencia(currentUser.potencia || '');
                       setSelfCidadeLoja(currentUser.cidadeLoja || '');
                       setSelfPassword(currentUser.password || '');
+                      setSelfEmail(currentUser.email || '');
+                      setSelfAvatarUrl(currentUser.avatarUrl || '');
                       setIsEditingSelf(true);
                     }}
                     className="mt-4 w-full bg-[#11212b] border border-[#1c2c36] text-[10px] text-[#E9C349] font-mono font-bold py-2 rounded hover:bg-[#1a303d] transition-colors flex items-center justify-center gap-1 cursor-pointer"
@@ -1207,17 +1224,40 @@ export default function ProfileView({
                   if (!currentUser) return;
                   const updated: AccessUser = {
                     ...currentUser,
+                    email: selfEmail.trim() || currentUser.email,
                     telefone: selfTelefone.trim() || undefined,
                     loja: selfLoja.trim() || undefined,
                     potencia: selfPotencia.trim() || undefined,
                     cidadeLoja: selfCidadeLoja.trim() || undefined,
-                    password: selfPassword.trim() || undefined
+                    password: selfPassword.trim() || undefined,
+                    avatarUrl: selfAvatarUrl.trim() || undefined
                   };
                   onUpdateAccessUser(updated);
                   setIsEditingSelf(false);
                 }}
                 className="w-full space-y-3 text-left"
               >
+                <div>
+                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">E-mail de Acesso</label>
+                  <input
+                    type="email"
+                    required
+                    value={selfEmail}
+                    onChange={(e) => setSelfEmail(e.target.value)}
+                    placeholder="Ex: irmao@dominio.com"
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">URL da Foto de Perfil</label>
+                  <input
+                    type="text"
+                    value={selfAvatarUrl}
+                    onChange={(e) => setSelfAvatarUrl(e.target.value)}
+                    placeholder="Ex: https://link-da-foto.com/foto.jpg"
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
                 <div>
                   <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Telefone com Prefixo</label>
                   <input
