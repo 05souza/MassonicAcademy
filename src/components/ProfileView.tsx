@@ -108,6 +108,7 @@ export default function ProfileView({
   const [userFormLoja, setUserFormLoja] = useState('');
   const [userFormPotencia, setUserFormPotencia] = useState('');
   const [userFormCidadeLoja, setUserFormCidadeLoja] = useState('');
+  const [userFormAvatarUrl, setUserFormAvatarUrl] = useState('');
   
   // Self Editing State
   const [isEditingSelf, setIsEditingSelf] = useState(false);
@@ -951,6 +952,7 @@ export default function ProfileView({
     setUserFormLoja(user.loja || '');
     setUserFormPotencia(user.potencia || '');
     setUserFormCidadeLoja(user.cidadeLoja || '');
+    setUserFormAvatarUrl(user.avatarUrl || '');
     
     setShowUserForm(true);
     setUserCrudError(null);
@@ -975,6 +977,7 @@ export default function ProfileView({
     setUserFormLoja('');
     setUserFormPotencia('');
     setUserFormCidadeLoja('');
+    setUserFormAvatarUrl('');
     
     setShowUserForm(true);
     setUserCrudError(null);
@@ -1025,7 +1028,8 @@ export default function ProfileView({
       loja: userFormLoja.trim() || undefined,
       potencia: userFormPotencia.trim() || undefined,
       cidadeLoja: userFormCidadeLoja.trim() || undefined,
-      userAcesso: userFormUserAcesso.trim() || undefined
+      userAcesso: userFormUserAcesso.trim() || undefined,
+      avatarUrl: userFormAvatarUrl.trim() || undefined
     };
 
     if (isCreatingNewUser) {
@@ -2260,32 +2264,54 @@ export default function ProfileView({
                   return m.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
                     m.email.toLowerCase().includes(accessSearchQuery.toLowerCase());
                 })
-                .map((m, idx) => (
-                  <div
-                    key={`static-m-${idx}`}
-                    className="p-3 rounded-lg border text-left text-xs bg-[#0c151e]/40 border-[#D4AF37]/30 border-l-4 border-l-[#D4AF37] flex items-center justify-between"
-                  >
-                    <div className="space-y-1 pr-2 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-[9px] text-[#E9C349] bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold">
-                          MESTRE
-                        </span>
-                        <span className="text-[9px] font-mono text-[#98907b]">
-                          DIRETORIA RM (ADMIN)
+                .map((m, idx) => {
+                  const masterAvatarUrl = (currentUser?.email.toLowerCase() === m.email.toLowerCase() ? currentUser?.avatarUrl : null) || 
+                    accessUsers.find(u => u.email.toLowerCase() === m.email.toLowerCase())?.avatarUrl;
+                  return (
+                    <div
+                      key={`static-m-${idx}`}
+                      className="p-3 rounded-lg border text-left text-xs bg-[#0c151e]/40 border-[#D4AF37]/30 border-l-4 border-l-[#D4AF37] flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3 pr-2 min-w-0">
+                        {masterAvatarUrl ? (
+                          <img 
+                            src={masterAvatarUrl} 
+                            alt={m.name}
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover border border-[#D4AF37]/40 bg-[#0c1d27] shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).onerror = null;
+                              (e.target as HTMLImageElement).src = ''; 
+                            }}
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#E9C349] text-[#04141D] flex items-center justify-center text-[10px] font-mono font-bold border border-[#1c2c36] shrink-0">
+                            {getInitials(m.name) || 'DL'}
+                          </div>
+                        )}
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] text-[#E9C349] bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold">
+                              MESTRE
+                            </span>
+                            <span className="text-[9px] font-mono text-[#98907b]">
+                              DIRETORIA RM (ADMIN)
+                            </span>
+                          </div>
+                          <h4 className="font-sans font-bold text-[#d4e5f2] text-[11px] truncate">
+                            {m.name}
+                          </h4>
+                          <p className="text-[10px] font-mono text-[#99907c] truncate">{m.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] font-mono bg-[#E9C349]/10 text-[#E9C349] px-1.5 py-0.5 rounded border border-[#E9C349]/30">
+                          Ativo (Master)
                         </span>
                       </div>
-                      <h4 className="font-sans font-bold text-[#d4e5f2] text-[11px]">
-                        {m.name}
-                      </h4>
-                      <p className="text-[10px] font-mono text-[#99907c] truncate">{m.email}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] font-mono bg-[#E9C349]/10 text-[#E9C349] px-1.5 py-0.5 rounded border border-[#E9C349]/30">
-                        Ativo (Master)
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
               {accessUsers
                 .filter(u => {
@@ -2311,38 +2337,56 @@ export default function ProfileView({
                           : 'bg-[#11212b]/60 border-[#1c2c36] hover:bg-[#06273a]/30 border-l-4 border-l-[#99907c]'
                       }`}
                     >
-                      <div className="space-y-1 pr-2 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[9px] text-cyan-400 bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold">
-                            {user.id}
-                          </span>
-                          {user.tipoUsuario === 'admin' ? (
-                            <span className="font-mono text-[9px] text-[#E9C349] bg-[#241a00] px-1 py-0.5 rounded border border-[#E9C349]/20 font-bold uppercase">
-                              Admin
+                      <div className="flex items-center gap-3 pr-2 min-w-0">
+                        {user.avatarUrl ? (
+                          <img 
+                            src={user.avatarUrl} 
+                            alt={user.name}
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover border border-[#66d9cc]/40 bg-[#0c1d27] shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).onerror = null;
+                              (e.target as HTMLImageElement).src = ''; 
+                            }}
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/40 to-[#66D9CC]/40 text-[#d4e5f2] flex items-center justify-center text-[10px] font-mono font-bold border border-[#1c2c36] shrink-0">
+                            {getInitials(user.name) || 'IR'}
+                          </div>
+                        )}
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[9px] text-cyan-400 bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold">
+                              {user.id}
                             </span>
-                          ) : (
-                            <span className="font-mono text-[9px] text-teal-400 bg-[#091a1e] px-1 py-0.5 rounded border border-[#1c2c36] uppercase">
-                              Padrão
+                            {user.tipoUsuario === 'admin' ? (
+                              <span className="font-mono text-[9px] text-[#E9C349] bg-[#241a00] px-1 py-0.5 rounded border border-[#E9C349]/20 font-bold uppercase">
+                                Admin
+                              </span>
+                            ) : (
+                              <span className="font-mono text-[9px] text-teal-400 bg-[#091a1e] px-1 py-0.5 rounded border border-[#1c2c36] uppercase">
+                                Padrão
+                              </span>
+                            )}
+                            <span className="text-[9px] font-mono text-[#99907c] truncate">
+                              {user.allowedReportIds ? `${user.allowedReportIds.split(',').length} Curso(s)` : 'Sem acesso'}
                             </span>
-                          )}
-                          <span className="text-[9px] font-mono text-[#99907c] truncate">
-                            {user.allowedReportIds ? `${user.allowedReportIds.split(',').length} Curso(s)` : 'Sem acesso'}
-                          </span>
+                          </div>
+                          <h4 className="font-sans font-bold text-[#d4e5f2] truncate text-[11px]">
+                            {user.name}
+                          </h4>
+                          <p className="text-[10px] font-mono text-[#99907c] truncate">
+                            {user.email} {user.userAcesso && <span className="text-[#E9C349] font-bold">(@{user.userAcesso})</span>}
+                          </p>
+                          <p className="text-[9px] font-mono text-[#E9C349] truncate mt-0.5" title={user.nivelAcesso || "1"}>
+                            Nível: {user.nivelAcesso || "1"}{' '}
+                            {user.password ? (
+                              <span className="text-[#66d9cc] ml-2 font-sans font-bold">🔑 {user.password}</span>
+                            ) : (
+                              <span className="text-[#99907c] ml-2">🔑 Sem Senha</span>
+                            )}
+                          </p>
                         </div>
-                        <h4 className="font-sans font-bold text-[#d4e5f2] truncate text-[11px]">
-                          {user.name}
-                        </h4>
-                        <p className="text-[10px] font-mono text-[#99907c] truncate">
-                          {user.email} {user.userAcesso && <span className="text-[#E9C349] font-bold">(@{user.userAcesso})</span>}
-                        </p>
-                        <p className="text-[9px] font-mono text-[#E9C349] truncate mt-0.5" title={user.nivelAcesso || "1"}>
-                          Nível: {user.nivelAcesso || "1"}{' '}
-                          {user.password ? (
-                            <span className="text-[#66d9cc] ml-2">🔑 Senha: {user.password}</span>
-                          ) : (
-                            <span className="text-[#99907c] ml-2">🔑 Senha: Sem Senha</span>
-                          )}
-                        </p>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -2457,6 +2501,64 @@ export default function ProfileView({
                         onChange={(e) => setUserFormName(e.target.value)}
                         className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Foto de Perfil</label>
+                      <div className="flex items-center gap-3 bg-[#04141d] border border-[#1c2c36] p-3 rounded-lg">
+                        {userFormAvatarUrl ? (
+                          <div className="relative group shrink-0">
+                            <img 
+                              src={userFormAvatarUrl} 
+                              alt="Foto de Perfil"
+                              className="w-12 h-12 rounded-full object-cover border border-[#E9C349]"
+                              referrerPolicy="no-referrer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setUserFormAvatarUrl('')}
+                              className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 transition-colors cursor-pointer flex items-center justify-center shadow-lg"
+                              title="Remover Foto"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-[#11212b] border border-[#1c2c36] flex items-center justify-center text-[#99907c] shrink-0">
+                            <ImageIcon className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-[#11212b] hover:bg-[#1a303d] border border-[#1c2c36] text-[10px] font-mono font-bold text-[#E9C349] cursor-pointer transition-colors">
+                            <Upload className="w-3.5 h-3.5" />
+                            Carregar Foto
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = async (event) => {
+                                  if (event.target?.result) {
+                                    try {
+                                      const base64Str = event.target.result as string;
+                                      const compressed = await compressImage(base64Str, 400, 400, 0.75);
+                                      setUserFormAvatarUrl(compressed);
+                                    } catch (err) {
+                                      console.error("Erro ao comprimir imagem:", err);
+                                      setUserFormAvatarUrl(event.target.result as string);
+                                    }
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                          </label>
+                          <span className="block text-[8px] text-[#99907c] font-mono mt-1">PNG, JPG ou GIF (comprimida automaticamente)</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
