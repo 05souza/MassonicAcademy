@@ -7,9 +7,10 @@ interface LibraryViewProps {
   currentUser: AccessUser | null;
   isAdmin: boolean;
   onOpenSecureViewer?: (url: string, title: string) => void;
+  onAccessBook?: (book: Book) => void;
 }
 
-export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureViewer }: LibraryViewProps) {
+export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureViewer, onAccessBook }: LibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('Todos os livros');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc'>('name-az');
@@ -138,6 +139,9 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
       e.stopPropagation();
       alert(`Acesso Restrito: Este material requer Grau ${book.nivelAcesso}. Seu Grau atual é ${userLevel}.`);
       return;
+    }
+    if (onAccessBook) {
+      onAccessBook(book);
     }
   };
 

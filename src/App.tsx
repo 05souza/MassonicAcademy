@@ -111,6 +111,11 @@ export default function App() {
     const saved = localStorage.getItem('masonic_books_v5');
     return saved ? JSON.parse(saved) : INITIAL_BOOKS;
   });
+
+  const [accessLogs, setAccessLogs] = useState<any[]>(() => {
+    const saved = localStorage.getItem('masonic_access_logs_v1');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('id');
 
@@ -232,6 +237,45 @@ export default function App() {
   const [bannerImageInput, setBannerImageInput] = useState('');
   const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
 
+  // Helper to log user accesses (logins, courses, books)
+  const logAccess = async (
+    type: 'login' | 'course' | 'book', 
+    targetId: string, 
+    targetTitle: string, 
+    userToLog?: AccessUser | null
+  ) => {
+    const targetUser = userToLog !== undefined ? userToLog : currentUser;
+    if (!targetUser) return;
+    const { db } = initializeFirebase();
+    const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const logData = {
+      id: logId,
+      userId: targetUser.id || 'master',
+      userEmail: targetUser.email,
+      userName: targetUser.name,
+      type,
+      targetId,
+      targetTitle,
+      timestamp: new Date().toISOString()
+    };
+
+    // 1. Update state & localStorage
+    setAccessLogs(prev => {
+      const updated = [logData, ...prev];
+      localStorage.setItem('masonic_access_logs_v1', JSON.stringify(updated));
+      return updated;
+    });
+
+    // 2. Save to Firestore
+    if (db) {
+      try {
+        await setDoc(doc(db, 'access_logs', logId), cleanObjectForFirestore(logData));
+      } catch (err) {
+        console.error('Error saving access log to Firestore:', err);
+      }
+    }
+  };
+
   // Load from Firestore (if configured) or LocalStorage fallback
   useEffect(() => {
     const savedCurrentUser = localStorage.getItem('masonic_current_user_v1');
@@ -246,6 +290,7 @@ export default function App() {
     let unsubUsers: () => void = () => {};
     let unsubBanner: () => void = () => {};
     let unsubBooks: () => void = () => {};
+    let unsubLogs: () => void = () => {};
 
     const loadInitialData = async () => {
       const { db } = initializeFirebase();
@@ -483,6 +528,29 @@ export default function App() {
             checkReady();
           });
 
+          // 6. Fetch access_logs in real-time
+          const logsCol = collection(db, 'access_logs');
+          unsubLogs = onSnapshot(logsCol, (logsSnapshot) => {
+            const loadedLogs: any[] = [];
+            logsSnapshot.forEach(docSnap => {
+              loadedLogs.push(docSnap.data());
+            });
+            // Sort by timestamp descending (newest first)
+            loadedLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setAccessLogs(loadedLogs);
+            localStorage.setItem('masonic_access_logs_v1', JSON.stringify(loadedLogs));
+          }, (err) => {
+            console.error('Erro de permissão ou rede no onSnapshot access_logs:', err);
+            const saved = localStorage.getItem('masonic_access_logs_v1');
+            if (saved) {
+              try {
+                setAccessLogs(JSON.parse(saved));
+              } catch (e) {
+                console.error('Failed to parse cached access logs:', e);
+              }
+            }
+          });
+
           return; // Skip local storage fallback
         } catch (err) {
           console.error('Falha de inicialização em tempo real do Firestore:', err);
@@ -556,6 +624,12 @@ export default function App() {
         setAccessUsers(defaultUsers);
         localStorage.setItem('masonic_access_users_v1', JSON.stringify(defaultUsers));
       }
+
+      const savedLogs = localStorage.getItem('masonic_access_logs_v1');
+      if (savedLogs) {
+        setAccessLogs(JSON.parse(savedLogs));
+      }
+
       setIsSessionLoaded(true);
     };
 
@@ -567,8 +641,16 @@ export default function App() {
       unsubUsers();
       unsubBanner();
       unsubBooks();
+      unsubLogs();
     };
   }, []);
+
+  // Log course views when a report/course is selected
+  useEffect(() => {
+    if (selectedReport && currentUser) {
+      logAccess('course', selectedReport.id, selectedReport.title);
+    }
+  }, [selectedReport]);
 
   // Synchronize currentUser with the latest from accessUsers list whenever accessUsers is updated!
   useEffect(() => {
@@ -712,6 +794,8 @@ export default function App() {
   const handleSelectUser = (user: AccessUser) => {
     setCurrentUser(user);
     localStorage.setItem('masonic_current_user_v1', JSON.stringify(user));
+    // Log login access for this user
+    logAccess('login', '', '', user);
     // If the simulated session user has changed to someone that isn't admin, switch navigation tab out of settings
     if (!isAdmin(user.email) && activeTab === 'perfil') {
       setActiveTab('inicio');
@@ -1540,6 +1624,9 @@ export default function App() {
               setSecureViewerTitle(title);
               setSecureViewerOpen(true);
             }}
+            onAccessBook={(book) => {
+              logAccess('book', book.id, book.title);
+            }}
           />
         )}
 
@@ -1584,6 +1671,7 @@ export default function App() {
             onAddBook={handleAddBook}
             onUpdateBook={handleUpdateBook}
             onDeleteBook={handleDeleteBook}
+            accessLogs={accessLogs}
           />
         )}
 

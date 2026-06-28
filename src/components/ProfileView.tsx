@@ -36,6 +36,9 @@ interface ProfileViewProps {
   onAddBook?: (newBook: Book) => void;
   onUpdateBook?: (updatedBook: Book) => void;
   onDeleteBook?: (bookId: string) => void;
+
+  // Access Logs Prop
+  accessLogs?: any[];
 }
 
 export default function ProfileView({ 
@@ -57,7 +60,8 @@ export default function ProfileView({
   books = [],
   onAddBook,
   onUpdateBook,
-  onDeleteBook
+  onDeleteBook,
+  accessLogs = []
 }: ProfileViewProps) {
   const getInitials = (name: string) => {
     return name
@@ -67,6 +71,10 @@ export default function ProfileView({
       .slice(0, 2)
       .join('')
       .toUpperCase();
+  };
+
+  const getLogsToRender = () => {
+    return accessLogs || [];
   };
 
   const nameToDisplay = currentUser?.name || 'Administrador';
@@ -81,7 +89,7 @@ export default function ProfileView({
   const isStandardUser = currentUser?.tipoUsuario === 'padrao';
 
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats'>('profile');
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile') {
@@ -123,6 +131,11 @@ export default function ProfileView({
   const [userCrudError, setUserCrudError] = useState<string | null>(null);
   const [userCrudSuccess, setUserCrudSuccess] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Access Stats / Reports tab filter state
+  const [reportsTab, setReportsTab] = useState<'logins' | 'courses' | 'books'>('logins');
+  const [reportsGrouping, setReportsGrouping] = useState<'by-item' | 'by-user'>('by-item');
+  const [searchLogUser, setSearchLogUser] = useState('');
 
   // Firebase Database Configuration State
   const initialFb = getFirebaseConfig();
@@ -1139,6 +1152,16 @@ export default function ProfileView({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE LIVROS ({books.length})
+            </button>
+            <button
+              onClick={() => setActiveSubTab('accessStats')}
+              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'accessStats'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-[#66d9cc]" /> RELATÓRIOS DE ACESSO
             </button>
           </>
         )}
@@ -3389,6 +3412,675 @@ export default function ProfileView({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {activeSubTab === 'accessStats' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0c1d27] p-5 rounded-xl border border-[#1c2c36]">
+            <div>
+              <h3 className="font-sans font-bold text-lg text-[#d4e5f2] flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-[#66d9cc]" /> Relatórios de Acessos & Atividades
+              </h3>
+              <p className="text-xs font-mono text-[#99907c] mt-1">
+                Análise em tempo real de logins de usuários, visualizações de cursos e leituras de livros.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-initial">
+                <input
+                  type="text"
+                  placeholder="Filtrar por Usuário..."
+                  value={searchLogUser}
+                  onChange={(e) => setSearchLogUser(e.target.value)}
+                  className="w-full sm:w-64 bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 pl-9 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+                {searchLogUser && (
+                  <button
+                    onClick={() => setSearchLogUser('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#99907c] hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* KPI Dashboard Grid */}
+          {(() => {
+            const allLogs = getLogsToRender().filter(log => {
+              if (!searchLogUser) return true;
+              return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                     log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+            });
+
+            const totalLogins = allLogs.filter(l => l.type === 'login').length;
+            const totalCourseAccess = allLogs.filter(l => l.type === 'course').length;
+            const totalBookAccess = allLogs.filter(l => l.type === 'book').length;
+            const uniqueUsers = new Set(allLogs.map(l => l.userEmail)).size;
+
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Total de Logins</span>
+                  <div className="flex items-baseline gap-1.5 mt-2">
+                    <span className="text-2xl font-bold font-sans text-[#E9C349]">{totalLogins}</span>
+                    <span className="text-[10px] font-mono text-[#99907c]">sessões</span>
+                  </div>
+                </div>
+                <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Cliques em Cursos</span>
+                  <div className="flex items-baseline gap-1.5 mt-2">
+                    <span className="text-2xl font-bold font-sans text-[#66d9cc]">{totalCourseAccess}</span>
+                    <span className="text-[10px] font-mono text-[#99907c]">leituras</span>
+                  </div>
+                </div>
+                <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Cliques em Livros</span>
+                  <div className="flex items-baseline gap-1.5 mt-2">
+                    <span className="text-2xl font-bold font-sans text-orange-400">{totalBookAccess}</span>
+                    <span className="text-[10px] font-mono text-[#99907c]">consultas</span>
+                  </div>
+                </div>
+                <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 flex flex-col justify-between">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Usuários Ativos</span>
+                  <div className="flex items-baseline gap-1.5 mt-2">
+                    <span className="text-2xl font-bold font-sans text-[#d4e5f2]">{uniqueUsers}</span>
+                    <span className="text-[10px] font-mono text-[#99907c]">membros</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Report Tab Navigation */}
+          <div className="flex border-b border-[#1c2c36] gap-1 select-none">
+            <button
+              onClick={() => {
+                setReportsTab('logins');
+                setReportsGrouping('by-item');
+              }}
+              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                reportsTab === 'logins'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              🔑 QUANTIDADE DE ACESSOS (SESSÕES)
+            </button>
+            <button
+              onClick={() => {
+                setReportsTab('courses');
+                setReportsGrouping('by-item');
+              }}
+              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                reportsTab === 'courses'
+                  ? 'border-[#66d9cc] text-[#66d9cc] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              🎓 ACESSOS POR USUÁRIO E CURSO
+            </button>
+            <button
+              onClick={() => {
+                setReportsTab('books');
+                setReportsGrouping('by-item');
+              }}
+              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                reportsTab === 'books'
+                  ? 'border-orange-400 text-orange-400 bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              📚 ACESSOS POR USUÁRIOS X LIVROS
+            </button>
+          </div>
+
+          {/* Detail Panel */}
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-6 space-y-6">
+            
+            {reportsTab === 'logins' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Logins Realizados por Usuário</h4>
+                    <p className="text-[10px] font-mono text-[#99907c]">Quantidade acumulada de autenticações de cada irmão</p>
+                  </div>
+                </div>
+
+                {(() => {
+                  const filtered = getLogsToRender().filter(log => {
+                    if (log.type !== 'login') return false;
+                    if (!searchLogUser) return true;
+                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                  });
+
+                  // Group by email
+                  const groupedMap: Record<string, { name: string; email: string; count: number; lastAccess: string }> = {};
+                  filtered.forEach(log => {
+                    const key = log.userEmail.toLowerCase();
+                    if (!groupedMap[key]) {
+                      groupedMap[key] = {
+                        name: log.userName,
+                        email: log.userEmail,
+                        count: 0,
+                        lastAccess: log.timestamp
+                      };
+                    }
+                    groupedMap[key].count++;
+                    if (new Date(log.timestamp) > new Date(groupedMap[key].lastAccess)) {
+                      groupedMap[key].lastAccess = log.timestamp;
+                    }
+                  });
+
+                  const groupedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                  const maxCount = groupedList.length > 0 ? Math.max(...groupedList.map(g => g.count)) : 1;
+
+                  if (groupedList.length === 0) {
+                    return (
+                      <div className="text-center py-10 bg-[#04141d] rounded-lg border border-[#1c2c36]">
+                        <p className="text-xs font-mono text-[#99907c]">Nenhum registro de login encontrado.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3">
+                      {groupedList.map((userStats, idx) => {
+                        const pct = (userStats.count / maxCount) * 100;
+                        const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                        return (
+                          <div 
+                            key={`log-usr-${idx}`}
+                            className="p-3.5 bg-[#04141d] rounded-lg border border-[#1c2c36]/60 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              {avatarUrl ? (
+                                <img 
+                                  src={avatarUrl} 
+                                  alt={userStats.name} 
+                                  referrerPolicy="no-referrer"
+                                  className="w-9 h-9 rounded-full object-cover border border-[#E9C349]/40 bg-[#0c1d27]"
+                                />
+                              ) : (
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-[#66D9CC]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                  {getInitials(userStats.name)}
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-sans font-bold text-[#d4e5f2] text-xs truncate">{userStats.name}</h5>
+                                <p className="text-[10px] font-mono text-[#99907c] truncate">{userStats.email}</p>
+                                
+                                {/* Progress visual meter */}
+                                <div className="mt-2 w-full bg-[#11212b] rounded-full h-1.5 overflow-hidden border border-[#1c2c36]">
+                                  <div 
+                                    className="bg-gradient-to-r from-[#E9C349] to-[#ffd452] h-full rounded-full transition-all"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between md:justify-end gap-6 shrink-0 border-t md:border-t-0 border-[#1c2c36] pt-2 md:pt-0">
+                              <div className="text-left md:text-right font-mono">
+                                <span className="text-[9px] text-[#99907c] block uppercase">Último Acesso</span>
+                                <span className="text-[10px] text-[#a5b8c7]">
+                                  {new Date(userStats.lastAccess).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-mono text-[9px] text-[#E9C349] block uppercase font-bold">Total Logins</span>
+                                <span className="text-lg font-bold font-sans text-[#E9C349]">{userStats.count}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {reportsTab === 'courses' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Acessos a Cursos & Títulos</h4>
+                    <p className="text-[10px] font-mono text-[#99907c]">Cliques e leituras de materiais dos cursos/títulos por usuário</p>
+                  </div>
+
+                  {/* Grouping Toggle */}
+                  <div className="flex bg-[#04141d] border border-[#1c2c36] p-0.5 rounded-lg select-none">
+                    <button
+                      onClick={() => setReportsGrouping('by-item')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        reportsGrouping === 'by-item'
+                          ? 'bg-[#66d9cc] text-[#02332e]'
+                          : 'text-[#99907c] hover:text-white'
+                      }`}
+                    >
+                      Agrupar por Curso
+                    </button>
+                    <button
+                      onClick={() => setReportsGrouping('by-user')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        reportsGrouping === 'by-user'
+                          ? 'bg-[#66d9cc] text-[#02332e]'
+                          : 'text-[#99907c] hover:text-white'
+                      }`}
+                    >
+                      Agrupar por Usuário
+                    </button>
+                  </div>
+                </div>
+
+                {(() => {
+                  const filtered = getLogsToRender().filter(log => {
+                    if (log.type !== 'course') return false;
+                    if (!searchLogUser) return true;
+                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-10 bg-[#04141d] rounded-lg border border-[#1c2c36]">
+                        <p className="text-xs font-mono text-[#99907c]">Nenhum registro de acesso a curso encontrado.</p>
+                      </div>
+                    );
+                  }
+
+                  if (reportsGrouping === 'by-item') {
+                    // Group by course title
+                    const groupedMap: Record<string, { title: string; count: number; users: Record<string, { name: string; count: number }> }> = {};
+                    filtered.forEach(log => {
+                      const key = log.targetTitle || log.targetId || 'Curso Não Identificado';
+                      if (!groupedMap[key]) {
+                        groupedMap[key] = {
+                          title: key,
+                          count: 0,
+                          users: {}
+                        };
+                      }
+                      groupedMap[key].count++;
+                      
+                      const userKey = log.userEmail.toLowerCase();
+                      if (!groupedMap[key].users[userKey]) {
+                        groupedMap[key].users[userKey] = {
+                          name: log.userName,
+                          count: 0
+                        };
+                      }
+                      groupedMap[key].users[userKey].count++;
+                    });
+
+                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                    const maxCount = sortedList.length > 0 ? Math.max(...sortedList.map(c => c.count)) : 1;
+
+                    return (
+                      <div className="space-y-4">
+                        {sortedList.map((courseStats, idx) => {
+                          const pct = (courseStats.count / maxCount) * 100;
+                          return (
+                            <div 
+                              key={`course-stat-${idx}`}
+                              className="p-4 bg-[#04141d] rounded-lg border border-[#1c2c36]/60 space-y-3 text-left"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1c2c36]/40 pb-2">
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-mono text-[9px] text-[#66d9cc] font-bold bg-[#66d9cc]/10 px-1.5 py-0.5 rounded border border-[#66d9cc]/30">
+                                    CURSO
+                                  </span>
+                                  <h5 className="font-sans font-bold text-[#d4e5f2] text-xs sm:text-sm mt-1 truncate" title={courseStats.title}>
+                                    {courseStats.title}
+                                  </h5>
+                                </div>
+                                <div className="text-left sm:text-right shrink-0">
+                                  <span className="text-[9px] font-mono text-[#99907c] uppercase block">Total de Acessos</span>
+                                  <span className="text-base font-bold font-sans text-[#66d9cc]">{courseStats.count}</span>
+                                </div>
+                              </div>
+
+                              {/* Progress visual bar */}
+                              <div className="w-full bg-[#11212b] rounded-full h-1 overflow-hidden">
+                                <div 
+                                  className="bg-[#66d9cc] h-full rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+
+                              {/* User breakdowns */}
+                              <div className="space-y-1">
+                                <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Acessos por Membro:</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                                  {Object.entries(courseStats.users).map(([email, info], uIdx) => (
+                                    <div 
+                                      key={`course-u-${uIdx}`}
+                                      className="flex items-center justify-between p-1.5 px-2 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded text-[10px] font-mono"
+                                    >
+                                      <span className="text-[#a5b8c7] truncate max-w-[130px]" title={`${info.name} (${email})`}>
+                                        {info.name}
+                                      </span>
+                                      <span className="font-bold text-[#66d9cc] bg-[#66d9cc]/10 px-1 rounded">
+                                        {info.count}x
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  } else {
+                    // Group by User
+                    const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
+                    filtered.forEach(log => {
+                      const key = log.userEmail.toLowerCase();
+                      const courseTitle = log.targetTitle || 'Curso Sem Título';
+                      if (!groupedMap[key]) {
+                        groupedMap[key] = {
+                          name: log.userName,
+                          email: log.userEmail,
+                          count: 0,
+                          items: {}
+                        };
+                      }
+                      groupedMap[key].count++;
+                      groupedMap[key].items[courseTitle] = (groupedMap[key].items[courseTitle] || 0) + 1;
+                    });
+
+                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+
+                    return (
+                      <div className="space-y-3">
+                        {sortedList.map((userStats, idx) => {
+                          const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                          return (
+                            <div 
+                              key={`user-course-stat-${idx}`}
+                              className="p-4 bg-[#04141d] rounded-lg border border-[#1c2c36]/60 flex flex-col md:flex-row md:items-start justify-between gap-4 text-left"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 md:w-1/3">
+                                {avatarUrl ? (
+                                  <img 
+                                    src={avatarUrl} 
+                                    alt={userStats.name} 
+                                    referrerPolicy="no-referrer"
+                                    className="w-9 h-9 rounded-full object-cover border border-[#66d9cc]/40 bg-[#0c1d27]"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#66D9CC]/20 to-[#E9C349]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                    {getInitials(userStats.name)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h5 className="font-sans font-bold text-[#d4e5f2] text-xs truncate">{userStats.name}</h5>
+                                  <p className="text-[10px] font-mono text-[#99907c] truncate">{userStats.email}</p>
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <span className="text-[9px] font-mono text-[#66d9cc] bg-[#66d9cc]/10 px-1.5 rounded uppercase font-bold">
+                                      {userStats.count} cliques totais
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 border-t md:border-t-0 border-[#1c2c36] pt-2 md:pt-0 space-y-1">
+                                <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Títulos Acessados por este Usuário:</span>
+                                <div className="space-y-1">
+                                  {Object.entries(userStats.items).map(([course, count], cIdx) => (
+                                    <div 
+                                      key={`uc-detail-${cIdx}`}
+                                      className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
+                                    >
+                                      <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{course}</span>
+                                      <span className="text-[#66d9cc] font-bold">{count}x</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            )}
+
+            {reportsTab === 'books' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Acessos a Livros & Biblioteca</h4>
+                    <p className="text-[10px] font-mono text-[#99907c]">Consultas e cliques para download dos títulos na Biblioteca Virtual</p>
+                  </div>
+
+                  {/* Grouping Toggle */}
+                  <div className="flex bg-[#04141d] border border-[#1c2c36] p-0.5 rounded-lg select-none">
+                    <button
+                      onClick={() => setReportsGrouping('by-item')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        reportsGrouping === 'by-item'
+                          ? 'bg-orange-400 text-[#241200]'
+                          : 'text-[#99907c] hover:text-white'
+                      }`}
+                    >
+                      Agrupar por Livro
+                    </button>
+                    <button
+                      onClick={() => setReportsGrouping('by-user')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-mono font-bold uppercase transition-all cursor-pointer ${
+                        reportsGrouping === 'by-user'
+                          ? 'bg-orange-400 text-[#241200]'
+                          : 'text-[#99907c] hover:text-white'
+                      }`}
+                    >
+                      Agrupar por Usuário
+                    </button>
+                  </div>
+                </div>
+
+                {(() => {
+                  const filtered = getLogsToRender().filter(log => {
+                    if (log.type !== 'book') return false;
+                    if (!searchLogUser) return true;
+                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-10 bg-[#04141d] rounded-lg border border-[#1c2c36]">
+                        <p className="text-xs font-mono text-[#99907c]">Nenhum registro de acesso a livro encontrado.</p>
+                      </div>
+                    );
+                  }
+
+                  if (reportsGrouping === 'by-item') {
+                    // Group by Book title
+                    const groupedMap: Record<string, { title: string; count: number; users: Record<string, { name: string; count: number }> }> = {};
+                    filtered.forEach(log => {
+                      const key = log.targetTitle || log.targetId || 'Livro Não Identificado';
+                      if (!groupedMap[key]) {
+                        groupedMap[key] = {
+                          title: key,
+                          count: 0,
+                          users: {}
+                        };
+                      }
+                      groupedMap[key].count++;
+
+                      const userKey = log.userEmail.toLowerCase();
+                      if (!groupedMap[key].users[userKey]) {
+                        groupedMap[key].users[userKey] = {
+                          name: log.userName,
+                          count: 0
+                        };
+                      }
+                      groupedMap[key].users[userKey].count++;
+                    });
+
+                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                    const maxCount = sortedList.length > 0 ? Math.max(...sortedList.map(c => c.count)) : 1;
+
+                    return (
+                      <div className="space-y-4">
+                        {sortedList.map((bookStats, idx) => {
+                          const pct = (bookStats.count / maxCount) * 100;
+                          return (
+                            <div 
+                              key={`book-stat-${idx}`}
+                              className="p-4 bg-[#04141d] rounded-lg border border-[#1c2c36]/60 space-y-3 text-left"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1c2c36]/40 pb-2">
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-mono text-[9px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded border border-orange-400/30">
+                                    LIVRO / OBRA
+                                  </span>
+                                  <h5 className="font-sans font-bold text-[#d4e5f2] text-xs sm:text-sm mt-1 truncate" title={bookStats.title}>
+                                    {bookStats.title}
+                                  </h5>
+                                </div>
+                                <div className="text-left sm:text-right shrink-0">
+                                  <span className="text-[9px] font-mono text-[#99907c] uppercase block">Acessos à Obra</span>
+                                  <span className="text-base font-bold font-sans text-orange-400">{bookStats.count}</span>
+                                </div>
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="w-full bg-[#11212b] rounded-full h-1 overflow-hidden">
+                                <div 
+                                  className="bg-orange-400 h-full rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+
+                              {/* Users breakdowns */}
+                              <div className="space-y-1">
+                                <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Acessado pelos Irmãos:</span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                                  {Object.entries(bookStats.users).map(([email, info], uIdx) => (
+                                    <div 
+                                      key={`book-u-${uIdx}`}
+                                      className="flex items-center justify-between p-1.5 px-2 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded text-[10px] font-mono"
+                                    >
+                                      <span className="text-[#a5b8c7] truncate max-w-[130px]" title={`${info.name} (${email})`}>
+                                        {info.name}
+                                      </span>
+                                      <span className="font-bold text-orange-400 bg-orange-400/10 px-1 rounded">
+                                        {info.count}x
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  } else {
+                    // Group by User
+                    const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
+                    filtered.forEach(log => {
+                      const key = log.userEmail.toLowerCase();
+                      const bookTitle = log.targetTitle || 'Obra Virtual';
+                      if (!groupedMap[key]) {
+                        groupedMap[key] = {
+                          name: log.userName,
+                          email: log.userEmail,
+                          count: 0,
+                          items: {}
+                        };
+                      }
+                      groupedMap[key].count++;
+                      groupedMap[key].items[bookTitle] = (groupedMap[key].items[bookTitle] || 0) + 1;
+                    });
+
+                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+
+                    return (
+                      <div className="space-y-3">
+                        {sortedList.map((userStats, idx) => {
+                          const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                          return (
+                            <div 
+                              key={`user-book-stat-${idx}`}
+                              className="p-4 bg-[#04141d] rounded-lg border border-[#1c2c36]/60 flex flex-col md:flex-row md:items-start justify-between gap-4 text-left"
+                            >
+                              <div className="flex items-center gap-3 min-w-0 md:w-1/3">
+                                {avatarUrl ? (
+                                  <img 
+                                    src={avatarUrl} 
+                                    alt={userStats.name} 
+                                    referrerPolicy="no-referrer"
+                                    className="w-9 h-9 rounded-full object-cover border border-orange-400/40 bg-[#0c1d27]"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-orange-400/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                    {getInitials(userStats.name)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h5 className="font-sans font-bold text-[#d4e5f2] text-xs truncate">{userStats.name}</h5>
+                                  <p className="text-[10px] font-mono text-[#99907c] truncate">{userStats.email}</p>
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <span className="text-[9px] font-mono text-orange-400 bg-orange-400/10 px-1.5 rounded uppercase font-bold">
+                                      {userStats.count} leituras totais
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 border-t md:border-t-0 border-[#1c2c36] pt-2 md:pt-0 space-y-1">
+                                <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Obras Acessadas por este Usuário:</span>
+                                <div className="space-y-1">
+                                  {Object.entries(userStats.items).map(([book, count], bIdx) => (
+                                    <div 
+                                      key={`ub-detail-${bIdx}`}
+                                      className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
+                                    >
+                                      <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{book}</span>
+                                      <span className="text-orange-400 font-bold">{count}x</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+            )}
+
+          </div>
+
+          {/* Bottom disclaimer */}
+          <div className="text-right">
+            <span className="text-[9px] font-mono text-[#99907c] uppercase block">
+              Nota: Os acessos são salvos automaticamente em tempo real no Firestore e na cache local.
+            </span>
+          </div>
+
         </div>
       )}
 
