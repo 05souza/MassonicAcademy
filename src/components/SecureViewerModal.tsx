@@ -202,8 +202,8 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
           
           {/* Subtle protection overlay watermark */}
           <div className="absolute inset-0 pointer-events-none select-none z-10 flex items-center justify-center opacity-[0.03]">
-            <div className="text-[#E9C349] font-sans font-extrabold text-5xl rotate-45 uppercase tracking-widest text-center leading-normal">
-              PROPRIEDADE EXCLUSIVA <br /> MASONIC ACADEMY
+            <div className="text-[#E9C349] font-sans font-extrabold text-2xl sm:text-3xl rotate-45 uppercase tracking-widest text-center leading-normal">
+              protegido por direitos autorais
             </div>
           </div>
 
