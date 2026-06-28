@@ -134,11 +134,11 @@ A busca contínua por excelência operacional gerou maior satisfação de client
     thumbnailUrl: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=120&q=80',
     additionalLink: 'https://www.masonicacademy.com.br/segmentos/educacional/',
     fullMarkdown: `## Planejamento Estratégico de Software (PES) Educacional
-O segmento Educacional transiciona vigorosamente no triênio 2023 a 2026. A digitalização massiva das jornadas do aluno e do corpo docente culmina em maior engajamento e combate à evasão de matrículas acadêmicas.
+O segmento Educacional transiciona vigorosamente no triênio 2023 a 2026. A digitalização massiva das jornadas do irmão e do corpo docente culmina em maior engajamento e combate à evasão de matrículas acadêmicas.
 
 ### 🎓 Objetivos Chave Consolidados:
-1. **Portal Unificado do Aluno**: Automação ponta-a-ponta, do vestibular e assinatura digital do contrato de matrícula até a emissão do diploma em blockchain corporativo.
-2. **Combate à Evasão via Análise Preditiva**: Algoritmos de aprendizado de máquina identificando alunos com padrão de frequência sob risco, gerando alertas instantâneos de intervenção psicopedagógica.
+1. **Portal Unificado do Irmão**: Automação ponta-a-ponta, do vestibular e assinatura digital do contrato de matrícula até a emissão do diploma em blockchain corporativo.
+2. **Combate à Evasão via Análise Preditiva**: Algoritmos de aprendizado de máquina identificando irmãos com padrão de frequência sob risco, gerando alertas instantâneos de intervenção psicopedagógica.
 3. **Plataforma de Avaliação Unificada**: Aplicação de provas e avaliações formativas online integradas diretamente aos boletins escolares do ERP.
 `
   }

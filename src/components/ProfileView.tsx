@@ -1249,14 +1249,61 @@ export default function ProfileView({
                   />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">URL da Foto de Perfil</label>
-                  <input
-                    type="text"
-                    value={selfAvatarUrl}
-                    onChange={(e) => setSelfAvatarUrl(e.target.value)}
-                    placeholder="Ex: https://link-da-foto.com/foto.jpg"
-                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                  />
+                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Foto de Perfil</label>
+                  <div className="flex items-center gap-3 bg-[#04141d] border border-[#1c2c36] p-3 rounded-lg">
+                    {selfAvatarUrl ? (
+                      <div className="relative group shrink-0">
+                        <img 
+                          src={selfAvatarUrl} 
+                          alt="Foto de Perfil"
+                          className="w-12 h-12 rounded-full object-cover border border-[#E9C349]"
+                          referrerPolicy="no-referrer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelfAvatarUrl('')}
+                          className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 transition-colors cursor-pointer flex items-center justify-center shadow-lg"
+                          title="Remover Foto"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-[#11212b] border border-[#1c2c36] flex items-center justify-center text-[#99907c] shrink-0">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-[#11212b] hover:bg-[#1a303d] border border-[#1c2c36] text-[10px] font-mono font-bold text-[#E9C349] cursor-pointer transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        Carregar Arquivo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = async (event) => {
+                              if (event.target?.result) {
+                                try {
+                                  const base64Str = event.target.result as string;
+                                  const compressed = await compressImage(base64Str, 400, 400, 0.75);
+                                  setSelfAvatarUrl(compressed);
+                                } catch (err) {
+                                  console.error("Erro ao comprimir imagem:", err);
+                                  setSelfAvatarUrl(event.target.result as string);
+                                }
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      <span className="block text-[8px] text-[#99907c] font-mono mt-1">PNG, JPG ou GIF</span>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Telefone com Prefixo</label>

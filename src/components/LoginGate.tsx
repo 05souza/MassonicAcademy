@@ -163,7 +163,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
               <p className="text-xs text-[#99907c] font-mono mt-1">Carregando painel analítico para:</p>
               <p className="text-base font-bold text-[#d4e5f2] mt-2 font-sans">{successUser.name}</p>
               <p className="text-[10px] text-[#E9C349] font-mono bg-[#11212b] px-3 py-1 rounded border border-[#1c2c36] inline-block mt-1 uppercase">
-                {successUser.email === 'dani.nanda.lucas@gmail.com' ? 'Acesso Diretor (Mestre)' : `Colaborador (${successUser.status})`}
+                {successUser.email === 'dani.nanda.lucas@gmail.com' ? 'Acesso Diretor (Mestre)' : `Irmão (${successUser.status})`}
               </p>
             </div>
           </div>

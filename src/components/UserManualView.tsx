@@ -59,7 +59,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
     {
       category: 'admin',
       question: 'Como funciona o limite "Emitir Certificado apenas para Conteúdo Completo"?',
-      answer: 'Esta é uma configuração habilitada individualmente por questionário. Se habilitada, impede que alunos obtenham certificados ao fazerem simulados rápidos baseados em "Amostras" de 10 ou 20 questões ou simulações por uma categoria temática única. Isso garante que o certificado oficial só seja liberado após o exame abrangente de 100% das perguntas.'
+      answer: 'Esta é uma configuração habilitada individualmente por questionário. Se habilitada, impede que irmãos obtenham certificados ao fazerem simulados rápidos baseados em "Amostras" de 10 ou 20 questões ou simulações por uma categoria temática única. Isso garante que o certificado oficial só seja liberado após o exame abrangente de 100% das perguntas.'
     },
     {
       category: 'admin',
@@ -119,7 +119,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
       <div className="flex flex-wrap gap-2 border-b border-[#1c2c36]/50 pb-3">
         {[
           { id: 'geral', label: '📙 Visão Geral', color: 'border-[#D4AF37]' },
-          { id: 'aluno', label: '🎓 Área do Aluno', color: 'border-[#66d9cc]' },
+          { id: 'aluno', label: '🎓 Área do Irmão', color: 'border-[#66d9cc]' },
           { id: 'admin', label: '👑 Painel Master', color: 'border-[#e07553]' },
           { id: 'faq', label: '💬 Perguntas Frequentes', color: 'border-blue-400' }
         ].filter(tab => tab.id !== 'admin' || isAdmin).map(tab => (
@@ -160,7 +160,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                 </h4>
                 <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
                   A plataforma utiliza um modelo de <strong>Graus de Instrução (1 ao 33)</strong>. Cada usuário é filiado a um grau específico.
-                  Isso restringe automaticamente quais relatórios, diretrizes e simulados podem ser visualizados na tela principal do aluno.
+                  Isso restringe automaticamente quais relatórios, diretrizes e simulados podem ser visualizados na tela principal do irmão.
                 </p>
               </div>
 
@@ -218,12 +218,12 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
           </div>
         )}
 
-        {/* SECTION: ÁREA DO ALUNO */}
+        {/* SECTION: ÁREA DO IRMÃO */}
         {activeManualSection === 'aluno' && (
           <div className="space-y-6">
             <div className="border-b border-[#1c2c36]/50 pb-3">
               <h3 className="text-base font-sans font-black text-[#d4e5f2] flex items-center gap-1.5 uppercase tracking-wide">
-                <BookOpenCheck className="w-4.5 h-4.5 text-[#66d9cc]" /> Instruções de Estudo do Aluno
+                <BookOpenCheck className="w-4.5 h-4.5 text-[#66d9cc]" /> Instruções de Estudo do Irmão
               </h3>
               <p className="text-xs text-[#99907c] mt-1 leading-relaxed">
                 Descubra como maximizar seus estudos e solicitar seus certificados oficiais de forma integrada.
@@ -319,14 +319,14 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
               {/* Gerenciamento de Usuários */}
               <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
                 <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#E9C349]" /> Controle de Alunos & Permissões de Acesso
+                  <Users className="w-4 h-4 text-[#E9C349]" /> Controle de Irmãos & Permissões de Acesso
                 </h4>
                 <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
                   Na seção de gerenciamento de usuários, o Administrador possui controle sobre:
                 </p>
                 <ul className="text-[10px] text-[#99907c] list-disc list-inside space-y-1.5 pl-1.5">
                   <li><strong className="text-white">Nível de Grau do Usuário:</strong> Limita o acesso apenas a disciplinas do seu grau ou inferiores.</li>
-                  <li><strong className="text-white">Status ("Ativo" ou "Inativo"):</strong> Bloqueia instantaneamente o acesso do aluno caso o status físico seja configurado para Inativo.</li>
+                  <li><strong className="text-white">Status ("Ativo" ou "Inativo"):</strong> Bloqueia instantaneamente o acesso do irmão caso o status físico seja configurado para Inativo.</li>
                   <li><strong className="text-white">Adicionar Novos Usuários:</strong> Cadastrar nomes, e-mails específicos e graus correspondentes de forma individual.</li>
                 </ul>
               </div>
@@ -349,7 +349,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                   <div className="bg-[#04141d] p-3 rounded border border-[#1c2c36] space-y-1">
                     <span className="text-[10px] font-mono text-orange-400 font-bold block">RESTRIÇÃO DE CERTIFICADO</span>
                     <span className="text-[10px] text-[#99907c] block leading-relaxed">
-                      Marque "Emitir apenas para conteúdo completo" para forçar que o aluno execute todo o escopo de perguntas, evitando simulações curtas e superficiais.
+                      Marque "Emitir apenas para conteúdo completo" para forçar que o irmão execute todo o escopo de perguntas, evitando simulações curtas e superficiais.
                     </span>
                   </div>
                 </div>
@@ -409,7 +409,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                             ? 'bg-orange-950 text-orange-400' 
                             : 'bg-[#11212b] text-blue-400'
                         }`}>
-                          {faq.category === 'aluno' ? 'Aluno' : faq.category === 'admin' ? 'Admin' : 'Geral'}
+                          {faq.category === 'aluno' ? 'Irmão' : faq.category === 'admin' ? 'Admin' : 'Geral'}
                         </span>
                         <span className="text-xs font-sans font-bold text-[#d4e5f2] hover:text-white transition-colors">
                           {faq.question}

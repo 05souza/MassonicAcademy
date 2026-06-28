@@ -1565,7 +1565,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                               EMITIR CERTIFICADO APENAS PARA CONTEÚDO COMPLETO
                             </span>
                             <span className="text-[9px] text-[#9a9280] block leading-relaxed">
-                              Se ativo e o aluno escolher as opções "Amostra" ou "por Tema", ao término do questionário será exibido apenas o feedback em tela.
+                              Se ativo e o irmão escolher as opções "Amostra" ou "por Tema", ao término do questionário será exibido apenas o feedback em tela.
                             </span>
                           </div>
                         </label>
@@ -1841,7 +1841,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
             </div>
 
             <p className="text-[10px] text-[#9cbfd5] leading-relaxed">
-              Insira o link de ativação gerado pelo seu Google Apps Script para consolidar logs de diploma e aprovação em sua planilha oficial de alunos. Caso deixado em branco, o sistema utilizará um endereço padrão de testes.
+              Insira o link de ativação gerado pelo seu Google Apps Script para consolidar logs de diploma e aprovação em sua planilha oficial de irmãos. Caso deixado em branco, o sistema utilizará um endereço padrão de testes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">

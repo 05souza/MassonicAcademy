@@ -1324,7 +1324,7 @@ export default function App() {
                   />
                 </h2>
                 <p className="text-xs text-[#99907c] font-mono mt-1 animate-fade-in pb-0.5">
-                  Aluno Ativo: <strong className="text-[#E9C349] font-sans text-xs">{currentUser.name}</strong>
+                  Irmão Ativo: <strong className="text-[#E9C349] font-sans text-xs">{currentUser.name}</strong>
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1.5">

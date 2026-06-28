@@ -91,7 +91,7 @@ export default function ReportDetail({
           }
         })
         .catch((err) => {
-          console.error('Falha ao sincronizar progresso inicial do aluno:', err);
+          console.error('Falha ao sincronizar progresso inicial do irmão:', err);
         });
     }
   }, [currentUser, report.id]);
@@ -122,7 +122,7 @@ export default function ReportDetail({
           lastUpdated: new Date().toISOString()
         }));
       } catch (err) {
-        console.error('Falha ao salvar progresso do aluno na nuvem:', err);
+        console.error('Falha ao salvar progresso do irmão na nuvem:', err);
       }
     }
   };
