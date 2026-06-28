@@ -145,10 +145,10 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
   ];
 
   return (
-    <div className="min-h-screen bg-[#05151e] text-[#d4e5f2] selection:bg-[#E9C349]/40 flex flex-col items-center justify-center font-sans p-4 relative overflow-hidden">
+    <div id="login-gate-root" className="min-h-screen bg-[#05151e] text-[#d4e5f2] selection:bg-[#E9C349]/40 flex flex-col items-center justify-center font-sans p-4 relative overflow-hidden">
       
       {/* Visual Ambient Grid and Background Accents */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0c1d27_1px,transparent_1px),linear-gradient(to_bottom,#0c1d27_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)] opacity-35 pointer-events-none"></div>
+      <div className="absolute inset-0 login-grid-bg pointer-events-none"></div>
       
       <div className="relative w-full max-w-lg bg-[#0c1d27] rounded-2xl border-2 border-[#1c2c36] shadow-2xl p-6 sm:p-10 space-y-6 md:space-y-8 backdrop-blur-md">
         
