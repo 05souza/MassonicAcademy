@@ -3,7 +3,7 @@ import { ExecutiveReport, AccessUser, Questionnaire } from '../types';
 import { 
   X, Calendar, Shield, User, FileText, Download, Share2, 
   Plus, CheckCircle2, Link as LinkIcon, Image as ImageIcon, Sparkles,
-  ExternalLink, Lock, Upload, HelpCircle
+  Lock, Upload, HelpCircle
 } from 'lucide-react';
 import InlineEditable from './InlineEditable';
 import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
@@ -19,6 +19,7 @@ interface ReportDetailProps {
   currentUser?: AccessUser | null;
   onToggleCompletion?: () => void;
   onGoToQuestionnaire?: (quizId: string) => void;
+  onOpenSecureViewer?: (url: string, title: string) => void;
 }
 
 export default function ReportDetail({ 
@@ -29,7 +30,8 @@ export default function ReportDetail({
   onUpdateReportField,
   currentUser,
   onToggleCompletion,
-  onGoToQuestionnaire
+  onGoToQuestionnaire,
+  onOpenSecureViewer
 }: ReportDetailProps) {
   const [completedMaterials, setCompletedMaterials] = useState<Record<string, boolean>>(() => {
     try {
@@ -403,7 +405,7 @@ export default function ReportDetail({
           {isAdmin && report.customAccessUrl && (
             <div className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
-                <ExternalLink className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Link Personalizado do Botão ACESSAR (URL)</span>
                   <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.customAccessUrl}>
@@ -415,9 +417,15 @@ export default function ReportDetail({
                 href={report.customAccessUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-2 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                onClick={(e) => {
+                  if (onOpenSecureViewer) {
+                    e.preventDefault();
+                    onOpenSecureViewer(report.customAccessUrl || '', report.title);
+                  }
+                }}
+                className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-2 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
               >
-                ACESSAR <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                ACESSAR
               </a>
             </div>
           )}
@@ -465,9 +473,15 @@ export default function ReportDetail({
                   href={report.material1Link}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material1Link || '', `${report.title} - Material 1`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
                 >
-                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                  Acessar Conteúdo
                 </a>
               </div>
             </div>
@@ -516,9 +530,15 @@ export default function ReportDetail({
                   href={report.material2Link}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material2Link || '', `${report.title} - Material 2`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
                 >
-                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                  Acessar Conteúdo
                 </a>
               </div>
             </div>
@@ -567,9 +587,15 @@ export default function ReportDetail({
                   href={report.material3Link}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material3Link || '', `${report.title} - Material 3`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
                 >
-                  Acessar Conteúdo <ExternalLink className="w-3.5 h-3.5 text-[#241a00]" />
+                  Acessar Conteúdo
                 </a>
               </div>
             </div>
@@ -647,7 +673,7 @@ export default function ReportDetail({
                         onClick={() => onGoToQuestionnaire && onGoToQuestionnaire(report.linkedQuestionnaireId!)}
                         className="w-full bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-xs uppercase py-3 rounded-lg hover:bg-[#ffe088] tracking-widest active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 select-none shadow-md border-none"
                       >
-                        <ExternalLink className="w-4 h-4" /> Realizar Questionário de Avaliação
+                        <FileText className="w-4 h-4" /> Realizar Questionário de Avaliação
                       </button>
 
                       {/* Flag de Concluído do Questionário */}
@@ -730,9 +756,15 @@ export default function ReportDetail({
                     href={report.additionalLink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-mono font-bold text-[#66d9cc] hover:underline flex items-center gap-1.5 bg-[#11212b] px-3.5 py-1.5 rounded border border-[#1c2c36] shrink-0"
+                    onClick={(e) => {
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.additionalLink || '', `${report.title} - Prova`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#66d9cc] hover:underline flex items-center gap-1.5 bg-[#11212b] px-3.5 py-1.5 rounded border border-[#1c2c36] shrink-0 cursor-pointer"
                   >
-                    PROVA DO CONTEÚDO <ExternalLink className="w-3.5 h-3.5 text-[#E9C349]" />
+                    PROVA DO CONTEÚDO
                   </a>
                 </div>
               </div>

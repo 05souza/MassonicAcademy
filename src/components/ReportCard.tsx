@@ -1,6 +1,6 @@
 import React from 'react';
 import { ExecutiveReport } from '../types';
-import { Calendar, Shield, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Shield, Image as ImageIcon } from 'lucide-react';
 import InlineEditable from './InlineEditable';
 
 interface ReportCardProps {
@@ -12,6 +12,7 @@ interface ReportCardProps {
   currentUser?: any;
   viewMode?: 'grid' | 'list';
   onBlockedAccess?: (courseTitle: string, requiredLevel: number) => void;
+  onOpenSecureViewer?: (url: string, title: string) => void;
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({ 
@@ -22,7 +23,8 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   onUpdateReportField,
   currentUser,
   viewMode = 'grid',
-  onBlockedAccess
+  onBlockedAccess,
+  onOpenSecureViewer
 }) => {
   const getBorderColorClass = (color: string) => {
     switch (color) {
@@ -131,7 +133,11 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                   if (report.customAccessUrl) {
                     handleAccessClick(e, true, report.customAccessUrl);
                     if (!e.isDefaultPrevented()) {
-                      window.open(report.customAccessUrl, '_blank', 'noopener,noreferrer');
+                      if (onOpenSecureViewer) {
+                        onOpenSecureViewer(report.customAccessUrl, report.title);
+                      } else {
+                        window.open(report.customAccessUrl, '_blank', 'noopener,noreferrer');
+                      }
                     }
                   } else {
                     handleAccessClick(e, false);
@@ -227,8 +233,12 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   handleAccessClick(e, true, report.customAccessUrl);
+                  if (!e.isDefaultPrevented() && onOpenSecureViewer) {
+                    e.preventDefault();
+                    onOpenSecureViewer(report.customAccessUrl || '', report.title);
+                  }
                 }}
-                className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-4 py-2 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center"
+                className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-4 py-2 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
               >
                 <span>ACESSAR</span>
               </a>
@@ -401,8 +411,12 @@ export const ReportCard: React.FC<ReportCardProps> = ({
               rel="noopener noreferrer"
               onClick={(e) => {
                 handleAccessClick(e, true, report.customAccessUrl);
+                if (!e.isDefaultPrevented() && onOpenSecureViewer) {
+                  e.preventDefault();
+                  onOpenSecureViewer(report.customAccessUrl || '', report.title);
+                }
               }}
-              className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-5 py-2.5 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-5 py-2.5 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm cursor-pointer"
             >
               <span>ACESSAR</span>
             </a>

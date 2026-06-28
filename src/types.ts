@@ -46,6 +46,7 @@ export interface AccessUser {
   loja?: string;
   potencia?: string;
   cidadeLoja?: string;
+  userAcesso?: string;
 }
 
 export interface QuestionnaireQuestion {

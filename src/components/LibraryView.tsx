@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Book, AccessUser } from '../types';
-import { Search, BookOpen, Download, ExternalLink, Shield, Lock, Unlock, Eye, ListFilter } from 'lucide-react';
+import { Search, BookOpen, Download, Shield, Lock, Unlock, Eye, ListFilter } from 'lucide-react';
 
 interface LibraryViewProps {
   books: Book[];
   currentUser: AccessUser | null;
   isAdmin: boolean;
+  onOpenSecureViewer?: (url: string, title: string) => void;
 }
 
-export default function LibraryView({ books, currentUser, isAdmin }: LibraryViewProps) {
+export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureViewer }: LibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('Todos os livros');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc'>('name-az');
@@ -342,13 +343,13 @@ export default function LibraryView({ books, currentUser, isAdmin }: LibraryView
                   </div>
 
                   {/* Thumbnail / Cover section with standard 3:4 aspect ratio */}
-                  <div className="relative aspect-[3/4] bg-[#05151e] overflow-hidden border-b border-[#1c2c36]/40">
+                  <div className="relative aspect-[3/4] bg-[#05151e] overflow-hidden border-b border-[#1c2c36]/40 flex items-center justify-center p-3">
                     {book.thumbnailUrl ? (
                       <img
                         src={book.thumbnailUrl}
                         alt={book.title}
                         referrerPolicy="no-referrer"
-                        className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                        className={`w-[80%] h-[80%] object-cover rounded shadow-md transition-transform duration-300 group-hover:scale-105 ${
                           isLocked ? 'filter brightness-[0.35] blur-[1px]' : 'filter brightness-[0.85]'
                         }`}
                         onError={(e) => {
@@ -356,9 +357,9 @@ export default function LibraryView({ books, currentUser, isAdmin }: LibraryView
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-[#99907c] space-y-1">
-                        <BookOpen className="w-8 h-8 opacity-40" />
-                        <span className="text-[10px] font-mono">Sem capa</span>
+                      <div className="w-[80%] h-[80%] flex flex-col items-center justify-center p-2 text-center text-[#99907c] space-y-1 bg-[#0c1d27]/40 rounded border border-[#1c2c36]/40">
+                        <BookOpen className="w-6 h-6 opacity-40" />
+                        <span className="text-[9px] font-mono">Sem capa</span>
                       </div>
                     )}
 
@@ -418,17 +419,20 @@ export default function LibraryView({ books, currentUser, isAdmin }: LibraryView
                           <span>Bloqueado</span>
                         </button>
                       ) : (
-                        <a
-                          href={book.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => handleAccessBook(book, e)}
+                        <button
+                          onClick={(e) => {
+                            handleAccessBook(book, e);
+                            if (onOpenSecureViewer) {
+                              onOpenSecureViewer(book.link, book.title);
+                            } else {
+                              window.open(book.link, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
                           className="w-full bg-[#E9C349]/15 hover:bg-[#E9C349]/35 border border-[#E9C349]/40 hover:border-[#E9C349] text-[#f2ca50] hover:text-white font-mono font-bold text-[10px] py-2 rounded flex items-center justify-center gap-1.5 transition-all transform active:scale-95 shadow-sm uppercase cursor-pointer"
                         >
                           <Eye className="w-3 h-3 text-[#E9C349]" />
                           <span>Acessar Livro</span>
-                          <ExternalLink className="w-2.5 h-2.5 text-[#E9C349]/70 shrink-0" />
-                        </a>
+                        </button>
                       )}
                     </div>
 

@@ -14,6 +14,7 @@ import LoginGate from './components/LoginGate';
 import QuestionnairesView from './components/QuestionnairesView';
 import UserManualView from './components/UserManualView';
 import LibraryView from './components/LibraryView';
+import SecureViewerModal from './components/SecureViewerModal';
 import { Search, Info, LogIn, ChevronRight, BookOpen, Layers, Shield, Image as ImageIcon, LayoutGrid, List, Upload } from 'lucide-react';
 import InlineEditable from './components/InlineEditable';
 import { compressImage } from './utils';
@@ -187,6 +188,11 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('TODOS');
   const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados'>('todos');
   const [selectedReport, setSelectedReport] = useState<ExecutiveReport | null>(null);
+
+  // Secure Document/Link Viewer Modal states
+  const [secureViewerOpen, setSecureViewerOpen] = useState(false);
+  const [secureViewerUrl, setSecureViewerUrl] = useState('');
+  const [secureViewerTitle, setSecureViewerTitle] = useState('');
 
   // Custom access level verification state for degree lock screen modal
   const [accessBlockedCourseTitle, setAccessBlockedCourseTitle] = useState<string | null>(null);
@@ -872,6 +878,45 @@ export default function App() {
     syncAlertToCloud(newAlert);
   };
 
+  // Import a list of access users from spreadsheet
+  const handleImportAccessUsers = async (newUsers: AccessUser[]) => {
+    // Avoid duplicates by email
+    const existingEmails = new Set(accessUsers.map(u => u.email.toLowerCase()));
+    const filteredNewUsers = newUsers.filter(u => !existingEmails.has(u.email.toLowerCase()));
+
+    if (filteredNewUsers.length === 0) return;
+
+    const updated = [...accessUsers, ...filteredNewUsers];
+    saveAccessUsersState(updated);
+
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        const chunkSize = 20;
+        for (let i = 0; i < filteredNewUsers.length; i += chunkSize) {
+          const chunk = filteredNewUsers.slice(i, i + chunkSize);
+          await Promise.all(chunk.map(user => 
+            setDoc(doc(db!, 'accessUsers', user.id), cleanObjectForFirestore(user))
+          ));
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `accessUsers/batch-import`);
+      }
+    }
+
+    const newAlert: SystemAlert = {
+      id: `alert-access-import-${Date.now()}`,
+      title: 'Acessos Importados via Planilha',
+      description: `${filteredNewUsers.length} novos acessos/usuários foram importados com sucesso por Daniel Luciano via arquivo Excel.`,
+      time: 'Agora mesmo',
+      type: 'access',
+      read: false,
+      createdAt: Date.now()
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
   // Update an existing executive report
   const handleUpdateReport = (updatedRep: ExecutiveReport) => {
     const updated = reports.map(r => r.id === updatedRep.id ? updatedRep : r);
@@ -1450,6 +1495,11 @@ export default function App() {
                       currentUser={currentUser}
                       viewMode={viewMode}
                       onBlockedAccess={handleBlockedAccess}
+                      onOpenSecureViewer={(url, title) => {
+                        setSecureViewerUrl(url);
+                        setSecureViewerTitle(title);
+                        setSecureViewerOpen(true);
+                      }}
                     />
                   ))}
 
@@ -1485,6 +1535,11 @@ export default function App() {
             books={books}
             currentUser={currentUser}
             isAdmin={isAdmin(currentUser.email)}
+            onOpenSecureViewer={(url, title) => {
+              setSecureViewerUrl(url);
+              setSecureViewerTitle(title);
+              setSecureViewerOpen(true);
+            }}
           />
         )}
 
@@ -1521,6 +1576,7 @@ export default function App() {
             onAddAccessUser={handleAddAccessUser}
             onUpdateAccessUser={handleUpdateAccessUser}
             onDeleteAccessUser={handleDeleteAccessUser}
+            onImportAccessUsers={handleImportAccessUsers}
             currentUser={currentUser}
             theme={theme}
             onThemeChange={setTheme}
@@ -1552,6 +1608,11 @@ export default function App() {
             localStorage.setItem('masonic_selected_quiz_id', quizId);
             setActiveTab('questionarios');
             setSelectedReport(null);
+          }}
+          onOpenSecureViewer={(url, title) => {
+            setSecureViewerUrl(url);
+            setSecureViewerTitle(title);
+            setSecureViewerOpen(true);
           }}
         />
       )}
@@ -1764,6 +1825,14 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Global Embedded Protective Document Viewer */}
+      <SecureViewerModal
+        isOpen={secureViewerOpen}
+        onClose={() => setSecureViewerOpen(false)}
+        url={secureViewerUrl}
+        title={secureViewerTitle}
+      />
 
       {/* Sticky Bottom Nav Bar with Alarms count badge */}
       <BottomNav

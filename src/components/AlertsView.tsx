@@ -1,5 +1,5 @@
 import { SystemAlert, ExecutiveReport } from '../types';
-import { Bell, AlertTriangle, RefreshCw, CheckCircle, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Bell, AlertTriangle, RefreshCw, CheckCircle, FileText, ShieldAlert } from 'lucide-react';
 
 interface AlertsViewProps {
   alerts: SystemAlert[];
@@ -92,7 +92,7 @@ export default function AlertsView({
                     
                     {alert.reportId && (
                       <span className="inline-flex items-center gap-1.5 text-[10px] font-mono text-[#E9C349] mt-2.5 bg-[#11212b] px-2 py-0.5 rounded border border-[#1a2d39]">
-                        <ExternalLink className="w-2.5 h-2.5" /> Acessar Título Associado
+                        <FileText className="w-2.5 h-2.5" /> Acessar Título Associado
                       </span>
                     )}
                   </div>

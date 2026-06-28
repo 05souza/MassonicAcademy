@@ -18,6 +18,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  const [regUserAcesso, setRegUserAcesso] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regTelefone, setRegTelefone] = useState('');
   const [regLoja, setRegLoja] = useState('');
@@ -41,19 +42,25 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
 
     const emailClean = emailInput.trim().toLowerCase();
     if (!emailClean) {
-      setErrorMsg('Por favor, informe seu e-mail.');
+      setErrorMsg('Por favor, informe seu e-mail ou User de Acesso.');
       return;
     }
 
-    // 1. Check master admins first
-    const adminFound = masterAdmins.find(admin => admin.email.toLowerCase() === emailClean);
+    // 1. Check master admins first (check by email or userAcesso if configured)
+    const adminFound = masterAdmins.find(admin => 
+      admin.email.toLowerCase() === emailClean || 
+      (admin.userAcesso && admin.userAcesso.toLowerCase() === emailClean)
+    );
     if (adminFound) {
       triggerSuccess(adminFound);
       return;
     }
 
-    // 2. Check access users lists
-    const userFound = accessUsers.find(user => user.email.toLowerCase() === emailClean);
+    // 2. Check access users lists (check by email or userAcesso)
+    const userFound = accessUsers.find(user => 
+      user.email.toLowerCase() === emailClean || 
+      (user.userAcesso && user.userAcesso.toLowerCase() === emailClean)
+    );
     if (userFound) {
       // Validate password if user has a password registered
       if (userFound.password && userFound.password !== loginPassword) {
@@ -65,7 +72,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
     }
 
     // 3. Not found - offer helper options
-    setErrorMsg(`O e-mail "${emailClean}" não foi localizado na base ativa.`);
+    setErrorMsg(`O e-mail ou User de Acesso "${emailClean}" não foi localizado na base ativa.`);
   };
 
   const triggerSuccess = (user: AccessUser) => {
@@ -81,6 +88,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
 
     const name = regName.trim();
     const email = regEmail.trim().toLowerCase();
+    const userAcesso = regUserAcesso.trim().toLowerCase();
     const password = regPassword.trim();
     const telefone = regTelefone.trim();
     const loja = regLoja.trim();
@@ -92,11 +100,17 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
       return;
     }
 
-    // Ensure email is not already registered in master or user lists
-    const isMaster = masterAdmins.some(a => a.email.toLowerCase() === email);
-    const isUser = accessUsers.some(u => u.email.toLowerCase() === email);
+    // Ensure email or userAcesso is not already registered in master or user lists
+    const isMaster = masterAdmins.some(a => 
+      a.email.toLowerCase() === email || 
+      (a.userAcesso && a.userAcesso.toLowerCase() === userAcesso)
+    );
+    const isUser = accessUsers.some(u => 
+      u.email.toLowerCase() === email || 
+      (u.userAcesso && u.userAcesso.toLowerCase() === userAcesso)
+    );
     if (isMaster || isUser) {
-      setErrorMsg(`O e-mail "${email}" já está cadastrado no sistema.`);
+      setErrorMsg(`O e-mail ou User de Acesso informado já está cadastrado no sistema.`);
       return;
     }
 
@@ -104,6 +118,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
       id: `usr-custom-${Date.now()}`,
       name: name,
       email: email,
+      userAcesso: userAcesso || undefined,
       allowedReportIds: '*', // Default full access for ease of demonstration
       status: 'Inativo',
       tipoUsuario: 'padrao',
@@ -176,16 +191,16 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
             <form onSubmit={handleValidateEmail} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-xs font-mono font-bold text-[#99907c] uppercase tracking-wider">
-                  Informe seu email cadastrado:
+                  Informe seu E-mail ou User de Acesso:
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#99907c]">
-                    <Mail className="w-4 h-4" />
+                    <User className="w-4 h-4 text-[#26a69a]" />
                   </div>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    placeholder="seu.email@masonicacademy.com.br"
+                    placeholder="Ex: seu.email@masonicacademy.com.br ou seu_user"
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
                     className="w-full bg-[#04141d] border-2 border-[#1c2c36]/80 text-xs sm:text-sm rounded-xl pl-10 pr-4 py-3 text-[#d4e5f2] placeholder-[#99907c]/60 focus:outline-none focus:border-[#E9C349] hover:border-[#1c2c36] transition-colors"
@@ -287,6 +302,17 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
                   placeholder="Ex: joao.silva@masonicacademy.com.br"
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
+                  className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3.5 py-2.5 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono font-bold text-[#99907c]">User de Acesso:</label>
+                <input
+                  type="text"
+                  placeholder="Ex: joaosilva (Opcional)"
+                  value={regUserAcesso}
+                  onChange={(e) => setRegUserAcesso(e.target.value)}
                   className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3.5 py-2.5 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
                 />
               </div>

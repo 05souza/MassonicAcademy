@@ -24,6 +24,7 @@ interface ProfileViewProps {
   onAddAccessUser: (user: AccessUser) => void;
   onUpdateAccessUser: (user: AccessUser) => void;
   onDeleteAccessUser: (userId: string) => void;
+  onImportAccessUsers?: (newUsers: AccessUser[]) => void;
   currentUser?: AccessUser | null;
   
   // Theme selection props
@@ -49,6 +50,7 @@ export default function ProfileView({
   onAddAccessUser,
   onUpdateAccessUser,
   onDeleteAccessUser,
+  onImportAccessUsers,
   currentUser,
   theme = 'dark',
   onThemeChange,
@@ -96,6 +98,7 @@ export default function ProfileView({
   // Access Form Field States
   const [userFormName, setUserFormName] = useState('');
   const [userFormEmail, setUserFormEmail] = useState('');
+  const [userFormUserAcesso, setUserFormUserAcesso] = useState('');
   const [userFormAllowedReports, setUserFormAllowedReports] = useState('');
   const [userFormStatus, setUserFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [userFormTipoUsuario, setUserFormTipoUsuario] = useState<'admin' | 'padrao'>('padrao');
@@ -236,6 +239,12 @@ export default function ProfileView({
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
+  // Access Import States
+  const [showAccessImportPanel, setShowAccessImportPanel] = useState(false);
+  const [importedAccessRows, setImportedAccessRows] = useState<AccessUser[]>([]);
+  const [accessImportError, setAccessImportError] = useState<string | null>(null);
+  const [accessImportSuccess, setAccessImportSuccess] = useState<string | null>(null);
+
   const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setImportError(null);
     setImportSuccess(null);
@@ -354,6 +363,201 @@ export default function ProfileView({
     setTimeout(() => {
       setShowImportPanel(false);
       setImportSuccess(null);
+    }, 4000);
+  };
+
+  // Access Import Helper Functions
+  const downloadAccessModelExcel = () => {
+    const modelData = [
+      {
+        "Nome Completo": "Carlos Silva",
+        "E-mail": "carlos.silva@masonicacademy.com",
+        "User de Acesso": "carlossilva",
+        "Senha": "senha_masonic_123",
+        "Grau (1 a 3)": 1,
+        "Telefone": "(11) 99999-9999",
+        "Loja": "Loja Simbólica Harmonia Nº 45",
+        "Potência": "GOSP",
+        "Cidade Loja": "São Paulo",
+        "Acesso aos Cursos (Lista de IDs ou * para todos)": "*"
+      },
+      {
+        "Nome Completo": "José de Souza",
+        "E-mail": "jose.souza@masonicacademy.com",
+        "User de Acesso": "josesouza",
+        "Senha": "senha_masonic_456",
+        "Grau (1 a 3)": 2,
+        "Telefone": "(21) 98888-8888",
+        "Loja": "Luz do Oriente Nº 12",
+        "Potência": "GLMERJ",
+        "Cidade Loja": "Rio de Janeiro",
+        "Acesso aos Cursos (Lista de IDs ou * para todos)": "rep-inst-123, rep-inst-456"
+      },
+      {
+        "Nome Completo": "Mateus Oliveira",
+        "E-mail": "mateus.oliveira@masonicacademy.com",
+        "User de Acesso": "mateusoliveira",
+        "Senha": "senha_masonic_789",
+        "Grau (1 a 3)": 3,
+        "Telefone": "(31) 97777-7777",
+        "Loja": "Fraternidade Mineira Nº 88",
+        "Potência": "GOMG",
+        "Cidade Loja": "Belo Horizonte",
+        "Acesso aos Cursos (Lista de IDs ou * para todos)": "*"
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(modelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Planilha Modelo");
+
+    // Adjust column widths
+    const max_len = [20, 30, 18, 18, 12, 16, 32, 12, 18, 45];
+    worksheet["!cols"] = max_len.map(w => ({ wch: w }));
+
+    XLSX.writeFile(workbook, "modelo_importacao_acessos.xlsx");
+  };
+
+  const handleAccessExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAccessImportError(null);
+    setAccessImportSuccess(null);
+    setImportedAccessRows([]);
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstream = evt.target?.result;
+        if (!bstream) {
+          setAccessImportError("Não foi possível ler o arquivo.");
+          return;
+        }
+
+        const data = new Uint8Array(bstream as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
+        
+        if (!jsonData || jsonData.length === 0) {
+          setAccessImportError("Planilha vazia ou em formato incorreto.");
+          return;
+        }
+
+        const parsedUsers: AccessUser[] = [];
+
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          
+          let name = '';
+          let email = '';
+          let userAcesso = '';
+          let password = '';
+          let nivelAcesso = '1';
+          let telefone = '';
+          let loja = '';
+          let potencia = '';
+          let cidadeLoja = '';
+          let allowedReportIds = '*';
+
+          Object.keys(row).forEach(key => {
+            const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const kNoSpaces = k.replace(/[\s\-_]+/g, '');
+            const val = String(row[key] !== undefined && row[key] !== null ? row[key] : '').trim();
+
+            if (k === 'nome' || k === 'name' || kNoSpaces === 'nomecompleto' || kNoSpaces === 'fullname') {
+              name = val;
+            } else if (k === 'email' || k === 'mail' || kNoSpaces === 'email') {
+              email = val;
+            } else if (k === 'user' || k === 'usuario' || k === 'username' || kNoSpaces === 'useracesso' || kNoSpaces === 'userdeacesso') {
+              userAcesso = val;
+            } else if (k === 'senha' || k === 'password' || k === 'pass' || k === 'code') {
+              password = val;
+            } else if (k === 'grau' || k === 'level' || k === 'degree' || kNoSpaces === 'nivelacesso' || kNoSpaces === 'grau1a3' || kNoSpaces === 'grau(1a3)') {
+              const num = parseInt(val.replace(/\D/g, ''), 10);
+              nivelAcesso = !isNaN(num) ? String(num) : '1';
+            } else if (k === 'telefone' || k === 'tel' || k === 'phone') {
+              telefone = val;
+            } else if (k === 'loja' || k === 'lodge' || k === 'oficina') {
+              loja = val;
+            } else if (k === 'potencia' || k === 'jurisdicao' || kNoSpaces === 'grandeloja') {
+              potencia = val;
+            } else if (kNoSpaces === 'cidadeloja' || k === 'cidade' || k === 'city') {
+              cidadeLoja = val;
+            } else if (k === 'acesso' || k === 'acessos' || k === 'cursos' || kNoSpaces === 'allowedreportids' || kNoSpaces === 'acessoaoscursos' || kNoSpaces === 'acessoaoscursos(listadeidsou*paratodos)') {
+              allowedReportIds = val || '*';
+            }
+          });
+
+          // Validation: nome completo e (email ou user de acesso) são obrigatórios
+          if (!name || (!email && !userAcesso)) {
+            continue; // Ignora linhas inválidas que não possuem nome completo, ou que não possuem nem e-mail nem user de acesso
+          }
+
+          // Se o e-mail estiver presente, valida o formato. Se não estiver e tiver user de acesso, geramos um e-mail fictício compatível
+          if (email && !email.includes('@')) {
+            continue; // Ignora se o e-mail não tiver um formato válido
+          }
+
+          if (!email && userAcesso) {
+            email = `${userAcesso.toLowerCase()}@import.local`;
+          }
+
+          const cleanId = `usr-imp-${Math.floor(100 + Math.random() * 900)}-${Date.now().toString().slice(-4)}`;
+          
+          const newUser: AccessUser = {
+            id: cleanId,
+            name: name,
+            email: email.toLowerCase().trim(),
+            userAcesso: userAcesso || undefined,
+            password: password || 'masonic123',
+            nivelAcesso: nivelAcesso,
+            telefone: telefone || undefined,
+            loja: loja || undefined,
+            potencia: potencia || undefined,
+            cidadeLoja: cidadeLoja || undefined,
+            allowedReportIds: allowedReportIds,
+            status: 'Ativo',
+            tipoUsuario: 'padrao'
+          };
+
+          parsedUsers.push(newUser);
+        }
+
+        if (parsedUsers.length === 0) {
+          setAccessImportError("Não foram encontrados registros válidos. Verifique se o arquivo contém Nome Completo e pelo menos o E-mail ou o User de Acesso.");
+          return;
+        }
+
+        setImportedAccessRows(parsedUsers);
+
+      } catch (err: any) {
+        setAccessImportError("Erro ao processar planilha: " + (err.message || String(err)));
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleConfirmAccessImport = () => {
+    if (importedAccessRows.length === 0) return;
+    
+    if (onImportAccessUsers) {
+      onImportAccessUsers(importedAccessRows);
+    } else {
+      importedAccessRows.forEach(user => onAddAccessUser(user));
+    }
+
+    setAccessImportSuccess(`${importedAccessRows.length} acessos importados com sucesso!`);
+    setImportedAccessRows([]);
+    
+    setTimeout(() => {
+      setShowAccessImportPanel(false);
+      setAccessImportSuccess(null);
     }, 4000);
   };
   const [isCreatingNew, setIsCreatingNew] = useState(true);
@@ -735,6 +939,7 @@ export default function ProfileView({
     setEditUserId(user.id);
     setUserFormName(user.name);
     setUserFormEmail(user.email);
+    setUserFormUserAcesso(user.userAcesso || '');
     setUserFormAllowedReports(user.allowedReportIds);
     setUserFormStatus(user.status);
     setUserFormTipoUsuario(user.tipoUsuario || 'padrao');
@@ -758,6 +963,7 @@ export default function ProfileView({
     setEditUserId(null);
     setUserFormName('');
     setUserFormEmail('');
+    setUserFormUserAcesso('');
     setUserFormAllowedReports('');
     setUserFormStatus('Inativo');
     setUserFormTipoUsuario('padrao');
@@ -816,7 +1022,8 @@ export default function ProfileView({
       telefone: userFormTelefone.trim() || undefined,
       loja: userFormLoja.trim() || undefined,
       potencia: userFormPotencia.trim() || undefined,
-      cidadeLoja: userFormCidadeLoja.trim() || undefined
+      cidadeLoja: userFormCidadeLoja.trim() || undefined,
+      userAcesso: userFormUserAcesso.trim() || undefined
     };
 
     if (isCreatingNewUser) {
@@ -1820,13 +2027,101 @@ export default function ProfileView({
                 <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Controle de Acessos</h3>
                 <p className="text-[10px] font-mono text-[#99907c] mt-0.5">Definição de privilégios de cursos por e-mail</p>
               </div>
-              <button
-                onClick={handleStartCreateNewUser}
-                className="bg-[#66D9CC] text-[#02332e] text-[10px] font-mono font-bold px-3 py-1.5 rounded hover:bg-[#83f7eb] transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3 h-3" /> Incluir
-              </button>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setShowAccessImportPanel(!showAccessImportPanel)}
+                  className="bg-[#E9C349]/10 border border-[#E9C349]/30 text-[#f2ca50] hover:bg-[#E9C349]/20 text-[10px] font-mono font-bold px-2.5 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Importar acessos de arquivo Excel/CSV"
+                >
+                  <Upload className="w-3 h-3" /> Importar
+                </button>
+                <button
+                  onClick={handleStartCreateNewUser}
+                  className="bg-[#66D9CC] text-[#02332e] text-[10px] font-mono font-bold px-2.5 py-1.5 rounded hover:bg-[#83f7eb] transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" /> Incluir
+                </button>
+              </div>
             </div>
+
+            {/* COLLAPSIBLE ACCESS IMPORT PANEL */}
+            {showAccessImportPanel && (
+              <div className="bg-[#05151e] border border-[#1c2c36] p-3 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-[#E9C349] font-bold uppercase tracking-wider">Importar Acessos via Excel / CSV</span>
+                  <button 
+                    onClick={() => {
+                      setShowAccessImportPanel(false);
+                      setImportedAccessRows([]);
+                      setAccessImportError(null);
+                      setAccessImportSuccess(null);
+                    }}
+                    className="text-[#99907c] hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                
+                <p className="text-[10px] text-[#9cbfd5] leading-relaxed">
+                  Faça o upload de uma planilha (.xlsx, .xls ou .csv) contendo as credenciais de acesso para importação em lote.
+                </p>
+
+                {/* Model / Template Download link */}
+                <div className="flex justify-between items-center text-[10px] font-mono bg-[#0c1d27] p-2 rounded border border-[#1c2c36]/60">
+                  <span className="text-[#99907c]">Baixar planilha exemplo:</span>
+                  <button 
+                    onClick={downloadAccessModelExcel}
+                    className="text-[#E9C349] hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                  >
+                    <FileText className="w-3 h-3" /> modelo_acessos.xlsx
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleAccessExcelFileChange}
+                    className="w-full text-[10px] text-[#9cbfd5] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-mono file:bg-[#11212b] file:text-[#d4e5f2] hover:file:bg-[#1a2d39] file:cursor-pointer cursor-pointer font-mono"
+                  />
+                  
+                  {accessImportError && (
+                    <div className="bg-rose-950/40 border border-rose-900/60 p-2 rounded text-[10px] font-mono text-rose-300 leading-normal">
+                      ❌ {accessImportError}
+                    </div>
+                  )}
+
+                  {accessImportSuccess && (
+                    <div className="bg-emerald-950/40 border border-emerald-900/60 p-2 rounded text-[10px] font-mono text-[#66d9cc] text-center">
+                      ✓ {accessImportSuccess}
+                    </div>
+                  )}
+
+                  {importedAccessRows.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="bg-[#0c1d27] border border-[#1c2c36] p-2 rounded text-[10px] font-mono max-h-[120px] overflow-y-auto space-y-1">
+                        <div className="text-[#99907c] font-bold border-b border-[#1c2c36] pb-1 mb-1">
+                          Pronto para importar ({importedAccessRows.length} linhas):
+                        </div>
+                        {importedAccessRows.map((u, i) => (
+                          <div key={i} className="flex justify-between text-[#9cbfd5] truncate">
+                            <span>{u.name} ({u.email})</span>
+                            <span className="text-[#E9C349]">Grau {u.nivelAcesso || '1'}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={handleConfirmAccessImport}
+                        className="w-full bg-[#E9C349] text-[#02332e] hover:bg-[#f3cf59] text-[10px] font-mono font-bold py-2 rounded transition-all cursor-pointer shadow-md uppercase tracking-wider"
+                      >
+                        Confirmar Importação de {importedAccessRows.length} Acessos
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Quick Search */}
             <div className="relative">
@@ -1908,7 +2203,8 @@ export default function ProfileView({
               {accessUsers
                 .filter(u => {
                   const matchesSearch = u.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
-                    u.email.toLowerCase().includes(accessSearchQuery.toLowerCase());
+                    u.email.toLowerCase().includes(accessSearchQuery.toLowerCase()) ||
+                    (u.userAcesso && u.userAcesso.toLowerCase().includes(accessSearchQuery.toLowerCase()));
                   
                   if (!matchesSearch) return false;
                   if (accessStatusFilter === 'todos') return true;
@@ -1949,7 +2245,9 @@ export default function ProfileView({
                         <h4 className="font-sans font-bold text-[#d4e5f2] truncate text-[11px]">
                           {user.name}
                         </h4>
-                        <p className="text-[10px] font-mono text-[#99907c] truncate">{user.email}</p>
+                        <p className="text-[10px] font-mono text-[#99907c] truncate">
+                          {user.email} {user.userAcesso && <span className="text-[#E9C349] font-bold">(@{user.userAcesso})</span>}
+                        </p>
                         <p className="text-[9px] font-mono text-[#E9C349] truncate mt-0.5" title={user.nivelAcesso || "1"}>
                           Nível: {user.nivelAcesso || "1"}{' '}
                           {user.password ? (
@@ -2082,6 +2380,17 @@ export default function ProfileView({
                         placeholder="Ex: usuario@masonicacademy.com.br"
                         value={userFormEmail}
                         onChange={(e) => setUserFormEmail(e.target.value)}
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">User de Acesso</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: joaosilva (Opcional - para logar alternativamente)"
+                        value={userFormUserAcesso}
+                        onChange={(e) => setUserFormUserAcesso(e.target.value)}
                         className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
                       />
                     </div>
