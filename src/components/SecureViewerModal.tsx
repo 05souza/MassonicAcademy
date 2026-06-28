@@ -156,7 +156,7 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
       }}
     >
       <div 
-        className="bg-[#0c1d27] border-2 border-[#1c2c36] rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl relative overflow-hidden"
+        className="bg-[#0c1d26] border-2 border-[#1c2c37] rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl relative overflow-hidden"
         onClick={() => {
           // Clicking anywhere inside the card (except form/buttons etc) will also focus the reader
           iframeRef.current?.focus();
@@ -164,7 +164,7 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
       >
         
         {/* Security Warning Header Banner */}
-        <div className="bg-red-950/40 border-b border-red-500/20 px-4 py-2 flex items-center gap-2 text-red-400 text-xs">
+        <div className="bg-red-950/40 border-b border-red-500/10 px-4 py-2 flex items-center gap-2 text-red-400 text-xs">
           <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
           <span className="font-mono font-medium tracking-wide">
             Visualização Segura Ativada
@@ -172,14 +172,14 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
         </div>
 
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-[#1c2c36]/60 flex items-center justify-between bg-[#08151c]" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-[#1c2c37]/60 flex items-center justify-between bg-[#08151b]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="bg-[#E9C349]/10 p-2 rounded-lg border border-[#E9C349]/30">
-              <Lock className="w-4 h-4 text-[#E9C349]" />
+            <div className="bg-[#e9c34a]/10 p-2 rounded-lg border border-[#e9c34a]/30">
+              <Lock className="w-4 h-4 text-[#e9c34a]" />
             </div>
             <div className="text-left min-w-0">
-              <span className="text-[9px] font-mono text-[#99907c] uppercase tracking-wider block">Visualizador Masonic Academy</span>
-              <h3 className="font-sans font-bold text-sm text-[#d4e5f2] truncate uppercase" title={title}>
+              <span className="text-[9px] font-mono text-[#99907b] uppercase tracking-wider block">Visualizador Masonic Academy</span>
+              <h3 className="font-sans font-bold text-sm text-[#d4e5f1] truncate uppercase" title={title}>
                 {title}
               </h3>
             </div>
@@ -190,7 +190,7 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
               e.stopPropagation();
               onClose();
             }}
-            className="bg-[#11212b] hover:bg-red-950/40 hover:text-red-400 text-[#99907c] border border-[#1c2c36] hover:border-red-900/30 p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+            className="bg-[#11212a] hover:bg-red-950/40 hover:text-red-400 text-[#99907b] border border-[#1c2c37] hover:border-red-900/30 p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center"
             title="Fechar Visualizador"
           >
             <X className="w-4 h-4" />
@@ -198,11 +198,11 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
         </div>
 
         {/* Viewer Content Frame */}
-        <div className="flex-1 bg-[#04141d] relative flex items-center justify-center overflow-hidden">
+        <div className="flex-1 bg-[#04141e] relative flex items-center justify-center overflow-hidden">
           
           {/* Subtle protection overlay watermark */}
           <div className="absolute inset-0 pointer-events-none select-none z-10 flex items-center justify-center opacity-[0.03]">
-            <div className="text-[#E9C349] font-sans font-extrabold text-2xl sm:text-3xl rotate-45 uppercase tracking-widest text-center leading-normal">
+            <div className="text-[#e9c34a] font-sans font-extrabold text-2xl sm:text-3xl rotate-45 uppercase tracking-widest text-center leading-normal">
               protegido por direitos autorais
             </div>
           </div>
@@ -230,14 +230,14 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
         </div>
 
         {/* Footer info banner */}
-        <div className="px-5 py-3 border-t border-[#1c2c36]/60 bg-[#08151c] flex flex-col sm:flex-row items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#99907c] text-center sm:text-left">
-            <EyeOff className="w-3.5 h-3.5 text-[#E9C349] shrink-0" />
+        <div className="px-5 py-3 border-t border-[#1c2c37]/60 bg-[#08151b] flex flex-col sm:flex-row items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#99907b] text-center sm:text-left">
+            <EyeOff className="w-3.5 h-3.5 text-[#e9c34a] shrink-0" />
             <span>Este conteúdo está sendo exibido em um ambiente isolado e protegido contra cópias.</span>
           </div>
           <button
             onClick={onClose}
-            className="bg-[#E9C349]/10 border border-[#E9C349]/30 hover:bg-[#E9C349]/20 text-[#f2ca50] font-mono font-bold text-[10px] px-4 py-2 rounded transition-all cursor-pointer uppercase shrink-0"
+            className="bg-[#e9c34a]/10 border border-[#e9c34a]/30 hover:bg-[#e9c34a]/20 text-[#f2ca51] font-mono font-bold text-[10px] px-4 py-2 rounded transition-all cursor-pointer uppercase shrink-0"
           >
             Fechar Leitor Protegido
           </button>
