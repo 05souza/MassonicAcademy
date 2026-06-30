@@ -165,37 +165,6 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
       {/* LEFT SIDEBAR - CATEGORIES & FILTERS */}
       <aside className="w-full lg:w-64 shrink-0 space-y-6">
         
-        {/* Categories Box */}
-        <div className="bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] shadow-sm" id="library-sidebar-categories">
-          <h3 className="font-sans font-extrabold text-xs text-[#E9C349] tracking-wider uppercase mb-3 border-b border-[#1c2c36] pb-2">
-            Categorias
-          </h3>
-          <ul className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1">
-            {categories.map((cat) => {
-              const isSelected = activeCategory === cat;
-              return (
-                <li key={cat}>
-                  <button
-                    onClick={() => {
-                      setActiveCategory(cat);
-                    }}
-                    className={`w-full text-left font-sans text-xs px-2.5 py-1.5 rounded transition-all flex items-center justify-between cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#E9C349]/15 text-[#f2ca50] font-bold border-l-2 border-l-[#E9C349]'
-                        : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#11212b]/60'
-                    }`}
-                  >
-                    <span className="truncate pr-2">{cat}</span>
-                    <span className="font-mono text-[10px] bg-[#05151e] px-1.5 py-0.2 rounded border border-[#1c2c36]/60 text-[#99907c]">
-                      {categoriesMap[cat]}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
         {/* Filtrar / Filters Checkboxes */}
         <div className="bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] shadow-sm" id="library-sidebar-filters">
           <h3 className="font-sans font-extrabold text-xs text-[#E9C349] tracking-wider uppercase mb-3 border-b border-[#1c2c36] pb-2 flex items-center gap-1.5">
@@ -229,16 +198,22 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
             {/* Checkbox filters by category */}
             <div className="space-y-2">
               <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Categorias de Livros</label>
-              <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+              <p className="text-[9px] font-mono text-[#99907c]/80 leading-snug">
+                Disponível: <span className="text-[#66d9cc] font-bold">{categories.filter(cat => cat !== 'Todos os livros').length}</span> categorias com <span className="text-[#E9C349] font-bold">{books.filter(b => b.status === 'Ativo').length}</span> livros ativos.
+              </p>
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 pt-1">
                 {categories.filter(cat => cat !== 'Todos os livros').map(cat => (
-                  <label key={cat} className="flex items-center gap-2 cursor-pointer text-xs font-sans text-[#99907c] hover:text-[#d4e5f2] select-none">
+                  <label key={cat} className="flex items-center gap-2 cursor-pointer text-xs font-sans text-[#99907c] hover:text-[#d4e5f2] select-none w-full">
                     <input
                       type="checkbox"
                       checked={!!checkedCategories[cat]}
                       onChange={() => toggleCategoryCheckbox(cat)}
                       className="rounded bg-[#05151e] border-[#1c2c36] text-[#E9C349] focus:ring-0 w-3.5 h-3.5 cursor-pointer accent-[#E9C349]"
                     />
-                    <span className="truncate">{cat}</span>
+                    <span className="truncate flex-1">{cat}</span>
+                    <span className="font-mono text-[9px] bg-[#05151e] px-1.5 py-0.2 rounded border border-[#1c2c36]/60 text-[#99907c]/80 shrink-0">
+                      {categoriesMap[cat] || 0}
+                    </span>
                   </label>
                 ))}
               </div>
