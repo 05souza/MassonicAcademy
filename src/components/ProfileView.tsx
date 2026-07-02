@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { ExecutiveReport, AccessUser, Questionnaire, Book } from '../types';
 import { getFirebaseConfig, saveFirebaseConfig } from '../firebase';
+import { getDegreeLabel as getGlobalDegreeLabel } from '../utils/degrees';
 import { 
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
@@ -638,6 +639,176 @@ export default function ProfileView({
 
   // Book CRUD states
   const [bookFormId, setBookFormId] = useState('');
+  
+  // Dynamic categories states
+  const [categoriesList, setCategoriesList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('masonic_categories_list_v1');
+    return saved ? JSON.parse(saved) : [
+      'Adonhiramita',
+      'Adonhiramita-Rituais',
+      'História do Brasil',
+      'Filosofia',
+      'Simbologia',
+      'Maçonaria',
+      'Cabala',
+      'Rituais'
+    ];
+  });
+  const [showCategoriesManager, setShowCategoriesManager] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryOldName, setEditingCategoryOldName] = useState<string | null>(null);
+  const [editingCategoryNewName, setEditingCategoryNewName] = useState('');
+
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    import('../firebase').then(({ initializeFirebase }) => {
+      const { db } = initializeFirebase();
+      if (db) {
+        import('firebase/firestore').then(({ collection, onSnapshot, doc, setDoc }) => {
+          const categoriesCol = collection(db, 'categories');
+          unsub = onSnapshot(categoriesCol, (snapshot) => {
+            if (!snapshot.empty) {
+              const loaded: string[] = [];
+              snapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data && data.name) {
+                  loaded.push(data.name);
+                }
+              });
+              loaded.sort((a, b) => a.localeCompare(b));
+              setCategoriesList(loaded);
+              localStorage.setItem('masonic_categories_list_v1', JSON.stringify(loaded));
+            } else {
+              const defaults = [
+                'Adonhiramita',
+                'Adonhiramita-Rituais',
+                'História do Brasil',
+                'Filosofia',
+                'Simbologia',
+                'Maçonaria',
+                'Cabala',
+                'Rituais'
+              ];
+              // Batch seed
+              defaults.forEach(async (catName) => {
+                const docId = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                await setDoc(doc(db, 'categories', docId), { id: docId, name: catName });
+              });
+              setCategoriesList(defaults);
+              localStorage.setItem('masonic_categories_list_v1', JSON.stringify(defaults));
+            }
+          }, (err) => {
+            console.error('Error listening to categories:', err);
+          });
+        });
+      }
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, []);
+
+  const handleAddCategory = async (catName: string) => {
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+    if (categoriesList.includes(trimmed)) {
+      alert('Esta categoria já existe!');
+      return;
+    }
+    const { initializeFirebase } = await import('../firebase');
+    const { db } = initializeFirebase();
+    if (db) {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const docId = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      await setDoc(doc(db, 'categories', docId), { id: docId, name: trimmed });
+    } else {
+      const updated = [...categoriesList, trimmed].sort((a, b) => a.localeCompare(b));
+      setCategoriesList(updated);
+      localStorage.setItem('masonic_categories_list_v1', JSON.stringify(updated));
+    }
+    setNewCategoryName('');
+  };
+
+  const handleDeleteCategory = async (catName: string) => {
+    if (!confirm(`Tem certeza de que deseja excluir a categoria "${catName}"?`)) {
+      return;
+    }
+    const { initializeFirebase } = await import('../firebase');
+    const { db } = initializeFirebase();
+    if (db) {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const docId = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      await deleteDoc(doc(db, 'categories', docId));
+    } else {
+      const updated = categoriesList.filter(c => c !== catName);
+      setCategoriesList(updated);
+      localStorage.setItem('masonic_categories_list_v1', JSON.stringify(updated));
+    }
+    setBookFormCategories(prev => prev.filter(c => c !== catName));
+  };
+
+  const handleRenameCategory = async (oldName: string, newName: string) => {
+    const trimmedNew = newName.trim();
+    if (!trimmedNew || trimmedNew === oldName) return;
+    if (categoriesList.includes(trimmedNew)) {
+      alert('Esta categoria já existe!');
+      return;
+    }
+    const { initializeFirebase } = await import('../firebase');
+    const { db } = initializeFirebase();
+    if (db) {
+      const { doc, setDoc, deleteDoc, writeBatch, collection, getDocs } = await import('firebase/firestore');
+      const oldDocId = oldName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const newDocId = trimmedNew.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      await setDoc(doc(db, 'categories', newDocId), { id: newDocId, name: trimmedNew });
+      await deleteDoc(doc(db, 'categories', oldDocId));
+
+      try {
+        const booksCol = collection(db, 'books');
+        const snapshot = await getDocs(booksCol);
+        if (!snapshot.empty) {
+          const batch = writeBatch(db);
+          let updatedCount = 0;
+          snapshot.forEach(docSnap => {
+            const bookData = docSnap.data() as Book;
+            let changed = false;
+            let bookCategories = bookData.categories || [];
+            let bookCategory = bookData.category || '';
+
+            if (bookCategories.includes(oldName)) {
+              bookCategories = bookCategories.map(c => c === oldName ? trimmedNew : c);
+              changed = true;
+            }
+            if (bookCategory === oldName) {
+              bookCategory = trimmedNew;
+              changed = true;
+            }
+
+            if (changed) {
+              const bookRef = doc(db, 'books', docSnap.id);
+              batch.update(bookRef, {
+                category: bookCategory,
+                categories: bookCategories
+              });
+              updatedCount++;
+            }
+          });
+          if (updatedCount > 0) {
+            await batch.commit();
+          }
+        }
+      } catch (err) {
+        console.error('Error updating books categories in rename batch:', err);
+      }
+    } else {
+      const updated = categoriesList.map(c => c === oldName ? trimmedNew : c).sort((a, b) => a.localeCompare(b));
+      setCategoriesList(updated);
+      localStorage.setItem('masonic_categories_list_v1', JSON.stringify(updated));
+    }
+    setBookFormCategories(prev => prev.map(c => c === oldName ? trimmedNew : c));
+    setEditingCategoryOldName(null);
+  };
   const [bookFormTitle, setBookFormTitle] = useState('');
   const [bookFormAuthor, setBookFormAuthor] = useState('');
   const [bookFormCategory, setBookFormCategory] = useState('');
@@ -698,15 +869,15 @@ export default function ProfileView({
     setBookFormSuccess(null);
 
     if (!bookFormId.trim()) {
-      setBookFormError('O ID do livro é obrigatório.');
+      setBookFormError('O ID do material é obrigatório.');
       return;
     }
     if (!bookFormTitle.trim()) {
-      setBookFormError('O Título do livro é obrigatório.');
+      setBookFormError('O Título do material é obrigatório.');
       return;
     }
     if (!bookFormAuthor.trim()) {
-      setBookFormError('O Autor do livro é obrigatório.');
+      setBookFormError('O Autor do material é obrigatório.');
       return;
     }
     if (bookFormCategories.length === 0) {
@@ -714,7 +885,7 @@ export default function ProfileView({
       return;
     }
     if (!bookFormLink.trim()) {
-      setBookFormError('O Link do livro é obrigatório.');
+      setBookFormError('O Link do material é obrigatório.');
       return;
     }
 
@@ -739,26 +910,26 @@ export default function ProfileView({
     try {
       if (isCreatingNewBook) {
         if (books.some(b => b.id === savedBook.id)) {
-          setBookFormError(`Um livro com o ID "${savedBook.id}" já existe.`);
+          setBookFormError(`Um material com o ID "${savedBook.id}" já existe.`);
           return;
         }
         if (onAddBook) {
           onAddBook(savedBook);
-          setBookFormSuccess('Livro cadastrado com sucesso!');
+          setBookFormSuccess('Material cadastrado com sucesso!');
         }
       } else {
         if (onUpdateBook) {
           onUpdateBook(savedBook);
-          setBookFormSuccess('Livro atualizado com sucesso!');
+          setBookFormSuccess('Material atualizado com sucesso!');
         }
       }
     } catch (err: any) {
-      setBookFormError(err.message || 'Erro ao salvar o livro.');
+      setBookFormError(err.message || 'Erro ao salvar o material.');
     }
   };
 
   const handleDeleteBookAction = (bookId: string) => {
-    if (confirm('Tem certeza de que deseja excluir este livro da biblioteca?')) {
+    if (confirm('Tem certeza de que deseja excluir este material da biblioteca?')) {
       if (onDeleteBook) {
         onDeleteBook(bookId);
         if (editBookId === bookId) {
@@ -1151,7 +1322,7 @@ export default function ProfileView({
                   : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE LIVROS ({books.length})
+              <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE MATERIAIS ({books.length})
             </button>
             <button
               onClick={() => setActiveSubTab('accessStats')}
@@ -1819,37 +1990,18 @@ export default function ProfileView({
                       </div>
 
                       <div>
-                        <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nível de Acesso Cursos (Grau 1 a 33)</label>
-                        <input
-                          type="number"
-                          required
-                          min="1"
-                          max="33"
-                          placeholder="Ex: 15"
-                          value={formNivelCurso}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            if (val === '') {
-                              // Accept typing intermediate state, fallback to 1 on blur or save, but let's keep it clean
-                              setFormNivelCurso('' as any);
-                              return;
-                            }
-                            const num = parseInt(val, 10);
-                            if (num >= 1 && num <= 33) {
-                              setFormNivelCurso(num);
-                            } else if (num > 33) {
-                              setFormNivelCurso(33);
-                            } else {
-                              setFormNivelCurso(1);
-                            }
-                          }}
-                          onBlur={() => {
-                            if (!formNivelCurso || isNaN(formNivelCurso)) {
-                              setFormNivelCurso(1);
-                            }
-                          }}
-                          className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349]"
-                        />
+                        <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nível de Acesso Cursos (Grau)</label>
+                        <select
+                          value={formNivelCurso || 1}
+                          onChange={(e) => setFormNivelCurso(Number(e.target.value))}
+                          className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                        >
+                          {Array.from({ length: 33 }, (_, i) => i + 1).map((g) => (
+                            <option key={g} value={g}>
+                              {getGlobalDegreeLabel(g)}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div>
@@ -2402,7 +2554,7 @@ export default function ProfileView({
                             {user.email} {user.userAcesso && <span className="text-[#E9C349] font-bold">(@{user.userAcesso})</span>}
                           </p>
                           <p className="text-[9px] font-mono text-[#E9C349] truncate mt-0.5" title={user.nivelAcesso || "1"}>
-                            Nível: {user.nivelAcesso || "1"}{' '}
+                            Nível: {getGlobalDegreeLabel(Number(user.nivelAcesso || "1"))}{' '}
                             {user.password ? (
                               <span className="text-[#66d9cc] ml-2 font-sans font-bold">🔑 {user.password}</span>
                             ) : (
@@ -2687,36 +2839,18 @@ export default function ProfileView({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nível de Acesso (Grau do Membro 1 a 33)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="33"
-                        required
-                        placeholder="Digite o Grau (1 a 33)"
-                        value={userFormNivelAcesso}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          if (val === '') {
-                            setUserFormNivelAcesso('');
-                            return;
-                          }
-                          const num = parseInt(val, 10);
-                          if (num >= 1 && num <= 33) {
-                            setUserFormNivelAcesso(num.toString());
-                          } else if (num > 33) {
-                            setUserFormNivelAcesso('33');
-                          } else {
-                            setUserFormNivelAcesso('1');
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!userFormNivelAcesso || isNaN(parseInt(userFormNivelAcesso, 10))) {
-                            setUserFormNivelAcesso('1');
-                          }
-                        }}
-                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                      />
+                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nível de Acesso (Grau do Membro)</label>
+                      <select
+                        value={userFormNivelAcesso || '1'}
+                        onChange={(e) => setUserFormNivelAcesso(e.target.value)}
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-sans"
+                      >
+                        {Array.from({ length: 33 }, (_, i) => i + 1).map((g) => (
+                          <option key={g} value={String(g)}>
+                            {getGlobalDegreeLabel(g)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
@@ -3025,7 +3159,7 @@ export default function ProfileView({
           <div className="lg:col-span-4 bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] space-y-4">
             <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3 flex-wrap gap-2">
               <div>
-                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Livros</h3>
+                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Materiais</h3>
                 <p className="text-[10px] font-mono text-[#99907c] mt-0.5">Selecione para editar dados</p>
               </div>
               <button
@@ -3040,7 +3174,7 @@ export default function ProfileView({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Pesquisar livros..."
+                placeholder="Pesquisar materiais..."
                 value={bookSearchQuery}
                 onChange={(e) => setBookSearchQuery(e.target.value)}
                 className="w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] placeholder-[#536573] focus:outline-none focus:border-[#E9C349] font-sans"
@@ -3113,7 +3247,7 @@ export default function ProfileView({
                 })}
               {books.length === 0 && (
                 <div className="p-8 text-center text-xs font-mono text-[#99907c]">
-                  Nenhum livro cadastrado.
+                  Nenhum material cadastrado.
                 </div>
               )}
             </div>
@@ -3124,7 +3258,7 @@ export default function ProfileView({
             <div className="border-b border-[#1c2c36] pb-3 flex justify-between items-center flex-wrap gap-2">
               <div>
                 <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">
-                  {isCreatingNewBook ? 'Cadastrar Novo Livro' : `Editando Livro: ${bookFormTitle || bookFormId}`}
+                  {isCreatingNewBook ? 'Cadastrar Novo Material' : `Editando Material: ${bookFormTitle || bookFormId}`}
                 </h3>
                 <p className="text-[10px] font-mono text-[#99907c] mt-0.5">
                   {isCreatingNewBook ? 'Adicione um novo título à biblioteca' : 'Modifique os metadados do título selecionado'}
@@ -3136,7 +3270,7 @@ export default function ProfileView({
                   onClick={() => handleDeleteBookAction(bookFormId)}
                   className="bg-red-950/40 hover:bg-red-950 hover:text-red-300 text-rose-400 text-[10px] font-mono font-bold px-3 py-1.5 rounded border border-red-900/30 transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> Excluir Livro
+                  <Trash2 className="w-3.5 h-3.5" /> Excluir Material
                 </button>
               )}
             </div>
@@ -3163,7 +3297,7 @@ export default function ProfileView({
                     type="text"
                     required
                     disabled={!isCreatingNewBook}
-                    placeholder="ex: livro-manual-aprendiz"
+                    placeholder="ex: material-manual-aprendiz"
                     value={bookFormId}
                     onChange={(e) => setBookFormId(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
                     className="w-full bg-[#04141d] disabled:bg-[#081721] disabled:text-[#99907c]/60 disabled:cursor-not-allowed border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
@@ -3185,7 +3319,7 @@ export default function ProfileView({
 
                 {/* Title Field */}
                 <div className="md:col-span-2">
-                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Título do Livro</label>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Título do Material</label>
                   <input
                     type="text"
                     required
@@ -3210,21 +3344,117 @@ export default function ProfileView({
                 </div>
 
                 {/* Category Field */}
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-2 uppercase tracking-wider">
-                    Categorias / Rito (Selecione uma ou mais)
-                  </label>
+                <div className="md:col-span-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">
+                      Categorias / Rito (Selecione uma ou mais)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoriesManager(!showCategoriesManager)}
+                      className="text-[9px] font-mono text-[#E9C349] hover:underline flex items-center gap-1 uppercase tracking-wider bg-[#1c2c36]/40 hover:bg-[#1c2c36]/80 px-2 py-1 rounded border border-[#1c2c36] transition-all cursor-pointer"
+                    >
+                      {showCategoriesManager ? 'Fechar Gerenciador ✕' : '⚙️ Gerenciar Categorias'}
+                    </button>
+                  </div>
+
+                  {showCategoriesManager && (
+                    <div className="bg-[#05151e] border border-[#1c2c36] rounded-lg p-3 space-y-3">
+                      <div className="text-[10px] font-mono font-bold text-[#E9C349] uppercase tracking-wider border-b border-[#1c2c36] pb-1.5 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-[#26a69a]" />
+                        Criar, Editar ou Excluir Categorias
+                      </div>
+
+                      {/* Create New Category Form */}
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Nome da nova categoria"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddCategory(newCategoryName);
+                            }
+                          }}
+                          className="flex-1 bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddCategory(newCategoryName)}
+                          className="bg-[#26a69a] hover:bg-[#26a69a]/80 text-white font-mono font-bold text-[10px] uppercase px-3 py-1.5 rounded transition-colors"
+                        >
+                          Adicionar
+                        </button>
+                      </div>
+
+                      {/* List and Actions */}
+                      <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                        {categoriesList.map((cat) => {
+                          const isEditingThis = editingCategoryOldName === cat;
+                          return (
+                            <div key={cat} className="flex items-center justify-between bg-[#04141d]/50 border border-[#1c2c36]/60 rounded px-2.5 py-1.5">
+                              {isEditingThis ? (
+                                <div className="flex items-center gap-2 flex-1 mr-2">
+                                  <input
+                                    type="text"
+                                    value={editingCategoryNewName}
+                                    onChange={(e) => setEditingCategoryNewName(e.target.value)}
+                                    className="flex-1 bg-[#04141d] border border-[#E9C349] text-xs px-2 py-1 rounded text-[#d4e5f2] focus:outline-none font-sans"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRenameCategory(cat, editingCategoryNewName)}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white p-1 rounded transition-colors cursor-pointer"
+                                    title="Salvar alteração"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingCategoryOldName(null)}
+                                    className="bg-rose-950/60 hover:bg-rose-900 text-rose-300 p-1 rounded transition-colors cursor-pointer"
+                                    title="Cancelar"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <span className="text-xs text-[#d4e5f2] font-medium">{cat}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingCategoryOldName(cat);
+                                        setEditingCategoryNewName(cat);
+                                      }}
+                                      className="text-gray-400 hover:text-[#E9C349] p-1 transition-colors cursor-pointer"
+                                      title="Editar nome"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCategory(cat)}
+                                      className="text-gray-400 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                                      title="Excluir categoria"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#04141d] border border-[#1c2c36] rounded p-3">
-                    {[
-                      'Adonhiramita',
-                      'Adonhiramita-Rituais',
-                      'História do Brasil',
-                      'Filosofia',
-                      'Simbologia',
-                      'Maçonaria',
-                      'Cabala',
-                      'Rituais'
-                    ].map((cat) => {
+                    {categoriesList.map((cat) => {
                       const isChecked = bookFormCategories.includes(cat);
                       return (
                         <label
@@ -3264,7 +3494,7 @@ export default function ProfileView({
                   >
                     {Array.from({ length: 33 }, (_, i) => i + 1).map((g) => (
                       <option key={g} value={g}>
-                        Grau {g} {g === 1 ? '(Aprendiz)' : g === 2 ? '(Companheiro)' : g === 3 ? '(Mestre)' : ''}
+                        {getGlobalDegreeLabel(g)}
                       </option>
                     ))}
                   </select>
@@ -3301,7 +3531,7 @@ export default function ProfileView({
                 {/* Cover Image URL / File Upload */}
                 <div className="md:col-span-2 space-y-3">
                   <div>
-                    <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link da Capa do Livro (Miniatura)</label>
+                    <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link da Capa do Material (Miniatura)</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -3407,7 +3637,7 @@ export default function ProfileView({
                   className="bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] text-xs font-mono font-bold px-6 py-2.5 rounded shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                 >
                   <Check className="w-4 h-4 text-[#241a00]" />
-                  <span>{isCreatingNewBook ? 'Cadastrar Livro' : 'Salvar Alterações'}</span>
+                  <span>{isCreatingNewBook ? 'Cadastrar Material' : 'Salvar Alterações'}</span>
                 </button>
               </div>
             </form>
@@ -3425,7 +3655,7 @@ export default function ProfileView({
                 <BarChart3 className="w-5 h-5 text-[#66d9cc]" /> Relatórios de Acessos & Atividades
               </h3>
               <p className="text-xs font-mono text-[#99907c] mt-1">
-                Análise em tempo real de logins de usuários, visualizações de cursos e leituras de livros.
+                Análise em tempo real de logins de usuários, visualizações de cursos e acessos a materiais.
               </p>
             </div>
             
@@ -3481,7 +3711,7 @@ export default function ProfileView({
                   </div>
                 </div>
                 <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 flex flex-col justify-between">
-                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Cliques em Livros</span>
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold tracking-wider">Cliques em Materiais</span>
                   <div className="flex items-baseline gap-1.5 mt-2">
                     <span className="text-2xl font-bold font-sans text-orange-400">{totalBookAccess}</span>
                     <span className="text-[10px] font-mono text-[#99907c]">consultas</span>
@@ -3537,7 +3767,7 @@ export default function ProfileView({
                   : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
               }`}
             >
-              📚 ACESSOS POR USUÁRIOS X LIVROS
+              📚 ACESSOS POR USUÁRIOS X MATERIAIS
             </button>
           </div>
 
@@ -3867,7 +4097,7 @@ export default function ProfileView({
               <div className="space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Acessos a Livros & Biblioteca</h4>
+                    <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Acessos a Materiais & Biblioteca</h4>
                     <p className="text-[10px] font-mono text-[#99907c]">Consultas e cliques para download dos títulos na Biblioteca Virtual</p>
                   </div>
 
@@ -3881,7 +4111,7 @@ export default function ProfileView({
                           : 'text-[#99907c] hover:text-white'
                       }`}
                     >
-                      Agrupar por Livro
+                      Agrupar por Material
                     </button>
                     <button
                       onClick={() => setReportsGrouping('by-user')}
@@ -3907,7 +4137,7 @@ export default function ProfileView({
                   if (filtered.length === 0) {
                     return (
                       <div className="text-center py-10 bg-[#04141d] rounded-lg border border-[#1c2c36]">
-                        <p className="text-xs font-mono text-[#99907c]">Nenhum registro de acesso a livro encontrado.</p>
+                        <p className="text-xs font-mono text-[#99907c]">Nenhum registro de acesso a material encontrado.</p>
                       </div>
                     );
                   }
@@ -3916,7 +4146,7 @@ export default function ProfileView({
                     // Group by Book title
                     const groupedMap: Record<string, { title: string; count: number; users: Record<string, { name: string; count: number }> }> = {};
                     filtered.forEach(log => {
-                      const key = log.targetTitle || log.targetId || 'Livro Não Identificado';
+                      const key = log.targetTitle || log.targetId || 'Material Não Identificado';
                       if (!groupedMap[key]) {
                         groupedMap[key] = {
                           title: key,
@@ -3951,14 +4181,14 @@ export default function ProfileView({
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1c2c36]/40 pb-2">
                                 <div className="flex-1 min-w-0">
                                   <span className="font-mono text-[9px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded border border-orange-400/30">
-                                    LIVRO / OBRA
+                                    MATERIAL
                                   </span>
                                   <h5 className="font-sans font-bold text-[#d4e5f2] text-xs sm:text-sm mt-1 truncate" title={bookStats.title}>
                                     {bookStats.title}
                                   </h5>
                                 </div>
                                 <div className="text-left sm:text-right shrink-0">
-                                  <span className="text-[9px] font-mono text-[#99907c] uppercase block">Acessos à Obra</span>
+                                  <span className="text-[9px] font-mono text-[#99907c] uppercase block">Acessos ao Material</span>
                                   <span className="text-base font-bold font-sans text-orange-400">{bookStats.count}</span>
                                 </div>
                               </div>

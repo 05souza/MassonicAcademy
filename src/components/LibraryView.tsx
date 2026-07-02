@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Book, AccessUser } from '../types';
-import { Search, BookOpen, Download, Shield, Lock, Unlock, Eye, ListFilter } from 'lucide-react';
+import { Search, BookOpen, Download, Shield, Lock, Unlock, Eye, ListFilter, LayoutGrid, List } from 'lucide-react';
+import { getDegreeLabel as getGlobalDegreeLabel } from '../utils/degrees';
 
 interface LibraryViewProps {
   books: Book[];
@@ -11,11 +12,12 @@ interface LibraryViewProps {
 }
 
 export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureViewer, onAccessBook }: LibraryViewProps) {
-  const [activeCategory, setActiveCategory] = useState<string>('Todos os livros');
+  const [activeCategory, setActiveCategory] = useState<string>('Todos os materiais');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc'>('name-az');
   const [checkedCategories, setCheckedCategories] = useState<Record<string, boolean>>({});
   const [checkedDegrees, setCheckedDegrees] = useState<Record<number, boolean>>({});
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // 1. Get user access level
   const userLevel = currentUser 
@@ -24,21 +26,12 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
 
   // Helper for degree labels
   const getDegreeLabel = (level: number) => {
-    switch (level) {
-      case 1:
-        return 'Grau 1 - Aprendiz';
-      case 2:
-        return 'Grau 2 - Companheiro';
-      case 3:
-        return 'Grau 3 - Mestre';
-      default:
-        return `Grau ${level}`;
-    }
+    return getGlobalDegreeLabel(level);
   };
 
-  // 2. Identify all categories and count of active books
+  // 2. Identify all categories and count of active materials
   const categoriesMap: Record<string, number> = {
-    'Todos os livros': books.length
+    'Todos os materiais': books.length
   };
 
   // Identify all degrees and count of active books
@@ -61,8 +54,8 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
     .sort((a, b) => a - b);
 
   const categories = Object.keys(categoriesMap).sort((a, b) => {
-    if (a === 'Todos os livros') return -1;
-    if (b === 'Todos os livros') return 1;
+    if (a === 'Todos os materiais') return -1;
+    if (b === 'Todos os materiais') return 1;
     return a.localeCompare(b);
   });
 
@@ -74,7 +67,7 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
     const bookCats = book.categories && book.categories.length > 0 ? book.categories : [book.category];
 
     // Category filter (Left Sidebar menu)
-    if (activeCategory !== 'Todos os livros' && !bookCats.includes(activeCategory)) {
+    if (activeCategory !== 'Todos os materiais' && !bookCats.includes(activeCategory)) {
       return false;
     }
 
@@ -137,7 +130,7 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
     if (isLocked) {
       e.preventDefault();
       e.stopPropagation();
-      alert(`Acesso Restrito: Este material requer Grau ${book.nivelAcesso}. Seu Grau atual é ${userLevel}.`);
+      alert(`Acesso Restrito: Este material requer ${getGlobalDegreeLabel(book.nivelAcesso)}. Seu Grau atual é ${getGlobalDegreeLabel(userLevel)}.`);
       return;
     }
     if (onAccessBook) {
@@ -179,7 +172,7 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Pesquisar livros..."
+                  placeholder="Pesquisar materiais..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] placeholder-[#99907c] focus:outline-none focus:border-[#E9C349]/50 font-sans"
@@ -197,12 +190,12 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
 
             {/* Checkbox filters by category */}
             <div className="space-y-2">
-              <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Categorias de Livros</label>
+              <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Categorias de Materiais</label>
               <p className="text-[9px] font-mono text-[#99907c]/80 leading-snug">
-                Disponível: <span className="text-[#66d9cc] font-bold">{categories.filter(cat => cat !== 'Todos os livros').length}</span> categorias com <span className="text-[#E9C349] font-bold">{books.filter(b => b.status === 'Ativo').length}</span> livros ativos.
+                Disponível: <span className="text-[#66d9cc] font-bold">{categories.filter(cat => cat !== 'Todos os materiais').length}</span> categorias com <span className="text-[#E9C349] font-bold">{books.filter(b => b.status === 'Ativo').length}</span> materiais ativos.
               </p>
               <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 pt-1">
-                {categories.filter(cat => cat !== 'Todos os livros').map(cat => (
+                {categories.filter(cat => cat !== 'Todos os materiais').map(cat => (
                   <label key={cat} className="flex items-center gap-2 cursor-pointer text-xs font-sans text-[#99907c] hover:text-[#d4e5f2] select-none w-full">
                     <input
                       type="checkbox"
@@ -250,14 +243,39 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
         {/* TOP STATUS BAR */}
         <div className="bg-[#0c1d27] rounded-xl p-3.5 border border-[#1c2c36] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm" id="library-top-bar">
           <div className="text-xs font-mono text-[#99907c]">
-            Total: <span className="text-[#f2ca50] font-bold">{sortedBooks.length}</span> {sortedBooks.length === 1 ? 'título encontrado' : 'títulos encontrados'}
-            {activeCategory !== 'Todos os livros' && (
+            Total: <span className="text-[#f2ca50] font-bold">{sortedBooks.length}</span> {sortedBooks.length === 1 ? 'material encontrado' : 'materiais encontrados'}
+            {activeCategory !== 'Todos os materiais' && (
               <span> em <span className="text-[#66d9cc] font-sans font-bold">{activeCategory}</span></span>
             )}
           </div>
 
-          {/* Sort selection */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Sort selection and View switcher */}
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-1 border-r border-[#1c2c36] pr-3 mr-1 select-none">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] border border-transparent'
+                }`}
+                title="Visualização em Grade"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded transition-all cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] border border-transparent'
+                }`}
+                title="Visualização em Lista"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider shrink-0">Ordenar:</span>
             <select
               value={sortBy}
@@ -276,15 +294,15 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
         {sortedBooks.length === 0 ? (
           <div className="bg-[#0c1d27] rounded-xl p-12 border border-[#1c2c36] text-center space-y-3">
             <BookOpen className="w-12 h-12 text-[#99907c] mx-auto opacity-40 animate-pulse" />
-            <h4 className="font-sans font-bold text-[#d4e5f2]">Nenhum livro encontrado</h4>
+            <h4 className="font-sans font-bold text-[#d4e5f2]">Nenhum material encontrado</h4>
             <p className="font-mono text-xs text-[#99907c] max-w-md mx-auto">
               Nenhum título corresponde aos seus critérios de busca ou filtros selecionados. Tente limpar as opções do filtro.
             </p>
-            {(searchQuery || activeCategory !== 'Todos os livros' || Object.values(checkedCategories).some(Boolean) || Object.values(checkedDegrees).some(Boolean)) && (
+            {(searchQuery || activeCategory !== 'Todos os materiais' || Object.values(checkedCategories).some(Boolean) || Object.values(checkedDegrees).some(Boolean)) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
-                  setActiveCategory('Todos os livros');
+                  setActiveCategory('Todos os materiais');
                   setCheckedCategories({});
                   setCheckedDegrees({});
                 }}
@@ -294,8 +312,8 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
               </button>
             )}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="library-books-grid">
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in" id="library-books-grid">
             {sortedBooks.map((book) => {
               const isLocked = !isAdmin && userLevel < book.nivelAcesso;
               
@@ -410,13 +428,101 @@ export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureV
                           className="w-full bg-[#E9C349]/15 hover:bg-[#E9C349]/35 border border-[#E9C349]/40 hover:border-[#E9C349] text-[#f2ca50] hover:text-white font-mono font-bold text-[10px] py-2 rounded flex items-center justify-center gap-1.5 transition-all transform active:scale-95 shadow-sm uppercase cursor-pointer"
                         >
                           <Eye className="w-3 h-3 text-[#E9C349]" />
-                          <span>Acessar Livro</span>
+                          <span>Acessar Material</span>
                         </button>
                       )}
                     </div>
 
                   </div>
 
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-3 animate-fade-in" id="library-books-list">
+            {sortedBooks.map((book) => {
+              const isLocked = !isAdmin && userLevel < book.nivelAcesso;
+              
+              return (
+                <div
+                  key={book.id}
+                  id={`book-card-${book.id}`}
+                  className="bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36]/60 shadow-md hover:shadow-lg hover:border-[#1c2c36] transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group relative text-left"
+                >
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Lock badge overlay */}
+                      {isLocked ? (
+                        <span className="bg-red-950/90 border border-red-500/50 text-red-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow shrink-0">
+                          <Lock className="w-2.5 h-2.5 text-red-400" />
+                          Grau {book.nivelAcesso}
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-950/80 border border-emerald-500/40 text-[#66d9cc] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow shrink-0">
+                          <Unlock className="w-2.5 h-2.5 text-emerald-400" />
+                          Grau {book.nivelAcesso}
+                        </span>
+                      )}
+
+                      {/* Category tag */}
+                      <span className="text-[9px] font-mono text-[#E9C349] uppercase tracking-widest font-black shrink-0">
+                        {(book.categories && book.categories.length > 0 ? book.categories : [book.category]).join(', ')}
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      {/* Book Title */}
+                      <h4 className="font-sans font-bold text-sm text-[#d4e5f2] leading-snug group-hover:text-[#f2ca50] transition-colors uppercase">
+                        {book.title}
+                      </h4>
+
+                      {/* Author */}
+                      <p className="font-mono text-[10px] text-[#99907c]">
+                        Por: <span className="text-slate-300 font-sans font-medium">{book.author}</span>
+                      </p>
+                    </div>
+
+                    {/* Book tags */}
+                    <div className="flex flex-wrap gap-1">
+                      {book.tags.map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-[#11212b] text-[8px] font-mono text-[#99907c] px-1 rounded border border-[#1c2c36]/60"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action buttons list */}
+                  <div className="shrink-0 w-full md:w-48">
+                    {isLocked ? (
+                      <button
+                        disabled
+                        className="w-full bg-red-950/20 text-[#99907c]/60 border border-red-900/30 font-mono font-bold text-[10px] py-2 rounded flex items-center justify-center gap-1.5 cursor-not-allowed select-none uppercase"
+                      >
+                        <Lock className="w-3 h-3 text-red-500/60" />
+                        <span>Bloqueado</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          handleAccessBook(book, e);
+                          if (onOpenSecureViewer) {
+                            onOpenSecureViewer(book.link, book.title);
+                          } else {
+                            window.open(book.link, '_blank', 'noopener,noreferrer');
+                          }
+                        }}
+                        className="w-full bg-[#E9C349]/15 hover:bg-[#E9C349]/35 border border-[#E9C349]/40 hover:border-[#E9C349] text-[#f2ca50] hover:text-white font-mono font-bold text-[10px] py-2 rounded flex items-center justify-center gap-1.5 transition-all transform active:scale-95 shadow-sm uppercase cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3 text-[#E9C349]" />
+                        <span>Acessar Material</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}

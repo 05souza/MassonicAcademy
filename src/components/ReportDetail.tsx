@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExecutiveReport, AccessUser, Questionnaire } from '../types';
+import { getDegreeLabel } from '../utils/degrees';
 import { 
   X, Calendar, Shield, User, FileText, Download, Share2, 
   Plus, CheckCircle2, Link as LinkIcon, Image as ImageIcon, Sparkles,
@@ -185,7 +186,7 @@ export default function ReportDetail({
                 />
                 {report.nivelCurso && (
                   <span className="bg-[#E9C349]/10 border border-[#E9C349]/20 text-[#E9C349] px-1 rounded text-[8.5px] uppercase font-black tracking-wide leading-none py-0.5 select-none font-mono">
-                    Grau {report.nivelCurso}
+                    {getDegreeLabel(report.nivelCurso)}
                   </span>
                 )}
               </span>
@@ -263,7 +264,7 @@ export default function ReportDetail({
                 <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">Grau Requerido</span>
                 <span className="text-xs font-mono font-extrabold text-[#E9C349] flex items-center gap-1.5 mt-1">
                   <Shield className="w-3.5 h-3.5 text-[#26a69a]" />
-                  Grau {report.nivelCurso || 1}
+                  {getDegreeLabel(report.nivelCurso || 1)}
                 </span>
               </div>
 

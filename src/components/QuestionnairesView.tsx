@@ -24,6 +24,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser } from '../types';
+import { getDegreeLabel } from '../utils/degrees';
 import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
 import { doc, collection, getDocs, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { APRENDIZ_QUESTIONS } from '../data/aprendizQuestions';
@@ -325,7 +326,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
     const userAccessLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || (isGlobalAdmin ? '33' : '1')), 10) : 1;
     const requiredLevel = currentQuiz.degreeRequired || 1;
     if (userAccessLevel < requiredLevel) {
-      showToast(`Acesso Bloqueado: Este questionário exige grau de acesso mínimo ${requiredLevel}. Seu grau atual é ${userAccessLevel}.`, 'error');
+      showToast(`Acesso Bloqueado: Este questionário exige grau de acesso mínimo ${getDegreeLabel(requiredLevel)}. Seu grau atual é ${getDegreeLabel(userAccessLevel)}.`, 'error');
       return;
     }
 
@@ -1338,7 +1339,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                   <div id="access-blocked-warning" className="flex items-start gap-2.5 bg-rose-950/40 border border-rose-900/60 text-rose-300 p-3 rounded-lg text-[11px] leading-relaxed font-mono">
                     <Shield className="w-4 h-4 text-rose-400 shrink-0 mt-0.5 animate-pulse" />
                     <span>
-                      <strong className="text-rose-400">Acesso Bloqueado:</strong> Este questionário exige no mínimo o <strong>Nível de Acesso (Grau {requiredLevel})</strong>. Seu grau atual cadastrado é <strong>{userAccessLevel}</strong>. Por favor, faça a instrução regulamentar para receber a outorga correspondente.
+                      <strong className="text-rose-400">Acesso Bloqueado:</strong> Este questionário exige no mínimo o <strong>Nível de Acesso ({getDegreeLabel(requiredLevel)})</strong>. Seu grau atual cadastrado é <strong>{getDegreeLabel(userAccessLevel)}</strong>. Por favor, faça a instrução regulamentar para receber a outorga correspondente.
                     </span>
                   </div>
                   <button
@@ -1347,7 +1348,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                     disabled
                     className="w-full bg-[#1c2c36] text-[#99907c] font-sans font-extrabold text-xs uppercase py-3.5 rounded-lg tracking-widest cursor-not-allowed flex items-center justify-center gap-2 opacity-60 shadow-md select-none border-none"
                   >
-                    <Shield className="w-4 h-4 text-rose-400" /> Grau {requiredLevel} Requerido
+                    <Shield className="w-4 h-4 text-rose-400" /> Requer {getDegreeLabel(requiredLevel)}
                   </button>
                 </div>
               ) : (
@@ -1530,7 +1531,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                         >
                           {Array.from({ length: 33 }, (_, i) => i + 1).map((degree) => (
                             <option key={degree} value={degree}>
-                              Grau {degree}
+                              {getDegreeLabel(degree)}
                             </option>
                           ))}
                         </select>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExecutiveReport } from '../types';
+import { getDegreeLabel } from '../utils/degrees';
 import { Calendar, Shield, Image as ImageIcon } from 'lucide-react';
 import InlineEditable from './InlineEditable';
 
@@ -123,7 +124,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 </span>
                 {report.nivelCurso && (
                   <span className="font-mono text-[9px] text-[#E9C349] bg-[#E9C349]/10 border border-[#E9C349]/25 px-1.5 py-0.2 rounded uppercase tracking-wider font-extrabold flex items-center gap-1 select-none">
-                    <Shield className="w-2.5 h-2.5 text-[#26a69a]" /> Grau {report.nivelCurso}
+                    <Shield className="w-2.5 h-2.5 text-[#26a69a]" /> {getDegreeLabel(report.nivelCurso)}
                   </span>
                 )}
               </div>
@@ -291,7 +292,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           </span>
           {report.nivelCurso && (
             <span className="font-mono text-[10px] text-[#E9C349] bg-[#E9C349]/10 border border-[#E9C349]/25 px-2 py-0.5 rounded uppercase tracking-wider font-extrabold flex items-center gap-1 select-none">
-              <Shield className="w-3 h-3 text-[#26a69a]" /> Grau {report.nivelCurso}
+              <Shield className="w-3 h-3 text-[#26a69a]" /> {getDegreeLabel(report.nivelCurso)}
             </span>
           )}
         </div>

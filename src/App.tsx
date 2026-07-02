@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
 import { ExecutiveReport, SystemAlert, AccessUser, Book } from './types';
+import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import Header from './components/Header';
@@ -1060,8 +1061,8 @@ export default function App() {
     // Auto add a system alert logging the inclusion
     const newAlert: SystemAlert = {
       id: `alert-add-book-${Date.now()}`,
-      title: 'Novo Livro Cadastrado',
-      description: `O livro "${newBook.title}" foi adicionado com sucesso à biblioteca por Daniel Luciano.`,
+      title: 'Novo Material Cadastrado',
+      description: `O material "${newBook.title}" foi adicionado com sucesso à biblioteca por Daniel Luciano.`,
       time: 'Agora mesmo',
       type: 'update',
       read: false
@@ -1078,8 +1079,8 @@ export default function App() {
     // Auto add a system alert logging the revision
     const newAlert: SystemAlert = {
       id: `alert-edit-book-${Date.now()}`,
-      title: 'Livro da Biblioteca Atualizado',
-      description: `Os metadados do livro "${updatedBook.title}" foram revisados por Daniel Luciano.`,
+      title: 'Material da Biblioteca Atualizado',
+      description: `Os metadados do material "${updatedBook.title}" foram revisados por Daniel Luciano.`,
       time: 'Agora mesmo',
       type: 'update',
       read: false
@@ -1098,8 +1099,8 @@ export default function App() {
     // Auto add a system alert logging the deletion
     const newAlert: SystemAlert = {
       id: `alert-del-book-${Date.now()}`,
-      title: 'Livro Removido da Biblioteca',
-      description: `O livro "${bookToDelete.title}" foi excluído da biblioteca.`,
+      title: 'Material Removido da Biblioteca',
+      description: `O material "${bookToDelete.title}" foi excluído da biblioteca.`,
       time: 'Agora mesmo',
       type: 'critical',
       read: false
@@ -1887,9 +1888,14 @@ export default function App() {
               Acesso Restrito ao Grau
             </h3>
             
-            <p className="text-xs text-[#9cbfd5] font-mono mt-1.5 uppercase tracking-widest bg-[#11212b] px-3 py-1 rounded-full border border-[#1c2c36] inline-block mb-4">
-              Grau Atual: {currentUser ? (currentUser.nivelAcesso || '1') : '1'} &bull; Requerido: {accessBlockedRequiredLevel}
-            </p>
+            <div className="flex flex-col gap-1.5 items-center mb-4">
+              <span className="text-[10px] text-[#9cbfd5] font-mono uppercase tracking-widest bg-[#11212b] px-3 py-1 rounded-full border border-[#1c2c36] inline-block">
+                Seu Grau: {getDegreeLabel(Number(currentUser ? (currentUser.nivelAcesso || '1') : '1'))}
+              </span>
+              <span className="text-[10px] text-[#E9C349] font-mono uppercase tracking-widest bg-[#11212b] px-3 py-1 rounded-full border border-[#D4AF37]/30 inline-block">
+                Requerido: {getDegreeLabel(Number(accessBlockedRequiredLevel || 1))}
+              </span>
+            </div>
 
             <div className="bg-[#04141d] rounded-xl p-4 border border-[#1c2c36] text-left space-y-2 mb-6 font-sans">
               <span className="block text-[9px] font-mono text-[#99907c] uppercase">INFORMAÇÃO CORPORATIVA</span>
