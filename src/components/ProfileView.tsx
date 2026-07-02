@@ -7,7 +7,7 @@ import {
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
   X, Search, Layers, FileText, Sliders, BarChart3, ChevronRight, HelpCircle,
-  Upload, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen
+  Upload, Download, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen
 } from 'lucide-react';
 import { compressImage } from '../utils';
 
@@ -37,6 +37,9 @@ interface ProfileViewProps {
   onAddBook?: (newBook: Book) => void;
   onUpdateBook?: (updatedBook: Book) => void;
   onDeleteBook?: (bookId: string) => void;
+  onBatchUpdateBooksStatus?: (bookIds: string[], status: 'Ativo' | 'Inativo') => void;
+  onBatchDeleteBooks?: (bookIds: string[]) => void;
+  onImportBooks?: (newBooks: Book[]) => void;
 
   // Access Logs Prop
   accessLogs?: any[];
@@ -62,6 +65,9 @@ export default function ProfileView({
   onAddBook,
   onUpdateBook,
   onDeleteBook,
+  onBatchUpdateBooksStatus,
+  onBatchDeleteBooks,
+  onImportBooks,
   accessLogs = []
 }: ProfileViewProps) {
   const getInitials = (name: string) => {
@@ -826,6 +832,32 @@ export default function ProfileView({
   const [bookFormError, setBookFormError] = useState<string | null>(null);
   const [bookFormSuccess, setBookFormSuccess] = useState<string | null>(null);
   const [bookThumbnailUploadError, setBookThumbnailUploadError] = useState<string | null>(null);
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+
+  const filteredBooks = books.filter(b => {
+    if (bookDegreeFilter !== 'all') {
+      if (String(b.nivelAcesso) !== bookDegreeFilter) {
+        return false;
+      }
+    }
+    const query = bookSearchQuery.toLowerCase();
+    const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
+    return b.title.toLowerCase().includes(query) || 
+           b.author.toLowerCase().includes(query) || 
+           b.id.toLowerCase().includes(query) ||
+           bookCats.some(cat => cat.toLowerCase().includes(query));
+  });
+
+  const allFilteredChecked = filteredBooks.length > 0 && filteredBooks.every(b => selectedBookIds.includes(b.id));
+  const handleToggleSelectAll = () => {
+    if (allFilteredChecked) {
+      const filteredIds = filteredBooks.map(b => b.id);
+      setSelectedBookIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      const filteredIds = filteredBooks.map(b => b.id);
+      setSelectedBookIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+    }
+  };
 
   const handleSelectBookToEdit = (book: Book) => {
     setIsCreatingNewBook(false);
@@ -936,6 +968,190 @@ export default function ProfileView({
         if (editBookId === bookId) {
           handleStartCreateNewBook();
         }
+      }
+    }
+  };
+
+  const handleDownloadExcelTemplate = () => {
+    const templateData = [
+      {
+        id: "livro-exemplo-1",
+        titulo: "A SIMBOLOGIA DO GRAU DE APRENDIZ",
+        autor: "José Castellani",
+        categorias: "Simbologia, Maçonaria",
+        grau: 1,
+        status: "Ativo",
+        tags: "aprendiz, simbologia, rito adonhiramita",
+        thumbnailUrl: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=200&q=80",
+        link: "https://exemplo.com/materiais/aprendiz.pdf"
+      },
+      {
+        id: "livro-exemplo-2",
+        titulo: "REGRAS DE ADMINISTRAÇÃO EM LOJA",
+        autor: "Autor Desconhecido",
+        categorias: "Filosofia, Rituais",
+        grau: 4,
+        status: "Inativo",
+        tags: "mestre secreto, administracao",
+        thumbnailUrl: "",
+        link: "https://exemplo.com/materiais/regras-loja.pdf"
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Materiais Modelo");
+    
+    // Auto size columns to look nice
+    worksheet["!cols"] = [
+      { wch: 18 }, 
+      { wch: 45 }, 
+      { wch: 20 }, 
+      { wch: 25 }, 
+      { wch: 8 }, 
+      { wch: 10 }, 
+      { wch: 35 }, 
+      { wch: 35 }, 
+      { wch: 40 }
+    ];
+
+    XLSX.writeFile(workbook, "modelo_importacao_materiais.xlsx");
+  };
+
+  const handleImportExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const bstr = event.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        if (data.length === 0) {
+          alert("A planilha está vazia ou não pôde ser lida.");
+          return;
+        }
+
+        const importedBooks: Book[] = [];
+        const errors: string[] = [];
+
+        data.forEach((row, index) => {
+          const rowNum = index + 2; // header is row 1
+          
+          const rawId = row.id || row.Identificador || row.ID;
+          const rawTitle = row.titulo || row.title || row.Título || row.Titulo;
+          const rawAuthor = row.autor || row.author || row.Autor;
+          const rawCategorias = row.categorias || row.categories || row.Categorias || row.category || row.Category || row.categoria || row.Categoria;
+          const rawGrau = row.grau || row.nivelAcesso || row.Grau || row.nivel || row.Nível || row.Nivel;
+          const rawStatus = row.status || row.Status;
+          const rawTags = row.tags || row.Tags || row.palavrasChave || row.PalavrasChave;
+          const rawThumbnail = row.thumbnailUrl || row.ThumbnailUrl || row.imagem || row.Imagem || row.thumbnail || row.Thumbnail;
+          const rawLink = row.link || row.Link || row.url || row.URL || row.documento || row.Documento;
+
+          if (!rawTitle) {
+            errors.push(`Linha ${rowNum}: O título é obrigatório.`);
+            return;
+          }
+
+          if (!rawAuthor) {
+            errors.push(`Linha ${rowNum}: O autor é obrigatório.`);
+            return;
+          }
+
+          if (!rawLink) {
+            errors.push(`Linha ${rowNum}: O link do material é obrigatório.`);
+            return;
+          }
+
+          const id = rawId ? String(rawId).trim().toLowerCase().replace(/\s+/g, '-') : `livro-imp-${Date.now()}-${index}`;
+
+          let categories: string[] = [];
+          if (rawCategorias) {
+            categories = String(rawCategorias).split(',').map(c => c.trim()).filter(Boolean);
+          }
+          if (categories.length === 0) {
+            categories = ['Filosofia'];
+          }
+
+          let degree = 1;
+          if (rawGrau !== undefined) {
+            const parsed = parseInt(String(rawGrau), 10);
+            if (!isNaN(parsed) && parsed >= 1 && parsed <= 33) {
+              degree = parsed;
+            }
+          }
+
+          let status: 'Ativo' | 'Inativo' = 'Ativo';
+          if (rawStatus) {
+            const statusStr = String(rawStatus).trim().toLowerCase();
+            if (statusStr === 'inativo' || statusStr === 'inactive' || statusStr === 'oculto' || statusStr === 'false') {
+              status = 'Inativo';
+            }
+          }
+
+          let tags: string[] = [];
+          if (rawTags) {
+            tags = String(rawTags).split(',').map(t => t.trim()).filter(Boolean);
+          }
+
+          importedBooks.push({
+            id,
+            title: String(rawTitle).trim(),
+            author: String(rawAuthor).trim(),
+            category: categories[0],
+            categories,
+            nivelAcesso: degree,
+            status,
+            tags,
+            thumbnailUrl: rawThumbnail ? String(rawThumbnail).trim() : '',
+            link: String(rawLink).trim()
+          });
+        });
+
+        if (errors.length > 0) {
+          alert(`Erros encontrados na validação:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n...e mais ${errors.length - 5} erros.` : ''}`);
+          return;
+        }
+
+        if (importedBooks.length > 0) {
+          if (onImportBooks) {
+            onImportBooks(importedBooks);
+            setBookFormSuccess(`${importedBooks.length} materiais importados com sucesso de ${file.name}!`);
+            setBookFormError(null);
+          } else {
+            alert("Erro do sistema: Função de importação não configurada.");
+          }
+        }
+      } catch (err: any) {
+        console.error("Erro ao importar planilha excel:", err);
+        setBookFormError(`Erro ao ler arquivo excel: ${err.message || err}`);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleBatchStatusAction = (status: 'Ativo' | 'Inativo') => {
+    if (selectedBookIds.length === 0) return;
+    if (onBatchUpdateBooksStatus) {
+      onBatchUpdateBooksStatus(selectedBookIds, status);
+      setBookFormSuccess(`Status de ${selectedBookIds.length} materiais alterado para "${status}" com sucesso!`);
+      setSelectedBookIds([]);
+    }
+  };
+
+  const handleBatchDeleteAction = () => {
+    if (selectedBookIds.length === 0) return;
+    if (confirm(`Tem certeza de que deseja excluir os ${selectedBookIds.length} materiais selecionados? Esta ação é irreversível.`)) {
+      if (onBatchDeleteBooks) {
+        onBatchDeleteBooks(selectedBookIds);
+        setBookFormSuccess(`${selectedBookIds.length} materiais excluídos com sucesso.`);
+        setSelectedBookIds([]);
+        handleStartCreateNewBook();
       }
     }
   };
@@ -3171,8 +3387,32 @@ export default function ProfileView({
               </button>
             </div>
 
+            {/* Admin Import & Export Tools */}
+            <div className="bg-[#05151e] border border-[#1c2c36] rounded-lg p-2.5 flex flex-col sm:flex-row gap-2 justify-between items-center">
+              <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Planilha Excel</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadExcelTemplate}
+                  className="bg-transparent hover:bg-[#11212b] border border-[#1c2c36] text-[#E9C349] hover:text-[#f3d368] text-[9px] font-mono font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                  title="Baixar planilha de exemplo para cadastro de materiais"
+                >
+                  <Download className="w-3 h-3" /> Modelo
+                </button>
+                <label className="bg-[#1ea296]/20 hover:bg-[#1ea296]/30 border border-[#1ea296]/40 text-[#66d9cc] text-[9px] font-mono font-bold px-2.5 py-1 rounded transition-all flex items-center gap-1 cursor-pointer">
+                  <Upload className="w-3 h-3" /> Importar
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    className="hidden"
+                    onChange={handleImportExcelFile}
+                  />
+                </label>
+              </div>
+            </div>
+
             {/* Quick search input and Degree Filter */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="relative">
                 <input
                   type="text"
@@ -3184,12 +3424,12 @@ export default function ProfileView({
                 <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
               </div>
               
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider shrink-0">Grau:</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Filtrar por Grau</span>
                 <select
                   value={bookDegreeFilter}
                   onChange={(e) => setBookDegreeFilter(e.target.value)}
-                  className="flex-1 bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1 text-xs text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans cursor-pointer"
+                  className="w-full min-w-0 max-w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans cursor-pointer truncate"
                 >
                   <option value="all">Todos os Graus</option>
                   {Array.from({ length: 33 }, (_, i) => i + 1).map((degree) => (
@@ -3201,79 +3441,134 @@ export default function ProfileView({
               </div>
             </div>
 
+            {/* Batch Actions Toolbar */}
+            {selectedBookIds.length > 0 && (
+              <div className="bg-[#11212b] border border-[#E9C349]/40 rounded-lg p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-[#E9C349] font-bold uppercase tracking-wider">
+                    {selectedBookIds.length} selecionados em lote
+                  </span>
+                  <button
+                    onClick={() => setSelectedBookIds([])}
+                    className="text-[10px] font-mono text-[#99907c] hover:text-[#d4e5f2] hover:underline"
+                  >
+                    Desmarcar
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    onClick={() => handleBatchStatusAction('Ativo')}
+                    className="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-[9px] font-mono font-bold py-1 px-1.5 rounded transition-all cursor-pointer text-center"
+                  >
+                    Ativar
+                  </button>
+                  <button
+                    onClick={() => handleBatchStatusAction('Inativo')}
+                    className="bg-yellow-950/60 hover:bg-yellow-900 border border-yellow-800 text-yellow-300 text-[9px] font-mono font-bold py-1 px-1.5 rounded transition-all cursor-pointer text-center"
+                  >
+                    Inativar
+                  </button>
+                  <button
+                    onClick={handleBatchDeleteAction}
+                    className="bg-red-950/60 hover:bg-red-900 border border-red-800 text-rose-300 text-[9px] font-mono font-bold py-1 px-1.5 rounded transition-all cursor-pointer text-center"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Header and Select All Toggle */}
+            <div className="flex items-center justify-between text-[10px] font-mono text-[#99907c] border-b border-[#1c2c36]/40 pb-1.5 pt-1">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#d4e5f2] select-none">
+                <input
+                  type="checkbox"
+                  checked={allFilteredChecked}
+                  onChange={handleToggleSelectAll}
+                  className="w-3.5 h-3.5 rounded bg-[#04141d] border-[#1c2c36] text-[#E9C349] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#E9C349]"
+                />
+                <span>Selecionar Todos ({filteredBooks.length})</span>
+              </label>
+              <span>{selectedBookIds.length} de {books.length}</span>
+            </div>
+
             {/* Books List Grid/Scroll */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-              {books
-                .filter(b => {
-                  // Degree filter logic
-                  if (bookDegreeFilter !== 'all') {
-                    if (String(b.nivelAcesso) !== bookDegreeFilter) {
-                      return false;
-                    }
-                  }
-
-                  const query = bookSearchQuery.toLowerCase();
-                  const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
-                  return b.title.toLowerCase().includes(query) || 
-                         b.author.toLowerCase().includes(query) || 
-                         b.id.toLowerCase().includes(query) ||
-                         bookCats.some(cat => cat.toLowerCase().includes(query));
-                })
-                .map(book => {
-                  const isSelected = editBookId === book.id;
-                  const bookCats = book.categories && book.categories.length > 0 ? book.categories : [book.category];
-                  return (
-                    <div
-                      key={book.id}
-                      onClick={() => handleSelectBookToEdit(book)}
-                      className={`p-3 rounded-lg border transition-all duration-150 cursor-pointer text-left flex items-start gap-2.5 ${
-                        isSelected 
-                          ? 'bg-[#E9C349]/10 border-[#E9C349] shadow-md' 
-                          : 'bg-[#05151e]/60 border-[#1c2c36] hover:bg-[#11212b]/40 hover:border-[#1ea296]/30'
-                      }`}
+              {filteredBooks.map(book => {
+                const isSelectedForEdit = editBookId === book.id;
+                const isChecked = selectedBookIds.includes(book.id);
+                const bookCats = book.categories && book.categories.length > 0 ? book.categories : [book.category];
+                return (
+                  <div
+                    key={book.id}
+                    onClick={() => handleSelectBookToEdit(book)}
+                    className={`p-3 rounded-lg border transition-all duration-150 cursor-pointer text-left flex items-start gap-2.5 ${
+                      isSelectedForEdit 
+                        ? 'bg-[#E9C349]/10 border-[#E9C349] shadow-md' 
+                        : 'bg-[#05151e]/60 border-[#1c2c36] hover:bg-[#11212b]/40 hover:border-[#1ea296]/30'
+                    }`}
+                  >
+                    {/* Card Checkbox */}
+                    <div 
+                      className="self-center pr-1 shrink-0"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      {/* Mini thumbnail */}
-                      {book.thumbnailUrl ? (
-                        <img
-                          src={book.thumbnailUrl}
-                          alt=""
-                          referrerPolicy="no-referrer"
-                          className="w-10 h-10 object-cover rounded border border-[#1c2c36]"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=100&q=80';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-[#0c1d27] rounded border border-[#1c2c36] flex items-center justify-center shrink-0">
-                          <BookOpen className="w-4 h-4 text-[#99907c]" />
-                        </div>
-                      )}
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSelectedBookIds(prev => 
+                            prev.includes(book.id) 
+                              ? prev.filter(id => id !== book.id) 
+                              : [...prev, book.id]
+                          );
+                        }}
+                        className="w-3.5 h-3.5 rounded bg-[#04141d] border-[#1c2c36] text-[#E9C349] focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#E9C349]"
+                      />
+                    </div>
 
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="font-mono text-[8px] text-[#E9C349] uppercase tracking-wider truncate shrink-0 max-w-[120px]">
-                            {bookCats.join(', ')}
-                          </span>
-                          <span className="font-mono text-[8px] bg-[#E9C349]/10 text-[#E9C349] border border-[#E9C349]/20 px-1 rounded-sm shrink-0 uppercase font-bold">
-                            Grau {book.nivelAcesso}
-                          </span>
-                        </div>
-                        <h4 className="font-sans font-bold text-xs text-[#d4e5f2] leading-tight truncate">
-                          {book.title}
-                        </h4>
-                        <div className="flex items-center justify-between text-[10px] font-mono text-[#99907c] pt-0.5">
-                          <span className="truncate">Por: {book.author}</span>
-                          <span className={`text-[9px] font-bold ${book.status === 'Ativo' ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {book.status}
-                          </span>
-                        </div>
+                    {/* Mini thumbnail */}
+                    {book.thumbnailUrl ? (
+                      <img
+                        src={book.thumbnailUrl}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="w-10 h-10 object-cover rounded border border-[#1c2c36] shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=100&q=80';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-[#0c1d27] rounded border border-[#1c2c36] flex items-center justify-center shrink-0">
+                        <BookOpen className="w-4 h-4 text-[#99907c]" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-mono text-[8px] text-[#E9C349] uppercase tracking-wider truncate shrink-0 max-w-[120px]">
+                          {bookCats.join(', ')}
+                        </span>
+                        <span className="font-mono text-[8px] bg-[#E9C349]/10 text-[#E9C349] border border-[#E9C349]/20 px-1 rounded-sm shrink-0 uppercase font-bold">
+                          Grau {book.nivelAcesso}
+                        </span>
+                      </div>
+                      <h4 className="font-sans font-bold text-xs text-[#d4e5f2] leading-tight truncate">
+                        {book.title}
+                      </h4>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-[#99907c] pt-0.5">
+                        <span className="truncate">Por: {book.author}</span>
+                        <span className={`text-[9px] font-bold ${book.status === 'Ativo' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {book.status}
+                        </span>
                       </div>
                     </div>
-                  );
-                })}
-              {books.length === 0 && (
+                  </div>
+                );
+              })}
+              {filteredBooks.length === 0 && (
                 <div className="p-8 text-center text-xs font-mono text-[#99907c]">
-                  Nenhum material cadastrado.
+                  Nenhum material encontrado com as configurações de filtro ativas.
                 </div>
               )}
             </div>

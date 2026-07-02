@@ -1116,6 +1116,109 @@ export default function App() {
     syncAlertToCloud(newAlert);
   };
 
+  const handleBatchUpdateBooksStatus = async (bookIds: string[], status: 'Ativo' | 'Inativo') => {
+    const updatedBooksList = books.map(b => {
+      if (bookIds.includes(b.id)) {
+        return { ...b, status };
+      }
+      return b;
+    });
+    saveBooksState(updatedBooksList);
+
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        const batchPromise = bookIds.map(async (id) => {
+          const matched = books.find(b => b.id === id);
+          if (matched) {
+            await setDoc(doc(db!, 'books', id), cleanObjectForFirestore({ ...matched, status }));
+          }
+        });
+        await Promise.all(batchPromise);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `books/batch-status-update`);
+      }
+    }
+
+    const newAlert: SystemAlert = {
+      id: `alert-batch-status-book-${Date.now()}`,
+      title: 'Status de Materiais em Lote',
+      description: `O status de ${bookIds.length} materiais foi alterado para "${status}" por Daniel Luciano.`,
+      time: 'Agora mesmo',
+      type: 'update',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
+  const handleBatchDeleteBooks = async (bookIds: string[]) => {
+    const updatedBooksList = books.filter(b => !bookIds.includes(b.id));
+    saveBooksState(updatedBooksList);
+
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        const batchPromise = bookIds.map(id => deleteDoc(doc(db!, 'books', id)));
+        await Promise.all(batchPromise);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.DELETE, `books/batch-delete`);
+      }
+    }
+
+    const newAlert: SystemAlert = {
+      id: `alert-batch-del-book-${Date.now()}`,
+      title: 'Exclusão de Materiais em Lote',
+      description: `${bookIds.length} materiais foram excluídos da biblioteca por Daniel Luciano.`,
+      time: 'Agora mesmo',
+      type: 'critical',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
+  const handleImportBooks = async (newBooks: Book[]) => {
+    const updated = [...books];
+    const newBooksFiltered = newBooks.filter(newB => {
+      const idx = updated.findIndex(b => b.id === newB.id);
+      if (idx > -1) {
+        updated[idx] = newB;
+        return true;
+      }
+      updated.push(newB);
+      return true;
+    });
+
+    saveBooksState(updated);
+
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        const chunkSize = 20;
+        for (let i = 0; i < newBooksFiltered.length; i += chunkSize) {
+          const chunk = newBooksFiltered.slice(i, i + chunkSize);
+          await Promise.all(chunk.map(book => 
+            setDoc(doc(db!, 'books', book.id), cleanObjectForFirestore(book))
+          ));
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `books/batch-import`);
+      }
+    }
+
+    const newAlert: SystemAlert = {
+      id: `alert-import-book-${Date.now()}`,
+      title: 'Materiais Importados via Planilha',
+      description: `${newBooksFiltered.length} novos materiais foram importados para a biblioteca por Daniel Luciano via arquivo Excel.`,
+      time: 'Agora mesmo',
+      type: 'update',
+      read: false
+    };
+    saveAlertsState([newAlert, ...alerts]);
+    syncAlertToCloud(newAlert);
+  };
+
   // Mark all alarms as read
   const handleMarkAllAlertsRead = () => {
     const updated = alerts.map(a => {
@@ -1679,6 +1782,9 @@ export default function App() {
             onAddBook={handleAddBook}
             onUpdateBook={handleUpdateBook}
             onDeleteBook={handleDeleteBook}
+            onBatchUpdateBooksStatus={handleBatchUpdateBooksStatus}
+            onBatchDeleteBooks={handleBatchDeleteBooks}
+            onImportBooks={handleImportBooks}
             accessLogs={accessLogs}
           />
         )}
