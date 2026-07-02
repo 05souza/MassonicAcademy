@@ -822,6 +822,7 @@ export default function ProfileView({
   const [isCreatingNewBook, setIsCreatingNewBook] = useState(true);
   const [editBookId, setEditBookId] = useState<string | null>(null);
   const [bookSearchQuery, setBookSearchQuery] = useState('');
+  const [bookDegreeFilter, setBookDegreeFilter] = useState<string>('all');
   const [bookFormError, setBookFormError] = useState<string | null>(null);
   const [bookFormSuccess, setBookFormSuccess] = useState<string | null>(null);
   const [bookThumbnailUploadError, setBookThumbnailUploadError] = useState<string | null>(null);
@@ -3170,22 +3171,47 @@ export default function ProfileView({
               </button>
             </div>
 
-            {/* Quick search input */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Pesquisar materiais..."
-                value={bookSearchQuery}
-                onChange={(e) => setBookSearchQuery(e.target.value)}
-                className="w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] placeholder-[#536573] focus:outline-none focus:border-[#E9C349] font-sans"
-              />
-              <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+            {/* Quick search input and Degree Filter */}
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Pesquisar materiais..."
+                  value={bookSearchQuery}
+                  onChange={(e) => setBookSearchQuery(e.target.value)}
+                  className="w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] placeholder-[#536573] focus:outline-none focus:border-[#E9C349] font-sans"
+                />
+                <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider shrink-0">Grau:</span>
+                <select
+                  value={bookDegreeFilter}
+                  onChange={(e) => setBookDegreeFilter(e.target.value)}
+                  className="flex-1 bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1 text-xs text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans cursor-pointer"
+                >
+                  <option value="all">Todos os Graus</option>
+                  {Array.from({ length: 33 }, (_, i) => i + 1).map((degree) => (
+                    <option key={degree} value={String(degree)}>
+                      {getGlobalDegreeLabel(degree)}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Books List Grid/Scroll */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {books
                 .filter(b => {
+                  // Degree filter logic
+                  if (bookDegreeFilter !== 'all') {
+                    if (String(b.nivelAcesso) !== bookDegreeFilter) {
+                      return false;
+                    }
+                  }
+
                   const query = bookSearchQuery.toLowerCase();
                   const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
                   return b.title.toLowerCase().includes(query) || 
