@@ -3,7 +3,7 @@ import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
 import { ExecutiveReport, SystemAlert, AccessUser, Book } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
-import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import Header from './components/Header';
 import ReportCard from './components/ReportCard';
 import ReportDetail from './components/ReportDetail';
@@ -298,32 +298,39 @@ export default function App() {
       if (db) {
         try {
           // One-time migration to seed the new 150+ books cleanly to Firestore (v5)
-          const hasClearedV5 = localStorage.getItem('masonic_books_cleared_v5') === 'true';
-          if (!hasClearedV5) {
-            localStorage.setItem('masonic_books_cleared_v5', 'true');
+          // To prevent incognito windows or other devices from clearing user-created books,
+          // we check a global settings document in Firestore to see if seeding has been completed.
+          const hasClearedV5Local = localStorage.getItem('masonic_books_cleared_v5') === 'true';
+          if (!hasClearedV5Local) {
             try {
-              const booksCol = collection(db, 'books');
-              const currentBooksSnapshot = await getDocs(booksCol);
-              
-              // Delete existing records in parallel
-              const deletePromises = currentBooksSnapshot.docs.map(docSnap => 
-                deleteDoc(doc(db, 'books', docSnap.id))
-              );
-              await Promise.all(deletePromises);
-              
-              // Seed clean INITIAL_BOOKS in chunks of 20 to avoid rate limit or timeout errors
-              const chunkSize = 20;
-              for (let i = 0; i < INITIAL_BOOKS.length; i += chunkSize) {
-                const chunk = INITIAL_BOOKS.slice(i, i + chunkSize);
-                await Promise.all(chunk.map(book => 
-                  setDoc(doc(db, 'books', book.id), cleanObjectForFirestore(book))
-                ));
+              const migrationDocRef = doc(db, 'settings', 'migration_v5');
+              const migrationSnap = await getDoc(migrationDocRef);
+              const isSeededGlobally = migrationSnap.exists() && migrationSnap.data()?.books_seeded === true;
+
+              if (!isSeededGlobally) {
+                const booksCol = collection(db, 'books');
+                const currentBooksSnapshot = await getDocs(booksCol);
+                const existingIds = new Set(currentBooksSnapshot.docs.map(docSnap => docSnap.id));
+
+                // Instead of blindly deleting everything and wiping out custom/saved books,
+                // we only insert default books that do not already exist in the database.
+                const booksToSeed = INITIAL_BOOKS.filter(book => !existingIds.has(book.id));
+                if (booksToSeed.length > 0) {
+                  const chunkSize = 20;
+                  for (let i = 0; i < booksToSeed.length; i += chunkSize) {
+                    const chunk = booksToSeed.slice(i, i + chunkSize);
+                    await Promise.all(chunk.map(book => 
+                      setDoc(doc(db, 'books', book.id), cleanObjectForFirestore(book))
+                    ));
+                  }
+                }
+
+                // Register global migration completion
+                await setDoc(migrationDocRef, { books_seeded: true });
               }
-              
-              localStorage.setItem('masonic_books_v5', JSON.stringify(INITIAL_BOOKS));
-              setBooks(INITIAL_BOOKS);
+              localStorage.setItem('masonic_books_cleared_v5', 'true');
             } catch (e) {
-              console.error('Error during one-time books v5 migration:', e);
+              console.error('Error during global books v5 migration:', e);
             }
           }
 
