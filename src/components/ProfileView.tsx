@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { ExecutiveReport, AccessUser, Questionnaire, Book } from '../types';
 import { getFirebaseConfig, saveFirebaseConfig } from '../firebase';
@@ -829,10 +829,23 @@ export default function ProfileView({
   const [editBookId, setEditBookId] = useState<string | null>(null);
   const [bookSearchQuery, setBookSearchQuery] = useState('');
   const [bookDegreeFilter, setBookDegreeFilter] = useState<string>('all');
+  const [bookCategoryFilter, setBookCategoryFilter] = useState<string>('all');
   const [bookFormError, setBookFormError] = useState<string | null>(null);
   const [bookFormSuccess, setBookFormSuccess] = useState<string | null>(null);
   const [bookThumbnailUploadError, setBookThumbnailUploadError] = useState<string | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+
+  // Get all unique categories dynamically from books list
+  const allBookCategories = useMemo(() => {
+    const categoriesSet = new Set<string>();
+    books.forEach(b => {
+      if (b.category) categoriesSet.add(b.category);
+      if (b.categories && Array.isArray(b.categories)) {
+        b.categories.forEach(cat => categoriesSet.add(cat));
+      }
+    });
+    return Array.from(categoriesSet).filter(Boolean).sort();
+  }, [books]);
 
   const filteredBooks = books.filter(b => {
     if (bookDegreeFilter !== 'all') {
@@ -840,8 +853,13 @@ export default function ProfileView({
         return false;
       }
     }
+    const bookCats = b.categories && b.categories.length > 0 ? b.categories : (b.category ? [b.category] : []);
+    if (bookCategoryFilter !== 'all') {
+      if (!bookCats.includes(bookCategoryFilter)) {
+        return false;
+      }
+    }
     const query = bookSearchQuery.toLowerCase();
-    const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
     return b.title.toLowerCase().includes(query) || 
            b.author.toLowerCase().includes(query) || 
            b.id.toLowerCase().includes(query) ||
@@ -3439,6 +3457,22 @@ export default function ProfileView({
                   ))}
                 </select>
               </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Filtrar por Categoria</span>
+                <select
+                  value={bookCategoryFilter}
+                  onChange={(e) => setBookCategoryFilter(e.target.value)}
+                  className="w-full min-w-0 max-w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans cursor-pointer truncate"
+                >
+                  <option value="all">Todas as Categorias</option>
+                  {allBookCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Batch Actions Toolbar */}
@@ -4013,7 +4047,20 @@ export default function ProfileView({
             const totalLogins = allLogs.filter(l => l.type === 'login').length;
             const totalCourseAccess = allLogs.filter(l => l.type === 'course').length;
             const totalBookAccess = allLogs.filter(l => l.type === 'book').length;
-            const uniqueUsers = new Set(allLogs.map(l => l.userEmail)).size;
+            
+            // Count unique users who either have logs or have active status (active sessions)
+            const loggedEmails = allLogs.map(l => l.userEmail.toLowerCase().trim());
+            const activeUserEmails = accessUsers
+              .filter(u => u.status === 'Ativo')
+              .map(u => u.email.toLowerCase().trim())
+              .filter(email => {
+                if (!searchLogUser) return true;
+                const query = searchLogUser.toLowerCase();
+                const u = accessUsers.find(user => user.email.toLowerCase().trim() === email);
+                return u && (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
+              });
+            const allActiveEmails = new Set([...loggedEmails, ...activeUserEmails]);
+            const uniqueUsers = allActiveEmails.size;
 
             return (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -4114,8 +4161,28 @@ export default function ProfileView({
 
                   // Group by email
                   const groupedMap: Record<string, { name: string; email: string; count: number; lastAccess: string }> = {};
+                  
+                  // Pre-populate with all active users (users with active sessions) so they are tracked
+                  accessUsers.forEach(u => {
+                    if (u.status === 'Ativo') {
+                      const key = u.email.toLowerCase().trim();
+                      if (searchLogUser) {
+                        const query = searchLogUser.toLowerCase();
+                        if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                          return;
+                        }
+                      }
+                      groupedMap[key] = {
+                        name: u.name,
+                        email: u.email,
+                        count: 0,
+                        lastAccess: ''
+                      };
+                    }
+                  });
+
                   filtered.forEach(log => {
-                    const key = log.userEmail.toLowerCase();
+                    const key = log.userEmail.toLowerCase().trim();
                     if (!groupedMap[key]) {
                       groupedMap[key] = {
                         name: log.userName,
@@ -4125,7 +4192,7 @@ export default function ProfileView({
                       };
                     }
                     groupedMap[key].count++;
-                    if (new Date(log.timestamp) > new Date(groupedMap[key].lastAccess)) {
+                    if (!groupedMap[key].lastAccess || new Date(log.timestamp) > new Date(groupedMap[key].lastAccess)) {
                       groupedMap[key].lastAccess = log.timestamp;
                     }
                   });
@@ -4182,13 +4249,17 @@ export default function ProfileView({
                               <div className="text-left md:text-right font-mono">
                                 <span className="text-[9px] text-[#99907c] block uppercase">Último Acesso</span>
                                 <span className="text-[10px] text-[#a5b8c7]">
-                                  {new Date(userStats.lastAccess).toLocaleDateString('pt-BR', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
+                                  {userStats.lastAccess ? (
+                                    new Date(userStats.lastAccess).toLocaleDateString('pt-BR', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : (
+                                    'Sem registro recente'
+                                  )}
                                 </span>
                               </div>
                               <div className="text-right">
@@ -4340,8 +4411,28 @@ export default function ProfileView({
                   } else {
                     // Group by User
                     const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
+                    
+                    // Pre-populate with all active users (users with active sessions) so they are tracked
+                    accessUsers.forEach(u => {
+                      if (u.status === 'Ativo') {
+                        const key = u.email.toLowerCase().trim();
+                        if (searchLogUser) {
+                          const query = searchLogUser.toLowerCase();
+                          if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                            return;
+                          }
+                        }
+                        groupedMap[key] = {
+                          name: u.name,
+                          email: u.email,
+                          count: 0,
+                          items: {}
+                        };
+                      }
+                    });
+
                     filtered.forEach(log => {
-                      const key = log.userEmail.toLowerCase();
+                      const key = log.userEmail.toLowerCase().trim();
                       const courseTitle = log.targetTitle || 'Curso Sem Título';
                       if (!groupedMap[key]) {
                         groupedMap[key] = {
@@ -4393,15 +4484,19 @@ export default function ProfileView({
                               <div className="flex-1 border-t md:border-t-0 border-[#1c2c36] pt-2 md:pt-0 space-y-1">
                                 <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Títulos Acessados por este Usuário:</span>
                                 <div className="space-y-1">
-                                  {Object.entries(userStats.items).map(([course, count], cIdx) => (
-                                    <div 
-                                      key={`uc-detail-${cIdx}`}
-                                      className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
-                                    >
-                                      <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{course}</span>
-                                      <span className="text-[#66d9cc] font-bold">{count}x</span>
-                                    </div>
-                                  ))}
+                                  {Object.entries(userStats.items).length === 0 ? (
+                                    <p className="text-[10px] font-mono text-[#99907c] italic">Nenhum curso acessado ainda.</p>
+                                  ) : (
+                                    Object.entries(userStats.items).map(([course, count], cIdx) => (
+                                      <div 
+                                        key={`uc-detail-${cIdx}`}
+                                        className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
+                                      >
+                                        <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{course}</span>
+                                        <span className="text-[#66d9cc] font-bold">{count}x</span>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -4549,8 +4644,28 @@ export default function ProfileView({
                   } else {
                     // Group by User
                     const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
+                    
+                    // Pre-populate with all active users (users with active sessions) so they are tracked
+                    accessUsers.forEach(u => {
+                      if (u.status === 'Ativo') {
+                        const key = u.email.toLowerCase().trim();
+                        if (searchLogUser) {
+                          const query = searchLogUser.toLowerCase();
+                          if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                            return;
+                          }
+                        }
+                        groupedMap[key] = {
+                          name: u.name,
+                          email: u.email,
+                          count: 0,
+                          items: {}
+                        };
+                      }
+                    });
+
                     filtered.forEach(log => {
-                      const key = log.userEmail.toLowerCase();
+                      const key = log.userEmail.toLowerCase().trim();
                       const bookTitle = log.targetTitle || 'Obra Virtual';
                       if (!groupedMap[key]) {
                         groupedMap[key] = {
@@ -4602,15 +4717,19 @@ export default function ProfileView({
                               <div className="flex-1 border-t md:border-t-0 border-[#1c2c36] pt-2 md:pt-0 space-y-1">
                                 <span className="block text-[8px] font-mono text-[#99907c] uppercase tracking-wider">Obras Acessadas por este Usuário:</span>
                                 <div className="space-y-1">
-                                  {Object.entries(userStats.items).map(([book, count], bIdx) => (
-                                    <div 
-                                      key={`ub-detail-${bIdx}`}
-                                      className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
-                                    >
-                                      <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{book}</span>
-                                      <span className="text-orange-400 font-bold">{count}x</span>
-                                    </div>
-                                  ))}
+                                  {Object.entries(userStats.items).length === 0 ? (
+                                    <p className="text-[10px] font-mono text-[#99907c] italic">Nenhum material acessado ainda.</p>
+                                  ) : (
+                                    Object.entries(userStats.items).map(([book, count], bIdx) => (
+                                      <div 
+                                        key={`ub-detail-${bIdx}`}
+                                        className="flex items-center justify-between text-[10px] font-mono p-1 bg-[#11212b]/60 border border-[#1c2c36]/30 rounded px-2"
+                                      >
+                                        <span className="text-[#a5b8c7] truncate max-w-sm sm:max-w-md">{book}</span>
+                                        <span className="text-orange-400 font-bold">{count}x</span>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
                             </div>

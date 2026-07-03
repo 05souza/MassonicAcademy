@@ -281,7 +281,14 @@ export default function App() {
   useEffect(() => {
     const savedCurrentUser = localStorage.getItem('masonic_current_user_v1');
     if (savedCurrentUser) {
-      setCurrentUser(JSON.parse(savedCurrentUser));
+      const parsedUser = JSON.parse(savedCurrentUser);
+      setCurrentUser(parsedUser);
+      // Only log login once per browser tab session to avoid duplicate logs during page refreshes/HMR
+      const loggedThisSession = sessionStorage.getItem('masonic_logged_this_session');
+      if (!loggedThisSession) {
+        logAccess('login', 'session_restore', 'Sessão Ativa (Restauração)', parsedUser);
+        sessionStorage.setItem('masonic_logged_this_session', 'true');
+      }
     } else {
       setCurrentUser(null);
     }
@@ -802,6 +809,7 @@ export default function App() {
   const handleSelectUser = (user: AccessUser) => {
     setCurrentUser(user);
     localStorage.setItem('masonic_current_user_v1', JSON.stringify(user));
+    sessionStorage.setItem('masonic_logged_this_session', 'true');
     // Log login access for this user
     logAccess('login', '', '', user);
     // If the simulated session user has changed to someone that isn't admin, switch navigation tab out of settings
@@ -813,6 +821,7 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('masonic_current_user_v1');
+    sessionStorage.removeItem('masonic_logged_this_session');
     setActiveTab('inicio');
   };
 
