@@ -830,6 +830,7 @@ export default function ProfileView({
   const [bookSearchQuery, setBookSearchQuery] = useState('');
   const [bookDegreeFilter, setBookDegreeFilter] = useState<string>('all');
   const [bookCategoryFilter, setBookCategoryFilter] = useState<string>('all');
+  const [bookStatusFilter, setBookStatusFilter] = useState<string>('all');
   const [bookFormError, setBookFormError] = useState<string | null>(null);
   const [bookFormSuccess, setBookFormSuccess] = useState<string | null>(null);
   const [bookThumbnailUploadError, setBookThumbnailUploadError] = useState<string | null>(null);
@@ -856,6 +857,11 @@ export default function ProfileView({
     const bookCats = b.categories && b.categories.length > 0 ? b.categories : (b.category ? [b.category] : []);
     if (bookCategoryFilter !== 'all') {
       if (!bookCats.includes(bookCategoryFilter)) {
+        return false;
+      }
+    }
+    if (bookStatusFilter !== 'all') {
+      if (b.status !== bookStatusFilter) {
         return false;
       }
     }
@@ -3471,6 +3477,19 @@ export default function ProfileView({
                       {category}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Filtrar por Status</span>
+                <select
+                  value={bookStatusFilter}
+                  onChange={(e) => setBookStatusFilter(e.target.value)}
+                  className="w-full min-w-0 max-w-full bg-[#05151e] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans cursor-pointer truncate"
+                >
+                  <option value="all">Todos os Status</option>
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
                 </select>
               </div>
             </div>
