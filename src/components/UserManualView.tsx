@@ -52,6 +52,11 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
       answer: 'Cada usuário possui um Grau de Acesso (nível de 1 a 33) configurado pelo Administrador. Você apenas visualizará no painel os títulos e questionários cujo nível exigido seja igual ou inferior ao seu próprio grau.'
     },
     {
+      category: 'aluno',
+      question: 'Como posso consultar e ler materiais na Biblioteca Virtual?',
+      answer: 'Basta acessar a aba "Biblioteca" no menu principal. Lá você pode pesquisar por palavras-chave, filtrar as obras pelas categorias ou por graus específicos, e alternar o modo de visualização entre Grade ou Lista. Caso um livro exija um Grau de Instrução superior ao seu, ele aparecerá como Bloqueado para você.'
+    },
+    {
       category: 'admin',
       question: 'Como posso importar uma lista de títulos em massa via Excel?',
       answer: 'Como Administrador, vá até a aba "Perfil", clique em "Gerenciar Títulos" e depois no botão "Importar de Excel / CSV". O arquivo deve conter colunas com os cabeçalhos: "titulo" ou "title" (para o nome), "instrutor" ou "owner" (para o responsável), e "grau" ou "level" (nível requerido).'
@@ -60,6 +65,11 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
       category: 'admin',
       question: 'Como funciona o limite "Emitir Certificado apenas para Conteúdo Completo"?',
       answer: 'Esta é uma configuração habilitada individualmente por questionário. Se habilitada, impede que irmãos obtenham certificados ao fazerem simulados rápidos baseados em "Amostras" de 10 ou 20 questões ou simulações por uma categoria temática única. Isso garante que o certificado oficial só seja liberado após o exame abrangente de 100% das perguntas.'
+    },
+    {
+      category: 'admin',
+      question: 'Como ocultar temporariamente um material ou livro da Biblioteca Virtual?',
+      answer: 'Acesse o menu "Perfil", clique em "Gerenciar Biblioteca" e edite o material correspondente, alterando seu status de "Ativo" para "Inativo". Obras inativas continuam salvas no seu painel administrativo, mas desaparecem completamente da visão dos alunos na Biblioteca.'
     },
     {
       category: 'admin',
@@ -282,6 +292,25 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                 </div>
               </div>
 
+              {/* Biblioteca Virtual */}
+              <div className="flex gap-4 items-start bg-[#0c1d27] p-4 rounded-xl border border-[#1c2c36]">
+                <div className="w-8 h-8 rounded-full bg-orange-950/50 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0 font-bold font-mono text-xs">
+                  D
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-sans font-bold text-[#d4e5f2] uppercase tracking-wider">Biblioteca Virtual & Consulta de Materiais</h4>
+                  <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
+                    A aba <strong>"Biblioteca"</strong> funciona como um repositório centralizado de obras virtuais, livros, rituais e artigos de estudo. O acesso a essas obras é regulado e otimizado da seguinte forma:
+                  </p>
+                  <ul className="text-[10px] text-[#99907c] list-disc list-inside space-y-1.5 mt-2 pl-1">
+                    <li><strong className="text-white">Regra de Grau de Acesso:</strong> Cada material cadastrado exige um grau mínimo de instrução (1 a 33). Caso o seu grau atual seja inferior ao exigido pela obra, o conteúdo aparecerá como <span className="text-rose-400 font-bold">Bloqueado</span> e o acesso não será permitido, garantindo o respeito à hierarquia de estudos.</li>
+                    <li><strong className="text-white">Busca Rápida e Filtros Dinâmicos:</strong> Utilize o menu lateral esquerdo para realizar buscas por palavras-chave ou filtrar as obras selecionando categorias temáticas específicas e faixas de graus de instrução.</li>
+                    <li><strong className="text-white">Visualização e Ordenação:</strong> Você pode alternar o layout de exibição entre <span className="text-white">Grade</span> (com as capas das obras) e <span className="text-white">Lista</span>, além de ordenar as obras por ordem alfabética ou nível de grau.</li>
+                    <li><strong className="text-white">Acesso Seguro:</strong> Ao clicar em <span className="text-[#E9C349] font-bold">Acessar Material</span>, a obra será aberta de forma segura por meio do visualizador em tela cheia da plataforma ou link seguro externo de consulta.</li>
+                  </ul>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
@@ -328,6 +357,22 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                   <li><strong className="text-white">Nível de Grau do Usuário:</strong> Limita o acesso apenas a disciplinas do seu grau ou inferiores.</li>
                   <li><strong className="text-white">Status ("Ativo" ou "Inativo"):</strong> Bloqueia instantaneamente o acesso do irmão caso o status físico seja configurado para Inativo.</li>
                   <li><strong className="text-white">Adicionar Novos Usuários:</strong> Cadastrar nomes, e-mails específicos e graus correspondentes de forma individual.</li>
+                </ul>
+              </div>
+
+              {/* Gerenciamento da Biblioteca Virtual */}
+              <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
+                <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-orange-400" /> Cadastro e Gestão de Materiais / Livros (Biblioteca)
+                </h4>
+                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
+                  Para gerenciar as obras virtuais, livros e PDFs da Biblioteca, acesse a aba <strong>Perfil ➔ Gerenciar Biblioteca</strong>. Como Administrador, você possui controle sobre:
+                </p>
+                <ul className="text-[10px] text-[#99907c] list-disc list-inside space-y-1.5 pl-1.5">
+                  <li><strong className="text-white">Adicionar e Editar Materiais:</strong> Cadastre novos livros com capa (URL), título, autor, link do documento, categorias (sub-áreas) e o nível de Grau necessário para acesso.</li>
+                  <li><strong className="text-white">Gerenciar Status (Ativo / Inativo):</strong> Defina o status de cada material. Obras marcadas como <span className="text-rose-400">Inativo</span> ficarão guardadas no seu banco de dados para manutenção futura, mas ficam totalmente <span className="text-rose-400 font-bold">ocultas</span> para os irmãos na Biblioteca Virtual.</li>
+                  <li><strong className="text-white">Filtro Administrativo por Status:</strong> No painel de gerenciamento, utilize o seletor de status para buscar rapidamente materiais Ativos ou Inativos para auditoria rápida.</li>
+                  <li><strong className="text-white">Importação em Massa via Excel / CSV:</strong> Você pode carregar um catálogo inteiro de livros enviando um arquivo Excel contendo as colunas de cabeçalho: <em>"titulo"</em>, <em>"autor"</em>, <em>"categoria"</em>, <em>"link"</em> e <em>"grau"</em>.</li>
                 </ul>
               </div>
 
