@@ -9,15 +9,28 @@ interface LibraryViewProps {
   isAdmin: boolean;
   onOpenSecureViewer?: (url: string, title: string) => void;
   onAccessBook?: (book: Book) => void;
+  globalSearchQuery?: string;
+  onGlobalSearchChange?: (query: string) => void;
 }
 
-export default function LibraryView({ books, currentUser, isAdmin, onOpenSecureViewer, onAccessBook }: LibraryViewProps) {
+export default function LibraryView({ 
+  books, 
+  currentUser, 
+  isAdmin, 
+  onOpenSecureViewer, 
+  onAccessBook,
+  globalSearchQuery,
+  onGlobalSearchChange
+}: LibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('Todos os materiais');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc'>('name-az');
   const [checkedCategories, setCheckedCategories] = useState<Record<string, boolean>>({});
   const [checkedDegrees, setCheckedDegrees] = useState<Record<number, boolean>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const searchQuery = globalSearchQuery !== undefined ? globalSearchQuery : localSearchQuery;
+  const setSearchQuery = onGlobalSearchChange || setLocalSearchQuery;
 
   // 1. Get user access level
   const userLevel = currentUser 

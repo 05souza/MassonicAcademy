@@ -1703,6 +1703,8 @@ export default function App() {
             books={books}
             currentUser={currentUser}
             isAdmin={isAdmin(currentUser.email)}
+            globalSearchQuery={searchQuery}
+            onGlobalSearchChange={setSearchQuery}
             onOpenSecureViewer={(url, title) => {
               setSecureViewerUrl(url);
               setSecureViewerTitle(title);
