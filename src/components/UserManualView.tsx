@@ -2,28 +2,18 @@ import React, { useState } from 'react';
 import { 
   BookOpen, 
   HelpCircle, 
-  FileText, 
-  CheckCircle, 
-  Shield, 
-  Award, 
   Sparkles, 
   Search, 
   ChevronDown, 
   ChevronUp, 
-  RefreshCw, 
-  Upload, 
-  Users, 
-  Settings, 
-  User, 
   BookOpenCheck,
-  CheckCircle2,
   Info
 } from 'lucide-react';
 
 interface FAQItem {
   question: string;
   answer: string;
-  category: 'aluno' | 'admin' | 'geral';
+  category: 'aluno' | 'geral';
 }
 
 interface UserManualViewProps {
@@ -31,7 +21,7 @@ interface UserManualViewProps {
 }
 
 export default function UserManualView({ isAdmin = false }: UserManualViewProps) {
-  const [activeManualSection, setActiveManualSection] = useState<'geral' | 'aluno' | 'admin' | 'faq'>('geral');
+  const [activeManualSection, setActiveManualSection] = useState<'geral' | 'aluno' | 'faq'>('geral');
   const [faqSearchQuery, setFaqSearchQuery] = useState('');
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
@@ -55,26 +45,6 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
       category: 'aluno',
       question: 'Como posso consultar e ler materiais na Biblioteca Virtual?',
       answer: 'Basta acessar a aba "Biblioteca" no menu principal. Lá você pode pesquisar por palavras-chave, filtrar as obras pelas categorias ou por graus específicos, e alternar o modo de visualização entre Grade ou Lista. Caso um livro exija um Grau de Instrução superior ao seu, ele aparecerá como Bloqueado para você.'
-    },
-    {
-      category: 'admin',
-      question: 'Como posso importar uma lista de títulos em massa via Excel?',
-      answer: 'Como Administrador, vá até a aba "Perfil", clique em "Gerenciar Títulos" e depois no botão "Importar de Excel / CSV". O arquivo deve conter colunas com os cabeçalhos: "titulo" ou "title" (para o nome), "instrutor" ou "owner" (para o responsável), e "grau" ou "level" (nível requerido).'
-    },
-    {
-      category: 'admin',
-      question: 'Como funciona o limite "Emitir Certificado apenas para Conteúdo Completo"?',
-      answer: 'Esta é uma configuração habilitada individualmente por questionário. Se habilitada, impede que irmãos obtenham certificados ao fazerem simulados rápidos baseados em "Amostras" de 10 ou 20 questões ou simulações por uma categoria temática única. Isso garante que o certificado oficial só seja liberado após o exame abrangente de 100% das perguntas.'
-    },
-    {
-      category: 'admin',
-      question: 'Como ocultar temporariamente um material ou livro da Biblioteca Virtual?',
-      answer: 'Acesse o menu "Perfil", clique em "Gerenciar Biblioteca" e edite o material correspondente, alterando seu status de "Ativo" para "Inativo". Obras inativas continuam salvas no seu painel administrativo, mas desaparecem completamente da visão dos alunos na Biblioteca.'
-    },
-    {
-      category: 'admin',
-      question: 'Como faço para reajustar a nota de aprovação de um simulado?',
-      answer: 'No menu "Questionários", sob o painel de Administração Master (na parte inferior), selecione o questionário desejado no seletor de ajustes. Use o slider para alterar a nota de aprovação (com limites flexíveis entre 25% e 95%) e clique em "Salvar Ajuste Master".'
     },
     {
       category: 'geral',
@@ -114,7 +84,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
               Masonic Academy • Guia de Uso Completo
             </h2>
             <p className="text-xs text-[#99907c] leading-relaxed">
-              Bem-vindo à base de conhecimento integrada da plataforma. Aqui você aprenderá como gerenciar títulos, simular exames de avanço de grau, emitir certificados consolidados e otimizar todo o portal administrativo.
+              Bem-vindo à base de conhecimento integrada da plataforma. Aqui você aprenderá como consultar materiais, simular exames de avanço de grau e emitir certificados consolidados de forma simples.
             </p>
           </div>
           <div className="shrink-0 flex justify-center">
@@ -130,9 +100,8 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
         {[
           { id: 'geral', label: '📙 Visão Geral', color: 'border-[#D4AF37]' },
           { id: 'aluno', label: '🎓 Área do Irmão', color: 'border-[#66d9cc]' },
-          { id: 'admin', label: '👑 Painel Master', color: 'border-[#e07553]' },
           { id: 'faq', label: '💬 Perguntas Frequentes', color: 'border-blue-400' }
-        ].filter(tab => tab.id !== 'admin' || isAdmin).map(tab => (
+        ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveManualSection(tab.id as any)}
@@ -162,7 +131,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
               </p>
             </div>
 
-            <div className={`grid grid-cols-1 ${isAdmin ? 'md:grid-cols-2' : ''} gap-5`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
                 <h4 className="text-xs font-mono font-bold text-[#E9C349] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#E9C349]" />
@@ -174,17 +143,15 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                 </p>
               </div>
 
-              {isAdmin && (
-                <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
-                  <h4 className="text-xs font-mono font-bold text-[#66d9cc] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
-                    Funcionamento Offline & Cloud
-                  </h4>
-                  <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                    Trabalhamos com bancos de dados unificados no <strong>Firebase Firestore</strong> para garantir dados sincronizados entre múltiplos dispositivos, além de uma robusta contingência local persistida no navegador do usuário.
-                  </p>
-                </div>
-              )}
+              <div className="bg-[#0c1d27] border border-[#1c2c36]/80 rounded-xl p-4.5 space-y-2.5">
+                <h4 className="text-xs font-mono font-bold text-[#66d9cc] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#1c2c36]/60 pb-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
+                  Funcionamento Offline & Cloud
+                </h4>
+                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
+                  Trabalhamos com bancos de dados unificados no <strong>Firebase Firestore</strong> para garantir dados sincronizados entre múltiplos dispositivos, além de uma robusta contingência local persistida no navegador do usuário.
+                </p>
+              </div>
             </div>
 
             {/* Architecture Flow Visual */}
@@ -315,94 +282,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
           </div>
         )}
 
-        {/* SECTION: PAINEL MASTER */}
-        {activeManualSection === 'admin' && isAdmin && (
-          <div className="space-y-6">
-            <div className="border-b border-[#1c2c36]/50 pb-3">
-              <h3 className="text-base font-sans font-black text-[#d4e5f2] flex items-center gap-1.5 uppercase tracking-wide">
-                <Shield className="w-4.5 h-4.5 text-[#e07553]" /> Manual do Administrador Master (Instrutor)
-              </h3>
-              <p className="text-xs text-[#99907c] mt-1 leading-relaxed">
-                Ferramentas de controle, importação de dados e parametrização educacional.
-              </p>
-            </div>
 
-            <div className="space-y-5">
-              
-              {/* Gerenciamento de Disciplinas e Importação Excel */}
-              <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
-                <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-[#66d9cc]" /> Cadastro e Importação de Títulos (Excel / CSV)
-                </h4>
-                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                  Para simplificar a carga inicial de conteúdo, os administradores contam com uma central de importação em massa na aba <strong>Perfil ➔ Gerenciar Títulos ➔ Importar de Excel / CSV</strong>. 
-                </p>
-                <div className="bg-[#04141d] p-3 rounded border border-[#1c2c36] text-[10px] text-[#a5b8c7] space-y-1 font-mono">
-                  <div className="text-white font-bold mb-1 border-b border-[#1c2c36] pb-1">Colunas recomendadas no cabeçalho do arquivo:</div>
-                  <div>1. <strong>"titulo"</strong> (Ex: Instrução de Companheiro Maçom)</div>
-                  <div>2. <strong>"instrutor"</strong> (Ex: Daniel Luciano)</div>
-                  <div>3. <strong>"grau"</strong> (Ex: 2)</div>
-                </div>
-              </div>
-
-              {/* Gerenciamento de Usuários */}
-              <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
-                <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#E9C349]" /> Controle de Irmãos & Permissões de Acesso
-                </h4>
-                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                  Na seção de gerenciamento de usuários, o Administrador possui controle sobre:
-                </p>
-                <ul className="text-[10px] text-[#99907c] list-disc list-inside space-y-1.5 pl-1.5">
-                  <li><strong className="text-white">Nível de Grau do Usuário:</strong> Limita o acesso apenas a disciplinas do seu grau ou inferiores.</li>
-                  <li><strong className="text-white">Status ("Ativo" ou "Inativo"):</strong> Bloqueia instantaneamente o acesso do irmão caso o status físico seja configurado para Inativo.</li>
-                  <li><strong className="text-white">Adicionar Novos Usuários:</strong> Cadastrar nomes, e-mails específicos e graus correspondentes de forma individual.</li>
-                </ul>
-              </div>
-
-              {/* Gerenciamento da Biblioteca Virtual */}
-              <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
-                <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-orange-400" /> Cadastro e Gestão de Materiais / Livros (Biblioteca)
-                </h4>
-                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                  Para gerenciar as obras virtuais, livros e PDFs da Biblioteca, acesse a aba <strong>Perfil ➔ Gerenciar Biblioteca</strong>. Como Administrador, você possui controle sobre:
-                </p>
-                <ul className="text-[10px] text-[#99907c] list-disc list-inside space-y-1.5 pl-1.5">
-                  <li><strong className="text-white">Adicionar e Editar Materiais:</strong> Cadastre novos livros com capa (URL), título, autor, link do documento, categorias (sub-áreas) e o nível de Grau necessário para acesso.</li>
-                  <li><strong className="text-white">Gerenciar Status (Ativo / Inativo):</strong> Defina o status de cada material. Obras marcadas como <span className="text-rose-400">Inativo</span> ficarão guardadas no seu banco de dados para manutenção futura, mas ficam totalmente <span className="text-rose-400 font-bold">ocultas</span> para os irmãos na Biblioteca Virtual.</li>
-                  <li><strong className="text-white">Filtro Administrativo por Status:</strong> No painel de gerenciamento, utilize o seletor de status para buscar rapidamente materiais Ativos ou Inativos para auditoria rápida.</li>
-                  <li><strong className="text-white">Importação em Massa via Excel / CSV:</strong> Você pode carregar um catálogo inteiro de livros enviando um arquivo Excel contendo as colunas de cabeçalho: <em>"titulo"</em>, <em>"autor"</em>, <em>"categoria"</em>, <em>"link"</em> e <em>"grau"</em>.</li>
-                </ul>
-              </div>
-
-              {/* Configuração Master de Questionários */}
-              <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-3">
-                <h4 className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-orange-400" /> Parametrização Master de Questionários
-                </h4>
-                <p className="text-[11px] text-[#9cbfd5] leading-relaxed">
-                  Os administradores possuem ferramentas exclusivas de ajuste na parte inferior da aba <strong>"Questionários"</strong>:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                  <div className="bg-[#04141d] p-3 rounded border border-[#1c2c36] space-y-1">
-                    <span className="text-[10px] font-mono text-orange-400 font-bold block">REAJUSTE DE NOTA MÍNIMA</span>
-                    <span className="text-[10px] text-[#99907c] block leading-relaxed">
-                      Altere a porcentagem de pontuação mínima para aprovação e emissão de diplomas de forma dinâmica por meio de controle do tipo slider.
-                    </span>
-                  </div>
-                  <div className="bg-[#04141d] p-3 rounded border border-[#1c2c36] space-y-1">
-                    <span className="text-[10px] font-mono text-orange-400 font-bold block">RESTRIÇÃO DE CERTIFICADO</span>
-                    <span className="text-[10px] text-[#99907c] block leading-relaxed">
-                      Marque "Emitir apenas para conteúdo completo" para forçar que o irmão execute todo o escopo de perguntas, evitando simulações curtas e superficiais.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
 
         {/* SECTION: FAQ */}
         {activeManualSection === 'faq' && (
@@ -450,11 +330,9 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
                         <span className={`text-[8px] font-mono px-2 py-0.5 rounded uppercase font-black tracking-wider ${
                           faq.category === 'aluno' 
                             ? 'bg-[#185347]/40 text-[#66d9cc]' 
-                            : faq.category === 'admin' 
-                            ? 'bg-orange-950 text-orange-400' 
                             : 'bg-[#11212b] text-blue-400'
                         }`}>
-                          {faq.category === 'aluno' ? 'Irmão' : faq.category === 'admin' ? 'Admin' : 'Geral'}
+                          {faq.category === 'aluno' ? 'Irmão' : 'Geral'}
                         </span>
                         <span className="text-xs font-sans font-bold text-[#d4e5f2] hover:text-white transition-colors">
                           {faq.question}
