@@ -1411,19 +1411,19 @@ export default function App() {
   const getHeaderTitle = () => {
     switch (activeTab) {
       case 'inicio':
-        return dashboardTitle;
+        return `Masonic Academy • ${dashboardTitle}`;
       case 'biblioteca':
-        return 'Biblioteca de Estudos';
+        return 'Masonic Academy • Biblioteca de Estudos';
       case 'alertas':
-        return 'Central de Alertas';
+        return 'Masonic Academy • Central de Alertas';
       case 'perfil':
-        return 'Perfil e Ferramentas';
+        return 'Masonic Academy • Perfil e Ferramentas';
       case 'questionarios':
-        return 'Central de Simulados';
+        return 'Masonic Academy • Central de Simulados';
       case 'manual':
-        return 'Manual do Usuário';
+        return 'Masonic Academy • Manual do Usuário';
       default:
-        return dashboardTitle;
+        return `Masonic Academy • ${dashboardTitle}`;
     }
   };
 
@@ -1512,33 +1512,6 @@ export default function App() {
         {/* --- INCIO VIEW --- */}
         {activeTab === 'inicio' && (
           <div className="space-y-4 animate-fade-in text-left">
-            
-            {/* Quick Greeting Header Banner */}
-            <div id="exec-greeting" className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="font-sans font-bold text-lg text-[#d4e5f2] tracking-tight">
-                  <InlineEditable
-                    value={dashboardTitle}
-                    isAdmin={isAdmin(currentUser.email)}
-                    onSave={(val) => {
-                      setDashboardTitle(val);
-                      localStorage.setItem('masonic_dashboard_title', val);
-                    }}
-                    className="font-sans font-bold text-lg text-[#d4e5f2] tracking-tight"
-                  />
-                </h2>
-                <p className="text-xs text-[#99907c] font-mono mt-1 animate-fade-in pb-0.5">
-                  Irmão Ativo: <strong className="text-[#E9C349] font-sans text-xs">{currentUser.name}</strong>
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <div className="flex items-center gap-2.5 text-[11px] font-mono bg-[#11212b] px-3 py-1.5 rounded-lg border border-[#1a2d39]">
-                  <span className={`w-2 h-2 rounded-full animate-pulse bg-[#66d9cc] ${isUserInactive ? 'bg-rose-500' : 'bg-[#66d9cc]'}`}></span>
-                  <span className="text-[#99907c]">{isUserInactive ? 'Acesso Revogado / Inativo' : 'Sessão Ativa'}</span>
-                </div>
-              </div>
-            </div>
-
             {isUserInactive ? (
               <div className="bg-[#1a0e12]/80 border border-rose-500/30 rounded-xl p-10 text-center space-y-5 animate-fade-in flex flex-col items-center justify-center max-w-2xl mx-auto my-8">
                 <Shield className="w-16 h-16 text-rose-500 animate-bounce mt-3" />
