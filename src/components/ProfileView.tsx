@@ -4116,46 +4116,85 @@ export default function ProfileView({
           })()}
 
           {/* Report Tab Navigation */}
-          <div className="flex border-b border-[#1c2c36] gap-1 select-none">
-            <button
-              onClick={() => {
-                setReportsTab('logins');
-                setReportsGrouping('by-item');
-              }}
-              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                reportsTab === 'logins'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              🔑 QUANTIDADE DE ACESSOS (SESSÕES)
-            </button>
-            <button
-              onClick={() => {
-                setReportsTab('courses');
-                setReportsGrouping('by-item');
-              }}
-              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                reportsTab === 'courses'
-                  ? 'border-[#66d9cc] text-[#66d9cc] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              🎓 ACESSOS POR USUÁRIO E CURSO
-            </button>
-            <button
-              onClick={() => {
-                setReportsTab('books');
-                setReportsGrouping('by-item');
-              }}
-              className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                reportsTab === 'books'
-                  ? 'border-orange-400 text-orange-400 bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              📚 ACESSOS POR USUÁRIOS X MATERIAIS
-            </button>
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#1c2c36] gap-2 select-none">
+            <div className="flex flex-wrap gap-1">
+              <button
+                onClick={() => {
+                  setReportsTab('logins');
+                  setReportsGrouping('by-item');
+                }}
+                className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                  reportsTab === 'logins'
+                    ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                🔑 QUANTIDADE DE ACESSOS (SESSÕES)
+              </button>
+              <button
+                onClick={() => {
+                  setReportsTab('courses');
+                  setReportsGrouping('by-item');
+                }}
+                className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                  reportsTab === 'courses'
+                    ? 'border-[#66d9cc] text-[#66d9cc] bg-[#0c1d27]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                🎓 ACESSOS POR USUÁRIO E CURSO
+              </button>
+              <button
+                onClick={() => {
+                  setReportsTab('books');
+                  setReportsGrouping('by-item');
+                }}
+                className={`py-2 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                  reportsTab === 'books'
+                    ? 'border-orange-400 text-orange-400 bg-[#0c1d27]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                📚 ACESSOS POR USUÁRIOS X MATERIAIS
+              </button>
+            </div>
+
+            {/* Active Sessions List/Dropdown positioned next to the menu tabs */}
+            <div className="relative group select-none py-1 px-2.5 self-end md:self-center">
+              <span className="text-[11px] font-mono text-[#99907c] cursor-pointer flex items-center gap-1.5 hover:text-[#66d9cc] transition-colors py-1">
+                <span className="w-2 h-2 rounded-full bg-[#66d9cc] animate-pulse"></span>
+                Sessões Ativas: <strong className="text-[#66d9cc] font-sans">{accessUsers.filter(u => u.status === 'Ativo').length}</strong>
+              </span>
+              
+              {/* Hover dropdown list of active users */}
+              <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block w-64 bg-[#0c1d27] border border-[#1c2c36] rounded-lg p-3 shadow-2xl z-50 animate-fadeIn">
+                <div className="text-[9px] font-mono text-[#94a9b8] uppercase tracking-wider mb-2 pb-1.5 border-b border-[#1c2c36] flex items-center justify-between">
+                  <span>Usuários Ativos</span>
+                  <span className="text-[#66d9cc] font-bold">{accessUsers.filter(u => u.status === 'Ativo').length}</span>
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-[#1c2c36] pr-1">
+                  {accessUsers.filter(u => u.status === 'Ativo').length === 0 ? (
+                    <div className="text-[10px] font-mono text-gray-500 italic p-1">
+                      Nenhum usuário ativo
+                    </div>
+                  ) : (
+                    accessUsers.filter(u => u.status === 'Ativo').map((u) => (
+                      <div key={u.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-[#11212b] transition-colors text-left">
+                        <div className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-sans font-medium text-[#d4e5f2] truncate" title={u.name}>
+                            {u.name}
+                          </div>
+                          <div className="text-[9px] font-mono text-[#99907c] truncate" title={u.email}>
+                            {u.email}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Detail Panel */}

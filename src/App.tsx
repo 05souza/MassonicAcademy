@@ -1536,42 +1536,6 @@ export default function App() {
                   <span className={`w-2 h-2 rounded-full animate-pulse bg-[#66d9cc] ${isUserInactive ? 'bg-rose-500' : 'bg-[#66d9cc]'}`}></span>
                   <span className="text-[#99907c]">{isUserInactive ? 'Acesso Revogado / Inativo' : 'Sessão Ativa'}</span>
                 </div>
-                {isAdmin(currentUser.email) && (
-                  <div className="relative group select-none">
-                    <span className="text-[10px] font-mono text-[#99907c] pr-1 cursor-help flex items-center gap-1 hover:text-[#66d9cc] transition-colors">
-                      Usuários com sessões ativas: <strong className="text-[#66d9cc]">{accessUsers.filter(u => u.status === 'Ativo').length}</strong>
-                    </span>
-                    
-                    {/* Hover dropdown list of active users */}
-                    <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block w-56 bg-[#0c1d27] border border-[#1c2c36] rounded-lg p-3 shadow-2xl z-50 animate-fadeIn">
-                      <div className="text-[9px] font-mono text-[#94a9b8] uppercase tracking-wider mb-2 pb-1.5 border-b border-[#1c2c36] flex items-center justify-between">
-                        <span>Usuários Ativos</span>
-                        <span className="text-[#66d9cc] font-bold">{accessUsers.filter(u => u.status === 'Ativo').length}</span>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-[#1c2c36] pr-1">
-                        {accessUsers.filter(u => u.status === 'Ativo').length === 0 ? (
-                          <div className="text-[10px] font-mono text-gray-500 italic p-1">
-                            Nenhum usuário ativo
-                          </div>
-                        ) : (
-                          accessUsers.filter(u => u.status === 'Ativo').map((u) => (
-                            <div key={u.id} className="flex items-center gap-2 p-1 rounded hover:bg-[#11212b] transition-colors text-left">
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
-                              <div className="min-w-0 flex-1">
-                                <div className="text-xs font-sans font-medium text-[#d4e5f2] truncate" title={u.name}>
-                                  {u.name}
-                                </div>
-                                <div className="text-[9px] font-mono text-[#99907c] truncate" title={u.email}>
-                                  {u.email}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
