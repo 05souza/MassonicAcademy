@@ -49,7 +49,7 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
     {
       category: 'geral',
       question: 'Os dados são salvos na nuvem ou apenas no meu navegador?',
-      answer: 'A plataforma opera com sincronização híbrida. Caso exista conexão com o Firebase Firestore ativa, as alterações em questionários, progresso e usuários são salvas eletronicamente e em tempo real na nuvem. Em cenários offline, uma cópia de contingência é mantida instantaneamente no LocalStorage do seu navegador.'
+      answer: 'A plataforma opera com sincronização híbrida. Caso exista conexão com ativa, as alterações em questionários, progresso e usuários são salvas eletronicamente e em tempo real na nuvem. Em cenários offline, uma cópia de contingência é mantida instantaneamente no LocalStorage do seu navegador.'
     },
     {
       category: 'geral',
