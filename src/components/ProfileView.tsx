@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { ExecutiveReport, AccessUser, Questionnaire, Book } from '../types';
+import { ExecutiveReport, AccessUser, Questionnaire, Book, Lodge } from '../types';
 import { getFirebaseConfig, saveFirebaseConfig } from '../firebase';
 import { getDegreeLabel as getGlobalDegreeLabel } from '../utils/degrees';
 import { 
@@ -43,6 +43,12 @@ interface ProfileViewProps {
 
   // Access Logs Prop
   accessLogs?: any[];
+
+  // Lodges Props
+  lodges?: Lodge[];
+  onAddLodge?: (lodge: Lodge) => void;
+  onUpdateLodge?: (lodge: Lodge) => void;
+  onDeleteLodge?: (lodgeId: string) => void;
 }
 
 export default function ProfileView({ 
@@ -68,7 +74,11 @@ export default function ProfileView({
   onBatchUpdateBooksStatus,
   onBatchDeleteBooks,
   onImportBooks,
-  accessLogs = []
+  accessLogs = [],
+  lodges = [],
+  onAddLodge,
+  onUpdateLodge,
+  onDeleteLodge
 }: ProfileViewProps) {
   const getInitials = (name: string) => {
     return name
@@ -95,14 +105,24 @@ export default function ProfileView({
 
   const isStandardUser = currentUser?.tipoUsuario === 'padrao';
 
+  const visibleAccessUsers = (accessUsers || []).filter(u => {
+    if (isMaster) return true;
+    if (u.email.toLowerCase().trim() === 'dani.nanda.lucas@gmail.com') return false;
+    const uLodge = u.lodgeId || 'lodge-cavaleiros';
+    const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+    return uLodge === userLodgeId;
+  });
+
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges'>('profile');
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile') {
       setActiveSubTab('profile');
+    } else if (!isMaster && (activeSubTab === 'database' || activeSubTab === 'accessStats')) {
+      setActiveSubTab('profile');
     }
-  }, [isStandardUser, activeSubTab]);
+  }, [isStandardUser, isMaster, activeSubTab]);
   
   // Access CRUD interface state
   const [accessSearchQuery, setAccessSearchQuery] = useState('');
@@ -124,6 +144,21 @@ export default function ProfileView({
   const [userFormPotencia, setUserFormPotencia] = useState('');
   const [userFormCidadeLoja, setUserFormCidadeLoja] = useState('');
   const [userFormAvatarUrl, setUserFormAvatarUrl] = useState('');
+  const [userFormLodgeId, setUserFormLodgeId] = useState('');
+
+  // Lodge Management States
+  const [showLodgeForm, setShowLodgeForm] = useState(false);
+  const [isCreatingNewLodge, setIsCreatingNewLodge] = useState(true);
+  const [editLodgeId, setEditLodgeId] = useState<string | null>(null);
+  const [lodgeFormNome, setLodgeFormNome] = useState('');
+  const [lodgeFormPotencia, setLodgeFormPotencia] = useState('');
+  const [lodgeFormCidade, setLodgeFormCidade] = useState('');
+  const [lodgeFormNumero, setLodgeFormNumero] = useState('');
+  const [lodgeFormEstado, setLodgeFormEstado] = useState('');
+  const [lodgeFormTema, setLodgeFormTema] = useState<'cavaleiros' | 'templo' | 'ecletico' | 'carbono'>('cavaleiros');
+  const [lodgeFormLogoUrl, setLodgeFormLogoUrl] = useState('');
+  const [lodgeCrudError, setLodgeCrudError] = useState<string | null>(null);
+  const [lodgeCrudSuccess, setLodgeCrudSuccess] = useState<string | null>(null);
   
   // Self Editing State
   const [isEditingSelf, setIsEditingSelf] = useState(false);
@@ -134,6 +169,7 @@ export default function ProfileView({
   const [selfPassword, setSelfPassword] = useState('');
   const [selfEmail, setSelfEmail] = useState('');
   const [selfAvatarUrl, setSelfAvatarUrl] = useState('');
+  const [selfName, setSelfName] = useState('');
   
   const [userCrudError, setUserCrudError] = useState<string | null>(null);
   const [userCrudSuccess, setUserCrudSuccess] = useState<string | null>(null);
@@ -532,6 +568,9 @@ export default function ProfileView({
 
           const cleanId = `usr-imp-${Math.floor(100 + Math.random() * 900)}-${Date.now().toString().slice(-4)}`;
           
+          const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+          const matchedLodge = (lodges || []).find(l => l.id === userLodgeId);
+
           const newUser: AccessUser = {
             id: cleanId,
             name: name,
@@ -540,12 +579,13 @@ export default function ProfileView({
             password: password || 'masonic123',
             nivelAcesso: nivelAcesso,
             telefone: telefone || undefined,
-            loja: loja || undefined,
-            potencia: potencia || undefined,
-            cidadeLoja: cidadeLoja || undefined,
+            loja: isMaster ? (loja || undefined) : (matchedLodge?.nome || undefined),
+            potencia: isMaster ? (potencia || undefined) : (matchedLodge?.potencia || undefined),
+            cidadeLoja: isMaster ? (cidadeLoja || undefined) : (matchedLodge?.cidade || undefined),
             allowedReportIds: allowedReportIds,
             status: 'Ativo',
-            tipoUsuario: 'padrao'
+            tipoUsuario: 'padrao',
+            lodgeId: isMaster ? undefined : userLodgeId
           };
 
           parsedUsers.push(newUser);
@@ -961,7 +1001,8 @@ export default function ProfileView({
       status: bookFormStatus,
       tags: processedTags,
       thumbnailUrl: bookFormThumbnailUrl.trim(),
-      link: bookFormLink.trim()
+      link: bookFormLink.trim(),
+      lodgeId: isCreatingNewBook ? (currentUser?.lodgeId || 'lodge-cavaleiros') : (books.find(b => b.id === bookFormId.trim())?.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros')
     };
 
     try {
@@ -1329,7 +1370,8 @@ export default function ProfileView({
       nivelCurso: formNivelCurso,
       conteudoSemProva: formConteudoSemProva,
       status: formStatus,
-      linkedQuestionnaireId: formLinkedQuestionnaireId || undefined
+      linkedQuestionnaireId: formLinkedQuestionnaireId || undefined,
+      lodgeId: isCreatingNew ? (currentUser?.lodgeId || 'lodge-cavaleiros') : (reports.find(r => r.id === finalId)?.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros')
     };
 
     if (isCreatingNew) {
@@ -1378,6 +1420,7 @@ export default function ProfileView({
     setUserFormPotencia(user.potencia || '');
     setUserFormCidadeLoja(user.cidadeLoja || '');
     setUserFormAvatarUrl(user.avatarUrl || '');
+    setUserFormLodgeId(user.lodgeId || '');
     
     setShowUserForm(true);
     setUserCrudError(null);
@@ -1399,10 +1442,27 @@ export default function ProfileView({
     setUserFormNivelAcesso('');
     setUserFormPassword('');
     setUserFormTelefone('');
-    setUserFormLoja('');
-    setUserFormPotencia('');
-    setUserFormCidadeLoja('');
     setUserFormAvatarUrl('');
+    
+    if (!isMaster) {
+      const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+      setUserFormLodgeId(userLodgeId);
+      const matched = (lodges || []).find(l => l.id === userLodgeId);
+      if (matched) {
+        setUserFormLoja(matched.nome);
+        setUserFormPotencia(matched.potencia);
+        setUserFormCidadeLoja(matched.cidade);
+      } else {
+        setUserFormLoja('');
+        setUserFormPotencia('');
+        setUserFormCidadeLoja('');
+      }
+    } else {
+      setUserFormLoja('');
+      setUserFormPotencia('');
+      setUserFormCidadeLoja('');
+      setUserFormLodgeId('');
+    }
     
     setShowUserForm(true);
     setUserCrudError(null);
@@ -1450,11 +1510,12 @@ export default function ProfileView({
       nivelAcesso: userFormNivelAcesso.trim(),
       password: userFormPassword.trim(),
       telefone: userFormTelefone.trim() || undefined,
-      loja: userFormLoja.trim() || undefined,
-      potencia: userFormPotencia.trim() || undefined,
-      cidadeLoja: userFormCidadeLoja.trim() || undefined,
+      loja: isMaster ? (userFormLoja.trim() || undefined) : (lodges.find(l => l.id === (currentUser?.lodgeId || 'lodge-cavaleiros'))?.nome || userFormLoja.trim() || undefined),
+      potencia: isMaster ? (userFormPotencia.trim() || undefined) : (lodges.find(l => l.id === (currentUser?.lodgeId || 'lodge-cavaleiros'))?.potencia || userFormPotencia.trim() || undefined),
+      cidadeLoja: isMaster ? (userFormCidadeLoja.trim() || undefined) : (lodges.find(l => l.id === (currentUser?.lodgeId || 'lodge-cavaleiros'))?.cidade || userFormCidadeLoja.trim() || undefined),
       userAcesso: userFormUserAcesso.trim() || undefined,
-      avatarUrl: userFormAvatarUrl.trim() || undefined
+      avatarUrl: userFormAvatarUrl.trim() || undefined,
+      lodgeId: isMaster ? (userFormLodgeId || undefined) : (currentUser?.lodgeId || 'lodge-cavaleiros')
     };
 
     if (isCreatingNewUser) {
@@ -1540,18 +1601,20 @@ export default function ProfileView({
                   : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
               }`}
             >
-              <Shield className="w-3.5 h-3.5 text-orange-400" /> CADASTRO DE ACESSOS ({accessUsers.length})
+              <Shield className="w-3.5 h-3.5 text-orange-400" /> CADASTRO DE ACESSOS ({visibleAccessUsers.length})
             </button>
-            <button
-              onClick={() => setActiveSubTab('database')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'database'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5 text-[#E9C349]" /> BANCO DE DADOS CLOUD (FIREBASE)
-            </button>
+            {isMaster && (
+              <button
+                onClick={() => setActiveSubTab('database')}
+                className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                  activeSubTab === 'database'
+                    ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                <Database className="w-3.5 h-3.5 text-[#E9C349]" /> BANCO DE DADOS CLOUD (FIREBASE)
+              </button>
+            )}
             <button
               onClick={() => {
                 setActiveSubTab('books');
@@ -1565,15 +1628,27 @@ export default function ProfileView({
             >
               <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE MATERIAIS ({books.length})
             </button>
+            {isMaster && (
+              <button
+                onClick={() => setActiveSubTab('accessStats')}
+                className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                  activeSubTab === 'accessStats'
+                    ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-[#66d9cc]" /> RELATÓRIOS DE ACESSO
+              </button>
+            )}
             <button
-              onClick={() => setActiveSubTab('accessStats')}
+              onClick={() => setActiveSubTab('lodges')}
               className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'accessStats'
+                activeSubTab === 'lodges'
                   ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
                   : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
               }`}
             >
-              <BarChart3 className="w-3.5 h-3.5 text-[#66d9cc]" /> RELATÓRIOS DE ACESSO
+              <Home className="w-3.5 h-3.5 text-amber-500" /> CADASTRO DA LOJA ({(lodges || []).filter(l => isMaster || l.id === (currentUser?.lodgeId || 'lodge-cavaleiros')).length})
             </button>
           </>
         )}
@@ -1589,7 +1664,7 @@ export default function ProfileView({
                 src={currentUser.avatarUrl} 
                 alt={nameToDisplay}
                 referrerPolicy="no-referrer"
-                className="w-20 h-20 rounded-full object-cover border-2 border-[#E9C349] shadow-lg mb-4"
+                className="w-20 h-20 rounded-full object-cover border-2 border-[#E9C349] shadow-lg mb-4 bg-[#04141d]"
                 onError={(e) => {
                   (e.target as HTMLImageElement).onerror = null;
                   (e.target as HTMLImageElement).src = ''; 
@@ -1641,6 +1716,7 @@ export default function ProfileView({
                 {currentUser && (
                   <button
                     onClick={() => {
+                      setSelfName(currentUser.name || '');
                       setSelfTelefone(currentUser.telefone || '');
                       setSelfLoja(currentUser.loja || '');
                       setSelfPotencia(currentUser.potencia || '');
@@ -1663,6 +1739,7 @@ export default function ProfileView({
                   if (!currentUser) return;
                   const updated: AccessUser = {
                     ...currentUser,
+                    name: selfName.trim() || currentUser.name,
                     email: selfEmail.trim() || currentUser.email,
                     telefone: selfTelefone.trim() || undefined,
                     loja: selfLoja.trim() || undefined,
@@ -1676,6 +1753,17 @@ export default function ProfileView({
                 }}
                 className="w-full space-y-3 text-left"
               >
+                <div>
+                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Nome Completo</label>
+                  <input
+                    type="text"
+                    required
+                    value={selfName}
+                    onChange={(e) => setSelfName(e.target.value)}
+                    placeholder="Ex: Seu Nome Completo"
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
                 <div>
                   <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">E-mail de Acesso</label>
                   <input
@@ -1784,18 +1872,16 @@ export default function ProfileView({
                     className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
                   />
                 </div>
-                {isStandardUser && (
-                  <div>
-                    <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Senha de Acesso</label>
-                    <input
-                      type="text"
-                      value={selfPassword}
-                      onChange={(e) => setSelfPassword(e.target.value)}
-                      placeholder="Sua senha secreta"
-                      className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                    />
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[9px] font-mono text-[#9cbfd5] uppercase tracking-wider mb-1">Senha de Acesso</label>
+                  <input
+                    type="text"
+                    value={selfPassword}
+                    onChange={(e) => setSelfPassword(e.target.value)}
+                    placeholder="Sua senha secreta"
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
 
                 <div className="flex gap-2 pt-2">
                   <button
@@ -2672,9 +2758,9 @@ export default function ProfileView({
             {/* List Rows */}
             <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
               {/* Render Master Administrators */}
-              {[
+              {(isMaster ? [
                 { name: 'Daniel Luciano', email: 'dani.nanda.lucas@gmail.com' }
-              ]
+              ] : [])
                 .filter(m => {
                   if (accessStatusFilter === 'Inativo') return false; // Masters are always Ativo
                   return m.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
@@ -2729,7 +2815,7 @@ export default function ProfileView({
                   );
                 })}
 
-              {accessUsers
+              {visibleAccessUsers
                 .filter(u => {
                   const matchesSearch = u.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
                     u.email.toLowerCase().includes(accessSearchQuery.toLowerCase()) ||
@@ -2848,7 +2934,7 @@ export default function ProfileView({
                   );
                 })}
 
-              {accessUsers.filter(u => 
+              {visibleAccessUsers.filter(u => 
                 u.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
                 u.email.toLowerCase().includes(accessSearchQuery.toLowerCase())
               ).length === 0 && (
@@ -3022,14 +3108,45 @@ export default function ProfileView({
                       />
                     </div>
 
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-mono text-[#E9C349] mb-1 uppercase tracking-wider font-bold">Loja Cadastrada</label>
+                      <select
+                        value={userFormLodgeId}
+                        disabled={!isMaster}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setUserFormLodgeId(val);
+                          const matched = (lodges || []).find(l => l.id === val);
+                          if (matched) {
+                            setUserFormLoja(matched.nome);
+                            setUserFormPotencia(matched.potencia);
+                            setUserFormCidadeLoja(matched.cidade);
+                          } else {
+                            setUserFormLoja('');
+                            setUserFormPotencia('');
+                            setUserFormCidadeLoja('');
+                          }
+                        }}
+                        className="w-full bg-[#04141d] border border-[#E9C349]/40 text-xs px-2.5 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono disabled:opacity-50"
+                      >
+                        <option value="">-- Selecione uma Loja (ou preencha manualmente abaixo) --</option>
+                        {(lodges || []).map(l => (
+                          <option key={l.id} value={l.id}>
+                            {l.nome} {l.numero ? `Nº ${l.numero}` : ''} ({l.potencia} - {l.cidade}{l.estado ? `/${l.estado}` : ''}) - Tema: {l.tema.toUpperCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Loja</label>
                       <input
                         type="text"
+                        disabled={!isMaster}
                         placeholder="Ex: Loja Fraternidade nº 42"
                         value={userFormLoja}
                         onChange={(e) => setUserFormLoja(e.target.value)}
-                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] disabled:opacity-50"
                       />
                     </div>
 
@@ -3037,10 +3154,11 @@ export default function ProfileView({
                       <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Potência</label>
                       <input
                         type="text"
+                        disabled={!isMaster}
                         placeholder="Ex: GOB / Glesp / GOP"
                         value={userFormPotencia}
                         onChange={(e) => setUserFormPotencia(e.target.value)}
-                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] disabled:opacity-50"
                       />
                     </div>
 
@@ -3048,10 +3166,11 @@ export default function ProfileView({
                       <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Cidade da Loja</label>
                       <input
                         type="text"
+                        disabled={!isMaster}
                         placeholder="Ex: São Paulo"
                         value={userFormCidadeLoja}
                         onChange={(e) => setUserFormCidadeLoja(e.target.value)}
-                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] disabled:opacity-50"
                       />
                     </div>
 
@@ -4163,22 +4282,22 @@ export default function ProfileView({
             <div className="relative group select-none py-1 px-2.5 self-end md:self-center">
               <span className="text-[11px] font-mono text-[#99907c] cursor-pointer flex items-center gap-1.5 hover:text-[#66d9cc] transition-colors py-1">
                 <span className="w-2 h-2 rounded-full bg-[#66d9cc] animate-pulse"></span>
-                Sessões Ativas: <strong className="text-[#66d9cc] font-sans">{accessUsers.filter(u => u.status === 'Ativo').length}</strong>
+                Sessões Ativas: <strong className="text-[#66d9cc] font-sans">{visibleAccessUsers.filter(u => u.status === 'Ativo').length}</strong>
               </span>
               
               {/* Hover dropdown list of active users */}
               <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block w-64 bg-[#0c1d27] border border-[#1c2c36] rounded-lg p-3 shadow-2xl z-50 animate-fadeIn">
                 <div className="text-[9px] font-mono text-[#94a9b8] uppercase tracking-wider mb-2 pb-1.5 border-b border-[#1c2c36] flex items-center justify-between">
                   <span>Usuários Ativos</span>
-                  <span className="text-[#66d9cc] font-bold">{accessUsers.filter(u => u.status === 'Ativo').length}</span>
+                  <span className="text-[#66d9cc] font-bold">{visibleAccessUsers.filter(u => u.status === 'Ativo').length}</span>
                 </div>
                 <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-[#1c2c36] pr-1">
-                  {accessUsers.filter(u => u.status === 'Ativo').length === 0 ? (
+                  {visibleAccessUsers.filter(u => u.status === 'Ativo').length === 0 ? (
                     <div className="text-[10px] font-mono text-gray-500 italic p-1">
                       Nenhum usuário ativo
                     </div>
                   ) : (
-                    accessUsers.filter(u => u.status === 'Ativo').map((u) => (
+                    visibleAccessUsers.filter(u => u.status === 'Ativo').map((u) => (
                       <div key={u.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-[#11212b] transition-colors text-left">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
                         <div className="min-w-0 flex-1">
@@ -4283,9 +4402,13 @@ export default function ProfileView({
                                   alt={userStats.name} 
                                   referrerPolicy="no-referrer"
                                   className="w-9 h-9 rounded-full object-cover border border-[#E9C349]/40 bg-[#0c1d27]"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).onerror = null;
+                                    (e.target as HTMLImageElement).src = ''; 
+                                  }}
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-[#66D9CC]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-[#66D9CC]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36] shrink-0">
                                   {getInitials(userStats.name)}
                                 </div>
                               )}
@@ -4522,9 +4645,13 @@ export default function ProfileView({
                                     alt={userStats.name} 
                                     referrerPolicy="no-referrer"
                                     className="w-9 h-9 rounded-full object-cover border border-[#66d9cc]/40 bg-[#0c1d27]"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).onerror = null;
+                                      (e.target as HTMLImageElement).src = ''; 
+                                    }}
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#66D9CC]/20 to-[#E9C349]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#66D9CC]/20 to-[#E9C349]/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36] shrink-0">
                                     {getInitials(userStats.name)}
                                   </div>
                                 )}
@@ -4755,9 +4882,13 @@ export default function ProfileView({
                                     alt={userStats.name} 
                                     referrerPolicy="no-referrer"
                                     className="w-9 h-9 rounded-full object-cover border border-orange-400/40 bg-[#0c1d27]"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).onerror = null;
+                                      (e.target as HTMLImageElement).src = ''; 
+                                    }}
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-orange-400/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36]">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#E9C349]/20 to-orange-400/20 text-[#d4e5f2] flex items-center justify-center text-xs font-bold font-mono border border-[#1c2c36] shrink-0">
                                     {getInitials(userStats.name)}
                                   </div>
                                 )}
@@ -4809,6 +4940,383 @@ export default function ProfileView({
             </span>
           </div>
 
+        </div>
+      )}
+
+      {activeSubTab === 'lodges' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0c1d27] p-5 rounded-xl border border-[#1c2c36]">
+            <div>
+              <h3 className="font-sans font-bold text-lg text-[#d4e5f2] flex items-center gap-2">
+                <Home className="w-5 h-5 text-amber-500" /> Cadastro e Gerenciamento da Loja
+              </h3>
+              <p className="text-xs font-mono text-[#99907c] mt-1">
+                Configure múltiplas lojas, cada uma com seu próprio tema visual, cursos isolados e acervo literário.
+              </p>
+            </div>
+            
+            {isMaster && (
+              <button
+                onClick={() => {
+                  setIsCreatingNewLodge(true);
+                  setEditLodgeId(null);
+                  setLodgeFormNome('');
+                  setLodgeFormPotencia('');
+                  setLodgeFormCidade('');
+                  setLodgeFormNumero('');
+                  setLodgeFormEstado('');
+                  setLodgeFormTema('cavaleiros');
+                  setLodgeFormLogoUrl('');
+                  setLodgeCrudError(null);
+                  setLodgeCrudSuccess(null);
+                  setShowLodgeForm(true);
+                }}
+                className="bg-[#D4AF37] hover:bg-[#ffca28] text-[#04141d] font-sans font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-1.5 transition-all shadow-md cursor-pointer uppercase tracking-wider"
+              >
+                <Plus className="w-4 h-4" /> Cadastrar Nova Loja
+              </button>
+            )}
+          </div>
+
+          {/* Error and Success banners */}
+          {lodgeCrudError && (
+            <div className="bg-red-900/20 border border-red-500/50 text-red-200 text-xs p-3.5 rounded-lg flex items-center gap-2">
+              <span className="font-mono font-bold">❌ ERRO:</span> {lodgeCrudError}
+            </div>
+          )}
+          {lodgeCrudSuccess && (
+            <div className="bg-emerald-950/30 border border-emerald-500/50 text-emerald-200 text-xs p-3.5 rounded-lg flex items-center gap-2">
+              <span className="font-mono font-bold">✓ SUCESSO:</span> {lodgeCrudSuccess}
+            </div>
+          )}
+
+          {/* Form to Add / Edit Lodge */}
+          {showLodgeForm && (
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                setLodgeCrudError(null);
+                setLodgeCrudSuccess(null);
+
+                if (!lodgeFormNome.trim()) {
+                  setLodgeCrudError('O nome da loja é obrigatório.');
+                  return;
+                }
+                if (!lodgeFormPotencia.trim()) {
+                  setLodgeCrudError('A potência maçônica é obrigatória.');
+                  return;
+                }
+                if (!lodgeFormCidade.trim()) {
+                  setLodgeCrudError('A cidade é obrigatória.');
+                  return;
+                }
+
+                const finalLodgeData: Lodge = {
+                  id: isCreatingNewLodge ? `lodge-${Math.floor(100 + Math.random() * 900)}` : (editLodgeId || ''),
+                  nome: lodgeFormNome.trim(),
+                  potencia: lodgeFormPotencia.trim().toUpperCase(),
+                  cidade: lodgeFormCidade.trim(),
+                  numero: lodgeFormNumero.trim() || undefined,
+                  estado: lodgeFormEstado.trim().toUpperCase() || undefined,
+                  tema: lodgeFormTema,
+                  logoUrl: lodgeFormLogoUrl.trim() || undefined
+                };
+
+                if (isCreatingNewLodge) {
+                  if (onAddLodge) onAddLodge(finalLodgeData);
+                  setLodgeCrudSuccess(`Loja "${finalLodgeData.nome}" cadastrada com sucesso!`);
+                } else {
+                  if (onUpdateLodge) onUpdateLodge(finalLodgeData);
+                  setLodgeCrudSuccess(`Loja "${finalLodgeData.nome}" atualizada com sucesso!`);
+                }
+
+                setTimeout(() => {
+                  setLodgeCrudSuccess(null);
+                  setShowLodgeForm(false);
+                }, 2000);
+              }}
+              className="bg-[#0c1d27] border border-[#1c2c36] p-5 rounded-xl space-y-4 animate-fade-in"
+            >
+              <h4 className="font-sans font-bold text-sm text-[#E9C349] uppercase tracking-wider">
+                {isCreatingNewLodge ? 'Nova Loja' : 'Editar Loja'}
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nome da Loja</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Loja Cavaleiros da Ordem"
+                    value={lodgeFormNome}
+                    onChange={(e) => setLodgeFormNome(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Potência Maçônica</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: GOB, GLESP, GOP"
+                    value={lodgeFormPotencia}
+                    onChange={(e) => setLodgeFormPotencia(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Cidade da Loja</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: São Paulo"
+                    value={lodgeFormCidade}
+                    onChange={(e) => setLodgeFormCidade(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Nº da Loja</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 1234"
+                    value={lodgeFormNumero}
+                    onChange={(e) => setLodgeFormNumero(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Estado (UF)</label>
+                  <input
+                    type="text"
+                    maxLength={2}
+                    placeholder="Ex: SP"
+                    value={lodgeFormEstado}
+                    onChange={(e) => setLodgeFormEstado(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] uppercase font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Tema do Sistema (Visual)</label>
+                  <select
+                    value={lodgeFormTema}
+                    onChange={(e) => setLodgeFormTema(e.target.value as any)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono"
+                  >
+                    <option value="cavaleiros">Tema Cavaleiros (Teal & Gold Clássico)</option>
+                    <option value="templo">Tema Templo (Burgundy & Sand Gold)</option>
+                    <option value="ecletico">Tema Eclético (Royal Blue & Silver)</option>
+                    <option value="carbono">Tema Carbono (Charcoal & Emerald)</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Logo da Loja</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                    <div className="sm:col-span-8">
+                      <input
+                        type="text"
+                        placeholder="Ex: https://url-da-imagem.com/logo.png ou use o botão ao lado"
+                        value={lodgeFormLogoUrl}
+                        onChange={(e) => setLodgeFormLogoUrl(e.target.value)}
+                        className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                      />
+                    </div>
+                    <div className="sm:col-span-4 flex items-center gap-2">
+                      <label className="bg-[#11212b] border border-[#1c2c36] hover:bg-[#1a2c36] text-white font-sans font-bold text-xs px-3 py-2.5 rounded-lg transition-all shadow-md cursor-pointer flex items-center justify-center gap-1.5 w-full">
+                        <Upload className="w-3.5 h-3.5 text-[#E9C349]" />
+                        <span>Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = async (event) => {
+                              if (event.target?.result) {
+                                try {
+                                  const base64Str = event.target.result as string;
+                                  const compressed = await compressImage(base64Str, 300, 300, 0.7);
+                                  setLodgeFormLogoUrl(compressed);
+                                } catch (err) {
+                                  console.error("Erro ao comprimir logo:", err);
+                                  setLodgeFormLogoUrl(event.target.result as string);
+                                }
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      
+                      {lodgeFormLogoUrl && (
+                        <div className="w-10 h-10 border border-[#1c2c36] bg-[#04141d] rounded flex items-center justify-center overflow-hidden shrink-0">
+                          <img src={lodgeFormLogoUrl} alt="Preview Logo" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowLodgeForm(false)}
+                  className="bg-[#11212b] border border-[#1c2c36] text-[#9cbfd5] font-sans font-bold text-xs px-4 py-2 rounded-lg hover:bg-[#1a2c36] transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-sans font-bold text-xs px-4 py-2 rounded-lg transition-all shadow-md cursor-pointer uppercase tracking-wider"
+                >
+                  Salvar
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Lodges List Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(lodges || [])
+              .filter((l) => {
+                if (isMaster) return true;
+                const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+                return l.id === userLodgeId;
+              })
+              .map((lodge) => {
+                const isDefaultLodge = lodge.id === 'lodge-cavaleiros';
+              
+              // Get current users count of this lodge
+              const memberCount = accessUsers.filter(u => u.lodgeId === lodge.id || (!u.lodgeId && isDefaultLodge)).length;
+              
+              return (
+                <div 
+                  key={lodge.id}
+                  className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 space-y-4 hover:border-[#D4AF37]/50 transition-all shadow-lg flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {lodge.logoUrl ? (
+                          <img 
+                            src={lodge.logoUrl} 
+                            alt={lodge.nome} 
+                            className="w-9 h-9 object-contain rounded bg-transparent border border-[#1c2c36]/60 p-0.5" 
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-transparent border border-[#1c2c36]/40 flex items-center justify-center text-amber-500/80 font-mono font-bold text-sm uppercase">
+                            {lodge.nome.slice(0, 2)}
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-sans font-bold text-sm text-[#d4e5f2] line-clamp-1">{lodge.nome}</h4>
+                          <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider block">ID: {lodge.id}</span>
+                        </div>
+                      </div>
+
+                      <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                        lodge.tema === 'cavaleiros' ? 'bg-teal-500/10 text-teal-400' :
+                        lodge.tema === 'templo' ? 'bg-rose-500/10 text-rose-400' :
+                        lodge.tema === 'ecletico' ? 'bg-blue-500/10 text-blue-400' :
+                        'bg-emerald-500/10 text-emerald-400'
+                      }`}>
+                        {lodge.tema}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-[#1c2c36]/60 pt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-xs font-mono">
+                      <div>
+                        <span className="block text-[9px] text-[#99907c] uppercase tracking-wider">Potência</span>
+                        <span className="text-[#a5b8c7] font-bold">{lodge.potencia}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] text-[#99907c] uppercase tracking-wider">Nº</span>
+                        <span className="text-[#a5b8c7] font-bold">{lodge.numero || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] text-[#99907c] uppercase tracking-wider">Cidade</span>
+                        <span className="text-[#a5b8c7] font-bold truncate block">{lodge.cidade}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[9px] text-[#99907c] uppercase tracking-wider">Estado</span>
+                        <span className="text-[#a5b8c7] font-bold">{lodge.estado || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-[#1c2c36]/60 pt-3 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-[#9cbfd5] bg-[#04141d] px-2 py-1 rounded border border-[#1c2c36]">
+                      👥 {memberCount} administradores/membros
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setIsCreatingNewLodge(false);
+                          setEditLodgeId(lodge.id);
+                          setLodgeFormNome(lodge.nome);
+                          setLodgeFormPotencia(lodge.potencia);
+                          setLodgeFormCidade(lodge.cidade);
+                          setLodgeFormNumero(lodge.numero || '');
+                          setLodgeFormEstado(lodge.estado || '');
+                          setLodgeFormTema(lodge.tema);
+                          setLodgeFormLogoUrl(lodge.logoUrl || '');
+                          setLodgeCrudError(null);
+                          setLodgeCrudSuccess(null);
+                          setShowLodgeForm(true);
+                        }}
+                        title="Editar Loja"
+                        className="p-1.5 text-[#9cbfd5] hover:text-[#E8C349] hover:bg-[#11212b] rounded transition-all cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      
+                      {isMaster && !isDefaultLodge && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Tem certeza de que deseja excluir a loja "${lodge.nome}"? Esta ação não pode ser desfeita.`)) {
+                              if (onDeleteLodge) {
+                                onDeleteLodge(lodge.id);
+                                setLodgeCrudSuccess(`Loja "${lodge.nome}" excluída.`);
+                                setTimeout(() => setLodgeCrudSuccess(null), 2500);
+                              }
+                            }
+                          }}
+                          title="Excluir Loja"
+                          className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-950/20 rounded transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Integration Tip Note */}
+          {isMaster && (
+            <div className="bg-[#11212b]/60 border border-[#1c2c36] p-4.5 rounded-xl space-y-2">
+              <span className="text-[10px] font-mono text-[#E9C349] font-black uppercase tracking-wider flex items-center gap-1">
+                💡 Guia Rápido de Instalação e Funcionamento Multi-Loja
+              </span>
+              <ul className="text-xs space-y-1.5 text-[#9cbfd5] list-disc list-inside pl-1">
+                <li>Cada loja cadastrada ganha um ambiente 100% isolado de cursos e livros digitais.</li>
+                <li>A <strong className="text-white">Loja Cavaleiros</strong> serve como base; registros antigos sem Loja vinculada pertencem a ela por padrão.</li>
+                <li>Para adicionar um administrador para a nova loja, vá em <strong className="text-white">Cadastro de Acessos</strong>, clique em <strong className="text-white">Cadastrar Credencial</strong>, selecione a nova loja no seletor correspondente, e defina a permissão como <strong className="text-white">admin</strong>.</li>
+                <li>Assim que este novo administrador fizer login, o sistema aplicará o tema customizado escolhido por ele e começará vazio, pronto para ser alimentado com seus próprios cursos e livros.</li>
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

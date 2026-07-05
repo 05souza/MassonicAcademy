@@ -141,6 +141,8 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
   // Load core structures
   const loadDatabase = async () => {
     try {
+      const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+
       // 1. Read Sheets settings
       const localSheets = localStorage.getItem('masonic_questionnaire_sheets_v1');
       if (localSheets) {
@@ -155,7 +157,10 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
       const localAttempts = localStorage.getItem('masonic_attempts_v1');
       let parsedAttempts: SimulationAttempt[] = [];
       if (localAttempts) {
-        parsedAttempts = JSON.parse(localAttempts);
+        parsedAttempts = JSON.parse(localAttempts).filter((a: SimulationAttempt) => {
+          const aLodge = a.lodgeId || 'lodge-cavaleiros';
+          return aLodge === userLodgeId;
+        });
         setSimulationAttempts(parsedAttempts);
       }
 
@@ -190,37 +195,56 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
       if (db) {
         try {
           const quizSnap = await getDocs(collection(db, 'questionnaires'));
+          const cloudQuizzes: Questionnaire[] = [];
+          
           if (!quizSnap.empty) {
-            const cloudQuizzes: Questionnaire[] = [];
             quizSnap.forEach(doc => {
-              cloudQuizzes.push(doc.data() as Questionnaire);
+              const q = doc.data() as Questionnaire;
+              if (q.lodgeId === userLodgeId || (!q.lodgeId && userLodgeId === 'lodge-cavaleiros')) {
+                cloudQuizzes.push(q);
+              }
             });
+          }
 
+          if (cloudQuizzes.length > 0) {
             // Check & upgrade within cloudQuizzes
-            const g1 = cloudQuizzes.find(q => q.id === 'quiz-grau-1');
-            if (g1 && g1.questions.length < 110) {
-              g1.questions = APRENDIZ_QUESTIONS;
-              // Save upgraded quiz back to Firestore
-              setDoc(doc(db, 'questionnaires', 'quiz-grau-1'), cleanObjectForFirestore(g1))
-                .catch(err => console.warn('Error upgrading firestore quiz-grau-1:', err));
-            }
+            if (userLodgeId === 'lodge-cavaleiros') {
+              const g1 = cloudQuizzes.find(q => q.id === 'quiz-grau-1');
+              if (g1 && g1.questions.length < 110) {
+                g1.questions = APRENDIZ_QUESTIONS;
+                // Save upgraded quiz back to Firestore
+                setDoc(doc(db, 'questionnaires', 'quiz-grau-1'), cleanObjectForFirestore(g1))
+                  .catch(err => console.warn('Error upgrading firestore quiz-grau-1:', err));
+              }
 
-            const g2 = cloudQuizzes.find(q => q.id === 'quiz-grau-2');
-            if (g2 && (!g2.questions || g2.questions.length < 60)) {
-              g2.questions = COMPANHEIRO_QUESTIONS;
-              // Save upgraded quiz back to Firestore
-              setDoc(doc(db, 'questionnaires', 'quiz-grau-2'), cleanObjectForFirestore(g2))
-                .catch(err => console.warn('Error upgrading firestore quiz-grau-2:', err));
+              const g2 = cloudQuizzes.find(q => q.id === 'quiz-grau-2');
+              if (g2 && (!g2.questions || g2.questions.length < 60)) {
+                g2.questions = COMPANHEIRO_QUESTIONS;
+                // Save upgraded quiz back to Firestore
+                setDoc(doc(db, 'questionnaires', 'quiz-grau-2'), cleanObjectForFirestore(g2))
+                  .catch(err => console.warn('Error upgrading firestore quiz-grau-2:', err));
+              }
             }
 
             loadedQuizzes = cloudQuizzes;
             localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(cloudQuizzes));
           } else {
-            // Seed cloud with defaults
-            const batchPromises = DEFAULT_QUESTIONNAIRES.map(q => 
-              setDoc(doc(db, 'questionnaires', q.id), cleanObjectForFirestore(q))
-            );
-            await Promise.all(batchPromises);
+            if (userLodgeId === 'lodge-cavaleiros') {
+              // Seed cloud with defaults
+              const seededDefaults = DEFAULT_QUESTIONNAIRES.map(q => ({
+                ...q,
+                lodgeId: 'lodge-cavaleiros'
+              }));
+              const batchPromises = seededDefaults.map(q => 
+                setDoc(doc(db, 'questionnaires', q.id), cleanObjectForFirestore(q))
+              );
+              await Promise.all(batchPromises);
+              loadedQuizzes = seededDefaults;
+              localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(seededDefaults));
+            } else {
+              loadedQuizzes = [];
+              localStorage.setItem('masonic_questionnaires_v1', JSON.stringify([]));
+            }
           }
 
           // Attempts Sync
@@ -228,11 +252,18 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
           if (!attemptSnap.empty) {
             const cloudAttempts: SimulationAttempt[] = [];
             attemptSnap.forEach(doc => {
-              cloudAttempts.push(doc.data() as SimulationAttempt);
+              const a = doc.data() as SimulationAttempt;
+              if (a.lodgeId === userLodgeId || (!a.lodgeId && userLodgeId === 'lodge-cavaleiros')) {
+                cloudAttempts.push(a);
+              }
             });
             parsedAttempts = cloudAttempts;
             setSimulationAttempts(cloudAttempts);
             localStorage.setItem('masonic_attempts_v1', JSON.stringify(cloudAttempts));
+          } else {
+            parsedAttempts = [];
+            setSimulationAttempts([]);
+            localStorage.setItem('masonic_attempts_v1', JSON.stringify([]));
           }
 
           // Settings Sync
@@ -250,7 +281,12 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
         }
       }
 
-      setQuestionnaires(loadedQuizzes);
+      // Filter locally in case Firestore was bypassed or is not synced
+      const finalQuizzes = loadedQuizzes.filter(q => {
+        const qLodge = q.lodgeId || 'lodge-cavaleiros';
+        return qLodge === userLodgeId;
+      });
+      setQuestionnaires(finalQuizzes);
     } catch (e) {
       console.error('Error loading questionnaire database:', e);
     }
@@ -454,7 +490,8 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
       dateTime: new Date().toLocaleString('pt-BR'),
       approved: isApproved,
       diplomaSent: false,
-      respostas: respostasText
+      respostas: respostasText,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
 
     // Save locally
@@ -703,7 +740,8 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
       approvalScore: 70,
       status: 'Ativo',
       questions: [],
-      onlyFullForCertificate: false
+      onlyFullForCertificate: false,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
 
     const updated = [...questionnaires, newQuiz];

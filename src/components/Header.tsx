@@ -31,6 +31,7 @@ interface HeaderProps {
   activeTab?: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual';
   onChangeTab?: (tab: 'inicio' | 'biblioteca' | 'alertas' | 'perfil' | 'questionarios' | 'manual') => void;
   isAdminUser?: boolean;
+  logoUrl?: string;
 }
 
 export default function Header({
@@ -47,7 +48,8 @@ export default function Header({
   onLogout,
   activeTab = 'inicio',
   onChangeTab,
-  isAdminUser = false
+  isAdminUser = false,
+  logoUrl
 }: HeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -78,6 +80,15 @@ export default function Header({
             <Menu className="w-6 h-6" />
           </button>
           
+          {logoUrl && (
+            <img 
+              src={logoUrl} 
+              alt="Lodge Logo" 
+              className="w-7 h-7 object-contain rounded border border-[#D4AF37]/30 bg-[#04141D]/50 p-0.5" 
+              referrerPolicy="no-referrer" 
+            />
+          )}
+
           <h1 id="header-title" className="font-sans font-semibold text-xl text-[#d4e5f2] tracking-wide">
             {title}
           </h1>
@@ -105,9 +116,18 @@ export default function Header({
 
           {/* Active Logged in User */}
           <div className="flex items-center gap-1.5 bg-[#04141D] rounded-full pl-2 pr-3 py-1 border border-[#D4AF37]/35 shadow-inner">
+          {currentUser.avatarUrl ? (
+            <img 
+              src={currentUser.avatarUrl} 
+              alt={currentUser.name} 
+              className="w-5.5 h-5.5 rounded-full object-cover border border-[#D4AF37]/30" 
+              referrerPolicy="no-referrer"
+            />
+          ) : (
             <div className="w-5.5 h-5.5 rounded-full bg-[#D4AF37] text-[#04141D] flex items-center justify-center text-[10px] font-mono font-black select-none uppercase">
               {getInitials(currentUser.name)}
             </div>
+          )}
             <span className="text-[10px] font-mono font-bold text-[#f2ca50] select-none">
               {currentUser.name}
             </span>
@@ -143,9 +163,18 @@ export default function Header({
 
             {/* Profile Brief */}
             <div className="p-5 bg-gradient-to-b from-[#04141D] to-[#06273A] border-b border-[#1c2c36] text-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#f2ca50] text-[#04141D] flex items-center justify-center text-lg font-mono font-bold mx-auto mb-3 shadow-md border border-[#04141D] uppercase">
-                {getInitials(currentUser.name)}
-              </div>
+              {currentUser.avatarUrl ? (
+                <img 
+                  src={currentUser.avatarUrl} 
+                  alt={currentUser.name} 
+                  className="w-14 h-14 rounded-full object-cover mx-auto mb-3 border border-[#D4AF37]/40 shadow-md" 
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#D4AF37] to-[#f2ca50] text-[#04141D] flex items-center justify-center text-lg font-mono font-bold mx-auto mb-3 shadow-md border border-[#04141D] uppercase">
+                  {getInitials(currentUser.name)}
+                </div>
+              )}
               <h3 className="font-sans font-semibold text-sm text-[#d4e5f2]">{currentUser.name}</h3>
               <p className="font-mono text-[10px] text-[#99907c] mt-0.5">{currentUser.email}</p>
               <div className={`inline-block border text-[10px] font-mono font-bold px-2.5 py-0.5 rounded mt-2.5 uppercase ${

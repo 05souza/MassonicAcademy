@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
-import { ExecutiveReport, SystemAlert, AccessUser, Book } from './types';
+import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -118,21 +118,49 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   
+  const [lodges, setLodges] = useState<Lodge[]>(() => {
+    const saved = localStorage.getItem('masonic_lodges_v1');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: 'lodge-cavaleiros',
+        nome: 'Loja Cavaleiros da Ordem',
+        potencia: 'GOB',
+        cidade: 'São Paulo',
+        numero: '1234',
+        estado: 'SP',
+        tema: 'cavaleiros'
+      }
+    ];
+  });
+  
   const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('id');
+
+  // Simulated active user & accesses database
+  const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
+  const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('masonic_theme_v1') as 'dark' | 'light') || 'dark';
   });
 
   useEffect(() => {
-    document.body.className = theme;
-    document.documentElement.className = theme;
+    const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+    const userLodge = lodges.find(l => l.id === userLodgeId);
+    const lodgeThemeClass = userLodge?.tema ? `theme-${userLodge.tema}` : '';
+    
+    // Combine light/dark theme with the lodge's custom theme class
+    const finalClasses = [theme, lodgeThemeClass].filter(Boolean).join(' ');
+    document.body.className = finalClasses;
+    document.documentElement.className = finalClasses;
     localStorage.setItem('masonic_theme_v1', theme);
-  }, [theme]);
-
-  // Simulated active user & accesses database
-  const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
-  const [isSessionLoaded, setIsSessionLoaded] = useState(false);
+  }, [theme, currentUser, lodges]);
   const [accessUsers, setAccessUsers] = useState<AccessUser[]>(() => {
     const saved = localStorage.getItem('masonic_access_users_v1');
     if (saved) {
@@ -299,6 +327,7 @@ export default function App() {
     let unsubBanner: () => void = () => {};
     let unsubBooks: () => void = () => {};
     let unsubLogs: () => void = () => {};
+    let unsubLodges: () => void = () => {};
 
     const loadInitialData = async () => {
       const { db } = initializeFirebase();
@@ -566,6 +595,46 @@ export default function App() {
             }
           });
 
+          // 7. Fetch lodges in real-time
+          const lodgesCol = collection(db, 'lodges');
+          unsubLodges = onSnapshot(lodgesCol, async (lodgesSnapshot) => {
+            const defaultLodgesList: Lodge[] = [
+              {
+                id: 'lodge-cavaleiros',
+                nome: 'Loja Cavaleiros da Ordem',
+                potencia: 'GOB',
+                cidade: 'São Paulo',
+                numero: '1234',
+                estado: 'SP',
+                tema: 'cavaleiros'
+              }
+            ];
+            if (lodgesSnapshot.empty) {
+              setLodges(defaultLodgesList);
+              localStorage.setItem('masonic_lodges_v1', JSON.stringify(defaultLodgesList));
+              for (const l of defaultLodgesList) {
+                await setDoc(doc(db, 'lodges', l.id), cleanObjectForFirestore(l));
+              }
+            } else {
+              const loadedLodges: Lodge[] = [];
+              lodgesSnapshot.forEach(docSnap => {
+                loadedLodges.push(docSnap.data() as Lodge);
+              });
+              setLodges(loadedLodges);
+              localStorage.setItem('masonic_lodges_v1', JSON.stringify(loadedLodges));
+            }
+          }, (err) => {
+            console.error('Erro de permissão ou rede no onSnapshot lodges:', err);
+            const saved = localStorage.getItem('masonic_lodges_v1');
+            if (saved) {
+              try {
+                setLodges(JSON.parse(saved));
+              } catch (e) {
+                console.error('Failed to parse cached lodges:', e);
+              }
+            }
+          });
+
           return; // Skip local storage fallback
         } catch (err) {
           console.error('Falha de inicialização em tempo real do Firestore:', err);
@@ -657,6 +726,7 @@ export default function App() {
       unsubBanner();
       unsubBooks();
       unsubLogs();
+      unsubLodges();
     };
   }, []);
 
@@ -682,7 +752,8 @@ export default function App() {
           match.telefone !== currentUser.telefone ||
           match.loja !== currentUser.loja ||
           match.potencia !== currentUser.potencia ||
-          match.cidadeLoja !== currentUser.cidadeLoja
+          match.cidadeLoja !== currentUser.cidadeLoja ||
+          match.lodgeId !== currentUser.lodgeId
         ) {
           setCurrentUser(match);
           localStorage.setItem('masonic_current_user_v1', JSON.stringify(match));
@@ -930,19 +1001,24 @@ export default function App() {
 
   // Add a new executive report
   const handleAddReport = (newRep: ExecutiveReport) => {
-    const updated = [...reports, newRep];
+    const finalRep = {
+      ...newRep,
+      lodgeId: newRep.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = [...reports, finalRep];
     saveReportsState(updated);
-    syncReportToCloud(newRep);
+    syncReportToCloud(finalRep);
     
     // Auto add a system alert logging the inclusion
     const newAlert: SystemAlert = {
       id: `alert-add-${Date.now()}`,
       title: 'Novo Título Cadastrado',
-      description: `O título "${newRep.title}" foi adicionado com sucesso ao sistema por Daniel Luciano.`,
+      description: `O título "${finalRep.title}" foi adicionado com sucesso ao sistema por ${currentUser?.name || 'Administrador'}.`,
       time: 'Agora mesmo',
-      reportId: newRep.id,
+      reportId: finalRep.id,
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
@@ -950,14 +1026,19 @@ export default function App() {
 
   // Import a list of reports from spreadsheet
   const handleImportReports = async (newReps: ExecutiveReport[]) => {
-    const updated = [...reports, ...newReps];
+    const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+    const finalReps = newReps.map(rep => ({
+      ...rep,
+      lodgeId: rep.lodgeId || userLodgeId
+    }));
+    const updated = [...reports, ...finalReps];
     saveReportsState(updated);
     
     // Cloud sync all of them in parallel
     const { db } = initializeFirebase();
     if (db) {
       try {
-        const batchPromise = newReps.map(rep => 
+        const batchPromise = finalReps.map(rep => 
           setDoc(doc(db!, 'reports', rep.id), cleanObjectForFirestore(rep))
         );
         await Promise.all(batchPromise);
@@ -970,10 +1051,11 @@ export default function App() {
     const newAlert: SystemAlert = {
       id: `alert-import-${Date.now()}`,
       title: 'Títulos Importados via Planilha',
-      description: `${newReps.length} novos títulos foram importados com sucesso para o sistema por Daniel Luciano via arquivo Excel.`,
+      description: `${finalReps.length} novos títulos foram importados com sucesso para o sistema por ${currentUser?.name || 'Administrador'} via arquivo Excel.`,
       time: 'Agora mesmo',
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: userLodgeId
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
@@ -1020,26 +1102,31 @@ export default function App() {
 
   // Update an existing executive report
   const handleUpdateReport = (updatedRep: ExecutiveReport) => {
-    const updated = reports.map(r => r.id === updatedRep.id ? updatedRep : r);
+    const finalRep = {
+      ...updatedRep,
+      lodgeId: updatedRep.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = reports.map(r => r.id === finalRep.id ? finalRep : r);
     saveReportsState(updated);
-    syncReportToCloud(updatedRep);
+    syncReportToCloud(finalRep);
 
     // Auto add a system alert logging the revision
     const newAlert: SystemAlert = {
       id: `alert-edit-${Date.now()}`,
       title: 'Métricas de Título Atualizadas',
-      description: `Parâmetros e diretrizes de "${updatedRep.title}" foram revisados por Daniel Luciano.`,
+      description: `Parâmetros e diretrizes de "${finalRep.title}" foram revisados por ${currentUser?.name || 'Administrador'}.`,
       time: 'Agora mesmo',
-      reportId: updatedRep.id,
+      reportId: finalRep.id,
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
 
     // Update opened drawer report if it matches
-    if (selectedReport && selectedReport.id === updatedRep.id) {
-      setSelectedReport(updatedRep);
+    if (selectedReport && selectedReport.id === finalRep.id) {
+      setSelectedReport(finalRep);
     }
   };
 
@@ -1058,7 +1145,8 @@ export default function App() {
       description: `O título "${reportToDelete.title}" foi excluído do sistema.`,
       time: 'Agora mesmo',
       type: 'critical',
-      read: false
+      read: false,
+      lodgeId: reportToDelete.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
@@ -1070,36 +1158,46 @@ export default function App() {
   };
 
   const handleAddBook = (newBook: Book) => {
-    const updated = [...books, newBook];
+    const finalBook = {
+      ...newBook,
+      lodgeId: newBook.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = [...books, finalBook];
     saveBooksState(updated);
-    syncBookToCloud(newBook);
+    syncBookToCloud(finalBook);
     
     // Auto add a system alert logging the inclusion
     const newAlert: SystemAlert = {
       id: `alert-add-book-${Date.now()}`,
       title: 'Novo Material Cadastrado',
-      description: `O material "${newBook.title}" foi adicionado com sucesso à biblioteca por Daniel Luciano.`,
+      description: `O material "${finalBook.title}" foi adicionado com sucesso à biblioteca por ${currentUser?.name || 'Administrador'}.`,
       time: 'Agora mesmo',
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
   };
 
   const handleUpdateBook = (updatedBook: Book) => {
-    const updated = books.map(b => b.id === updatedBook.id ? updatedBook : b);
+    const finalBook = {
+      ...updatedBook,
+      lodgeId: updatedBook.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = books.map(b => b.id === finalBook.id ? finalBook : b);
     saveBooksState(updated);
-    syncBookToCloud(updatedBook);
+    syncBookToCloud(finalBook);
 
     // Auto add a system alert logging the revision
     const newAlert: SystemAlert = {
       id: `alert-edit-book-${Date.now()}`,
       title: 'Material da Biblioteca Atualizado',
-      description: `Os metadados do material "${updatedBook.title}" foram revisados por Daniel Luciano.`,
+      description: `Os metadados do material "${finalBook.title}" foram revisados por ${currentUser?.name || 'Administrador'}.`,
       time: 'Agora mesmo',
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
@@ -1119,10 +1217,53 @@ export default function App() {
       description: `O material "${bookToDelete.title}" foi excluído da biblioteca.`,
       time: 'Agora mesmo',
       type: 'critical',
-      read: false
+      read: false,
+      lodgeId: bookToDelete.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
+  };
+
+  const handleAddLodge = async (newLodge: Lodge) => {
+    const updated = [...lodges, newLodge];
+    setLodges(updated);
+    localStorage.setItem('masonic_lodges_v1', JSON.stringify(updated));
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'lodges', newLodge.id), cleanObjectForFirestore(newLodge));
+      } catch (e) {
+        console.error('Error adding lodge to cloud:', e);
+      }
+    }
+  };
+
+  const handleUpdateLodge = async (updatedLodge: Lodge) => {
+    const updated = lodges.map(l => l.id === updatedLodge.id ? updatedLodge : l);
+    setLodges(updated);
+    localStorage.setItem('masonic_lodges_v1', JSON.stringify(updated));
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'lodges', updatedLodge.id), cleanObjectForFirestore(updatedLodge));
+      } catch (e) {
+        console.error('Error updating lodge in cloud:', e);
+      }
+    }
+  };
+
+  const handleDeleteLodge = async (lodgeId: string) => {
+    const updated = lodges.filter(l => l.id !== lodgeId);
+    setLodges(updated);
+    localStorage.setItem('masonic_lodges_v1', JSON.stringify(updated));
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'lodges', lodgeId));
+      } catch (e) {
+        console.error('Error deleting lodge from cloud:', e);
+      }
+    }
   };
 
   const handleBatchUpdateBooksStatus = async (bookIds: string[], status: 'Ativo' | 'Inativo') => {
@@ -1188,8 +1329,13 @@ export default function App() {
   };
 
   const handleImportBooks = async (newBooks: Book[]) => {
+    const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+    const finalBooks = newBooks.map(b => ({
+      ...b,
+      lodgeId: b.lodgeId || userLodgeId
+    }));
     const updated = [...books];
-    const newBooksFiltered = newBooks.filter(newB => {
+    const newBooksFiltered = finalBooks.filter(newB => {
       const idx = updated.findIndex(b => b.id === newB.id);
       if (idx > -1) {
         updated[idx] = newB;
@@ -1219,10 +1365,11 @@ export default function App() {
     const newAlert: SystemAlert = {
       id: `alert-import-book-${Date.now()}`,
       title: 'Materiais Importados via Planilha',
-      description: `${newBooksFiltered.length} novos materiais foram importados para a biblioteca por Daniel Luciano via arquivo Excel.`,
+      description: `${newBooksFiltered.length} novos materiais foram importados para a biblioteca por ${currentUser?.name || 'Administrador'} via arquivo Excel.`,
       time: 'Agora mesmo',
       type: 'update',
-      read: false
+      read: false,
+      lodgeId: userLodgeId
     };
     saveAlertsState([newAlert, ...alerts]);
     syncAlertToCloud(newAlert);
@@ -1295,11 +1442,32 @@ export default function App() {
     setIsEditingBanner(false);
   };
 
+  const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
+  const isMasterAdmin = currentUser?.email.toLowerCase().trim() === 'dani.nanda.lucas@gmail.com';
+
+  const lodgeReports = reports.filter(r => {
+    if (isMasterAdmin) return true;
+    const rLodge = r.lodgeId || 'lodge-cavaleiros';
+    return rLodge === userLodgeId;
+  });
+
+  const lodgeBooks = books.filter(b => {
+    if (isMasterAdmin) return true;
+    const bLodge = b.lodgeId || 'lodge-cavaleiros';
+    return bLodge === userLodgeId;
+  });
+
+  const lodgeAlerts = alerts.filter(a => {
+    if (isMasterAdmin) return true;
+    const aLodge = a.lodgeId || 'lodge-cavaleiros';
+    return aLodge === userLodgeId;
+  });
+
   // Compute unique categories from reports dynamics
-  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(reports.map(r => r.category.trim()).filter(Boolean)))];
+  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(lodgeReports.map(r => r.category.trim()).filter(Boolean)))];
 
   // Filter computation logic (Search string + Active Category tab selection)
-  const filteredReports = reports.filter((report) => {
+  const filteredReports = lodgeReports.filter((report) => {
     const matchesCategory = activeCategory === 'TODOS' || report.category.trim().toLowerCase() === activeCategory.trim().toLowerCase();
     const matchesSearch = 
       report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1467,6 +1635,7 @@ export default function App() {
         activeTab={activeTab}
         onChangeTab={setActiveTab}
         isAdminUser={isAdmin(currentUser.email)}
+        logoUrl={lodges.find(l => l.id === (currentUser?.lodgeId || 'lodge-cavaleiros'))?.logoUrl}
       />
 
       {/* Main Container Content */}
@@ -1673,7 +1842,7 @@ export default function App() {
         {/* --- BIBLIOTECA VIEW --- */}
         {activeTab === 'biblioteca' && currentUser && (
           <LibraryView
-            books={books}
+            books={lodgeBooks}
             currentUser={currentUser}
             isAdmin={isAdmin(currentUser.email)}
             globalSearchQuery={searchQuery}
@@ -1692,8 +1861,8 @@ export default function App() {
         {/* --- ALERTAS VIEW --- */}
         {activeTab === 'alertas' && isAdmin(currentUser.email) && (
           <AlertsView
-            alerts={alerts}
-            reports={reports}
+            alerts={lodgeAlerts}
+            reports={lodgeReports}
             onMarkAllRead={handleMarkAllAlertsRead}
             onToggleRead={handleToggleAlertRead}
             onSelectReport={setSelectedReport}
@@ -1711,7 +1880,7 @@ export default function App() {
         {/* --- PERFIL VIEW --- */}
         {activeTab === 'perfil' && currentUser && (
           <ProfileView
-            reports={reports}
+            reports={lodgeReports}
             onUpdateImageLink={handleUpdateReportImage}
             onAddReport={handleAddReport}
             onImportReports={handleImportReports}
@@ -1726,7 +1895,7 @@ export default function App() {
             currentUser={currentUser}
             theme={theme}
             onThemeChange={setTheme}
-            books={books}
+            books={lodgeBooks}
             onAddBook={handleAddBook}
             onUpdateBook={handleUpdateBook}
             onDeleteBook={handleDeleteBook}
@@ -1734,6 +1903,10 @@ export default function App() {
             onBatchDeleteBooks={handleBatchDeleteBooks}
             onImportBooks={handleImportBooks}
             accessLogs={accessLogs}
+            lodges={lodges}
+            onAddLodge={handleAddLodge}
+            onUpdateLodge={handleUpdateLodge}
+            onDeleteLodge={handleDeleteLodge}
           />
         )}
 

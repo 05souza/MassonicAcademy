@@ -525,4 +525,83 @@ body.light ::-webkit-scrollbar-thumb:hover {
   opacity: 0.3 !important;
 }
 
+/* ==========================================
+   DYNAMIC LODGE THEME OVERRIDES (DARK MODE)
+   ========================================== */
+
+/* --- TEMPLO THEME (Burgundy & Gold) --- */
+.theme-templo, .theme-templo body {
+  background-color: #160406 !important;
+  color: #fbf2f3 !important;
+}
+.theme-templo .bg-\[\#05151e\] { background-color: #160406 !important; }
+.theme-templo .bg-\[\#0c1d27\] { background-color: #290a0f !important; }
+.theme-templo .bg-\[\#11212b\] { background-color: #3d1117 !important; }
+.theme-templo .bg-\[\#04141d\] { background-color: #0e0204 !important; }
+.theme-templo .bg-\[\#11212b\]\/40 { background-color: rgba(61, 17, 23, 0.4) !important; }
+.theme-templo .border-\[\#1c2c36\] { border-color: #541921 !important; }
+.theme-templo .border-\[\#1c2c36\]\/50 { border-color: rgba(84, 25, 33, 0.5) !important; }
+.theme-templo .border-\[\#1c2c36\]\/60 { border-color: rgba(84, 25, 33, 0.6) !important; }
+.theme-templo .text-\[\#E9C349\] { color: #ffca28 !important; }
+.theme-templo .text-\[\#e8c34c\] { color: #ffca28 !important; }
+.theme-templo .text-\[\#d4e5f2\] { color: #fbf2f3 !important; }
+.theme-templo .text-\[\#9cbfd5\] { color: #e5b3ba !important; }
+.theme-templo .text-\[\#99907c\] { color: #c29b9e !important; }
+.theme-templo .text-\[\#66d9cc\] { color: #f43f5e !important; } /* Soft Crimson */
+.theme-templo .hover\:border-\[\#66d9cc\]\/40:hover { border-color: rgba(244, 63, 94, 0.4) !important; }
+.theme-templo .hover\:bg-\[\#0c1d27\]\/85:hover { background-color: rgba(41, 10, 15, 0.85) !important; }
+.theme-templo ::-webkit-scrollbar-track { background: #0e0204 !important; }
+.theme-templo ::-webkit-scrollbar-thumb { background: #541921 !important; }
+.theme-templo ::-webkit-scrollbar-thumb:hover { background: #ffca28 !important; }
+
+/* --- ECLÉTICO THEME (Royal Blue & Silver) --- */
+.theme-ecletico, .theme-ecletico body {
+  background-color: #050e1e !important;
+  color: #e0e7ff !important;
+}
+.theme-ecletico .bg-\[\#05151e\] { background-color: #050e1e !important; }
+.theme-ecletico .bg-\[\#0c1d27\] { background-color: #0c1930 !important; }
+.theme-ecletico .bg-\[\#11212b\] { background-color: #122442 !important; }
+.theme-ecletico .bg-\[\#04141d\] { background-color: #030814 !important; }
+.theme-ecletico .bg-\[\#11212b\]\/40 { background-color: rgba(18, 36, 66, 0.4) !important; }
+.theme-ecletico .border-\[\#1c2c36\] { border-color: #1b335c !important; }
+.theme-ecletico .border-\[\#1c2c36\]\/50 { border-color: rgba(27, 51, 92, 0.5) !important; }
+.theme-ecletico .border-\[\#1c2c36\]\/60 { border-color: rgba(27, 51, 92, 0.6) !important; }
+.theme-ecletico .text-\[\#E9C349\] { color: #38bdf8 !important; } /* Sky Blue Accent */
+.theme-ecletico .text-\[\#e8c34c\] { color: #38bdf8 !important; }
+.theme-ecletico .text-\[\#d4e5f2\] { color: #e0e7ff !important; }
+.theme-ecletico .text-\[\#9cbfd5\] { color: #94a3b8 !important; }
+.theme-ecletico .text-\[\#99907c\] { color: #64748b !important; }
+.theme-ecletico .text-\[\#66d9cc\] { color: #60a5fa !important; } /* Royal Blue Highlight */
+.theme-ecletico .hover\:border-\[\#66d9cc\]\/40:hover { border-color: rgba(96, 165, 250, 0.4) !important; }
+.theme-ecletico .hover\:bg-\[\#0c1d27\]\/85:hover { background-color: rgba(12, 25, 48, 0.85) !important; }
+.theme-ecletico ::-webkit-scrollbar-track { background: #030814 !important; }
+.theme-ecletico ::-webkit-scrollbar-thumb { background: #1b335c !important; }
+.theme-ecletico ::-webkit-scrollbar-thumb:hover { background: #38bdf8 !important; }
+
+/* --- CARBONO THEME (Matte Charcoal & Emerald) --- */
+.theme-carbono, .theme-carbono body {
+  background-color: #121214 !important;
+  color: #f4f4f5 !important;
+}
+.theme-carbono .bg-\[\#05151e\] { background-color: #121214 !important; }
+.theme-carbono .bg-\[\#0c1d27\] { background-color: #1a1a1e !important; }
+.theme-carbono .bg-\[\#11212b\] { background-color: #232329 !important; }
+.theme-carbono .bg-\[\#04141d\] { background-color: #0b0b0c !important; }
+.theme-carbono .bg-\[\#11212b\]\/40 { background-color: rgba(35, 35, 41, 0.4) !important; }
+.theme-carbono .border-\[\#1c2c36\] { border-color: #2f2f37 !important; }
+.theme-carbono .border-\[\#1c2c36\]\/50 { border-color: rgba(47, 47, 55, 0.5) !important; }
+.theme-carbono .border-\[\#1c2c36\]\/60 { border-color: rgba(47, 47, 55, 0.6) !important; }
+.theme-carbono .text-\[\#E9C349\] { color: #10b981 !important; } /* Emerald Green */
+.theme-carbono .text-\[\#e8c34c\] { color: #10b981 !important; }
+.theme-carbono .text-\[\#d4e5f2\] { color: #f4f4f5 !important; }
+.theme-carbono .text-\[\#9cbfd5\] { color: #a1a1aa !important; }
+.theme-carbono .text-\[\#99907c\] { color: #71717a !important; }
+.theme-carbono .text-\[\#66d9cc\] { color: #34d399 !important; } /* Soft Mint Accent */
+.theme-carbono .hover\:border-\[\#66d9cc\]\/40:hover { border-color: rgba(52, 211, 153, 0.4) !important; }
+.theme-carbono .hover\:bg-\[\#0c1d27\]\/85:hover { background-color: rgba(26, 26, 30, 0.85) !important; }
+.theme-carbono ::-webkit-scrollbar-track { background: #0b0b0c !important; }
+.theme-carbono ::-webkit-scrollbar-thumb { background: #2f2f37 !important; }
+.theme-carbono ::-webkit-scrollbar-thumb:hover { background: #10b981 !important; }
+
 

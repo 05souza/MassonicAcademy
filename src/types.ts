@@ -20,6 +20,7 @@ export interface ExecutiveReport {
   conteudoSemProva?: boolean;
   status?: 'Ativo' | 'Inativo';
   linkedQuestionnaireId?: string;
+  lodgeId?: string;
 }
 
 export interface SystemAlert {
@@ -31,6 +32,7 @@ export interface SystemAlert {
   type: 'update' | 'critical' | 'access';
   read: boolean;
   createdAt?: number;
+  lodgeId?: string;
 }
 
 export interface AccessUser {
@@ -48,6 +50,18 @@ export interface AccessUser {
   cidadeLoja?: string;
   userAcesso?: string;
   avatarUrl?: string;
+  lodgeId?: string;
+}
+
+export interface Lodge {
+  id: string;
+  nome: string;
+  potencia: string;
+  cidade: string;
+  numero?: string;
+  estado?: string;
+  tema: 'cavaleiros' | 'templo' | 'ecletico' | 'carbono';
+  logoUrl?: string;
 }
 
 export interface QuestionnaireQuestion {
@@ -68,6 +82,7 @@ export interface Questionnaire {
   questions: QuestionnaireQuestion[];
   status?: 'Ativo' | 'Inativo';
   onlyFullForCertificate?: boolean;
+  lodgeId?: string;
 }
 
 export interface SimulationAttempt {
@@ -86,6 +101,7 @@ export interface SimulationAttempt {
   approved: boolean;
   diplomaSent?: boolean;
   respostas?: string;
+  lodgeId?: string;
 }
 
 export interface QuestionnaireSettings {
@@ -104,5 +120,6 @@ export interface Book {
   tags: string[];
   thumbnailUrl: string;
   link: string;
+  lodgeId?: string;
 }
 
