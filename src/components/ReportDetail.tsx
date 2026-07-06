@@ -132,6 +132,9 @@ export default function ReportDetail({
     { key: 'material1', link: report.material1Link, label: 'Material 1' },
     { key: 'material2', link: report.material2Link, label: 'Material 2' },
     { key: 'material3', link: report.material3Link, label: 'Material 3' },
+    { key: 'material4', link: report.material4Link, label: 'Material 4' },
+    { key: 'material5', link: report.material5Link, label: 'Material 5' },
+    { key: 'material6', link: report.material6Link, label: 'Material 6' },
     ...(report.linkedQuestionnaireId ? [{ key: 'linked_questionnaire', link: report.linkedQuestionnaireId, label: 'Questionário' }] : [])
   ].filter(m => !!m.link);
 
@@ -139,6 +142,9 @@ export default function ReportDetail({
     { key: 'material1', link: report.material1Link, label: 'Material 1' },
     { key: 'material2', link: report.material2Link, label: 'Material 2' },
     { key: 'material3', link: report.material3Link, label: 'Material 3' },
+    { key: 'material4', link: report.material4Link, label: 'Material 4' },
+    { key: 'material5', link: report.material5Link, label: 'Material 5' },
+    { key: 'material6', link: report.material6Link, label: 'Material 6' },
   ].filter(m => !!m.link);
 
   const materialsCompleted = onlyMaterials.every(m => completedMaterials[m.key]);
@@ -592,6 +598,177 @@ export default function ReportDetail({
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material3Link || '', `${report.title} - Material 3`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                >
+                  Acessar Conteúdo
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Link do Material 4 / Referência Direta (URL) */}
+          {report.material4Link && (
+            <div id={`detail-material4-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 4 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material4Link}>
+                        {report.material4Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 4</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material4')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material4']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material4'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material4Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material4Link || '', `${report.title} - Material 4`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                >
+                  Acessar Conteúdo
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Link do Material 5 / Referência Direta (URL) */}
+          {report.material5Link && (
+            <div id={`detail-material5-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 5 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material5Link}>
+                        {report.material5Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 5</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material5')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material5']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material5'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material5Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material5Link || '', `${report.title} - Material 5`);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                >
+                  Acessar Conteúdo
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Link do Material 6 / Referência Direta (URL) */}
+          {report.material6Link && (
+            <div id={`detail-material6-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
+                <div className="text-left min-w-0">
+                  {isAdmin ? (
+                    <>
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">Link do Material 6 / Referência Direta (URL)</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material6Link}>
+                        {report.material6Link}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Material 6</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('material6')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['material6']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['material6'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.material6Link}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => {
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.material6Link || '', `${report.title} - Material 6`);
                     }
                   }}
                   className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"

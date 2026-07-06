@@ -1,0 +1,253 @@
+{
+  "entities": {
+    "ExecutiveReport": {
+      "title": "ExecutiveReport",
+      "description": "Represents a course or report in the Portal Maçônico",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array" },
+        "department": { "type": "string" },
+        "summary": { "type": "string" },
+        "fullMarkdown": { "type": "string" },
+        "leftBorderColor": { "type": "string" },
+        "lastUpdated": { "type": "string" },
+        "owner": { "type": "string" },
+        "confidentiality": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "additionalLink": { "type": "string" },
+        "customAccessUrl": { "type": "string" },
+        "material1Link": { "type": "string" },
+        "material2Link": { "type": "string" },
+        "material3Link": { "type": "string" },
+        "material4Link": { "type": "string" },
+        "material5Link": { "type": "string" },
+        "material6Link": { "type": "string" },
+        "nivelCurso": { "type": "number" },
+        "conteudoSemProva": { "type": "boolean" },
+        "status": { "type": "string" },
+        "linkedQuestionnaireId": { "type": "string" },
+        "prerequisiteId": { "type": "string" },
+        "lodgeId": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "SystemAlert": {
+      "title": "SystemAlert",
+      "description": "Represents a system alert/notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "time": { "type": "string" },
+        "reportId": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "lodgeId": { "type": "string" }
+      },
+      "required": ["id", "title", "description", "time"]
+    },
+    "AccessUser": {
+      "title": "AccessUser",
+      "description": "Represents a user profile and access levels",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "allowedReportIds": { "type": "string" },
+        "status": { "type": "string" },
+        "tipoUsuario": { "type": "string" },
+        "password": { "type": "string" },
+        "nivelAcesso": { "type": "string" },
+        "telefone": { "type": "string" },
+        "loja": { "type": "string" },
+        "potencia": { "type": "string" },
+        "cidadeLoja": { "type": "string" },
+        "userAcesso": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "lodgeId": { "type": "string" },
+        "lastActiveAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Lodge": {
+      "title": "Lodge",
+      "description": "Represents a Masonic lodge",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "potencia": { "type": "string" },
+        "cidade": { "type": "string" },
+        "numero": { "type": "string" },
+        "estado": { "type": "string" },
+        "tema": { "type": "string" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["id", "nome", "potencia", "cidade", "tema"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Represents a book in the library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "categories": { "type": "array" },
+        "nivelAcesso": { "type": "number" },
+        "status": { "type": "string" },
+        "tags": { "type": "array" },
+        "thumbnailUrl": { "type": "string" },
+        "link": { "type": "string" },
+        "lodgeId": { "type": "string" }
+      },
+      "required": ["id", "title", "author", "category", "nivelAcesso", "status", "link"]
+    },
+    "Trilha": {
+      "title": "Trilha",
+      "description": "Represents a learning track (Trilha de Aprendizado)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "courseIds": { "type": "array" },
+        "lodgeId": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "AccessLog": {
+      "title": "AccessLog",
+      "description": "Audit log of user accesses and events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" }
+      },
+      "required": ["id", "timestamp"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Represents a dynamic category in the Portal Maçônico",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Questionnaire": {
+      "title": "Questionnaire",
+      "description": "Represents a questionnaire containing multiple choice questions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "degreeRequired": { "type": "number" },
+        "approvalScore": { "type": "number" },
+        "questions": { "type": "array" },
+        "status": { "type": "string" },
+        "onlyFullForCertificate": { "type": "boolean" },
+        "lodgeId": { "type": "string" }
+      },
+      "required": ["id", "title", "degreeRequired", "approvalScore", "questions"]
+    },
+    "SimulationAttempt": {
+      "title": "SimulationAttempt",
+      "description": "Represents a user's attempt at a simulation/questionnaire",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "questionnaireId": { "type": "string" },
+        "questionnaireTitle": { "type": "string" },
+        "scorePercentage": { "type": "number" },
+        "correctAnswersCount": { "type": "number" },
+        "totalQuestionsCount": { "type": "number" },
+        "simulationMode": { "type": "string" },
+        "timeSpentSeconds": { "type": "number" },
+        "dateTime": { "type": "string" },
+        "approved": { "type": "boolean" },
+        "diplomaSent": { "type": "boolean" },
+        "respostas": { "type": "string" },
+        "lodgeId": { "type": "string" }
+      },
+      "required": ["id", "userId", "userEmail", "questionnaireId", "scorePercentage"]
+    },
+    "Completion": {
+      "title": "Completion",
+      "description": "Represents a user's progress completion checklist for a specific course",
+      "type": "object",
+      "properties": {
+        "userEmail": { "type": "string" },
+        "reportId": { "type": "string" },
+        "completed": { "type": "object" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["userEmail", "reportId", "completed"]
+    }
+  },
+  "firestore": {
+    "/books/{bookId}": {
+      "schema": "Book",
+      "description": "Masonic library books"
+    },
+    "/reports/{reportId}": {
+      "schema": "ExecutiveReport",
+      "description": "Courses/reports of the Masonic portal"
+    },
+    "/alerts/{alertId}": {
+      "schema": "SystemAlert",
+      "description": "System-wide or lodge-wide notifications/alerts"
+    },
+    "/accessUsers/{userId}": {
+      "schema": "AccessUser",
+      "description": "User profiles and permissions mapping"
+    },
+    "/access_logs/{logId}": {
+      "schema": "AccessLog",
+      "description": "Secure access logs for audit purposes"
+    },
+    "/lodges/{lodgeId}": {
+      "schema": "Lodge",
+      "description": "Config and active themes for different lodges"
+    },
+    "/trilhas/{trilhaId}": {
+      "schema": "Trilha",
+      "description": "Custom sequencings of courses as learning tracks"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Dynamic categories mapped to reports/courses"
+    },
+    "/questionnaires/{questionnaireId}": {
+      "schema": "Questionnaire",
+      "description": "Course exams/quizzes/questionnaires"
+    },
+    "/simulation_attempts/{attemptId}": {
+      "schema": "SimulationAttempt",
+      "description": "Quiz simulation test results and histories"
+    },
+    "/completions/{completionId}": {
+      "schema": "Completion",
+      "description": "Course completions tracker by user and report"
+    },
+    "/settings/{settingsId}": {
+      "schema": "object",
+      "description": "App-wide migrations, Google Sheets links, custom banner URLs"
+    }
+  }
+}

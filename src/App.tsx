@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
-import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge } from './types';
+import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge, Trilha } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -16,9 +16,9 @@ import QuestionnairesView from './components/QuestionnairesView';
 import UserManualView from './components/UserManualView';
 import LibraryView from './components/LibraryView';
 import SecureViewerModal from './components/SecureViewerModal';
-import { Search, Info, LogIn, ChevronRight, BookOpen, Layers, Shield, Image as ImageIcon, LayoutGrid, List, Upload } from 'lucide-react';
+import { Search, Info, LogIn, ChevronRight, BookOpen, Layers, Shield, Image as ImageIcon, LayoutGrid, List, Upload, Lock, Play, ThumbsUp, Heart, ArrowLeft, ChevronDown, CheckCircle2, Plus, Trash2, Edit, MoveUp, MoveDown, Check, Construction } from 'lucide-react';
 import InlineEditable from './components/InlineEditable';
-import { compressImage } from './utils';
+import { compressImage, isCourseCompleted } from './utils';
 
 export const isAdmin = (email: string | undefined): boolean => {
   if (!email) return false;
@@ -29,7 +29,7 @@ export const isAdmin = (email: string | undefined): boolean => {
     const saved = localStorage.getItem('masonic_current_user_v1');
     if (saved) {
       const parsed = JSON.parse(saved) as AccessUser;
-      if (parsed && parsed.email.toLowerCase().trim() === lower && parsed.tipoUsuario === 'admin') {
+      if (parsed && (parsed.email || '').toLowerCase().trim() === lower && parsed.tipoUsuario === 'admin') {
         return true;
       }
     }
@@ -39,7 +39,7 @@ export const isAdmin = (email: string | undefined): boolean => {
     const savedUsers = localStorage.getItem('masonic_access_users_v1');
     if (savedUsers) {
       const usersList = JSON.parse(savedUsers) as AccessUser[];
-      const found = usersList.find(u => u.email.toLowerCase().trim() === lower);
+      const found = usersList.find(u => (u.email || '').toLowerCase().trim() === lower);
       if (found && found.tipoUsuario === 'admin') {
         return true;
       }
@@ -223,14 +223,36 @@ export default function App() {
   const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados'>('todos');
   const [selectedReport, setSelectedReport] = useState<ExecutiveReport | null>(null);
 
+  // Catalog layout switcher (Cursos / Trilhas)
+  const [catalogTab, setCatalogTab] = useState<'cursos' | 'trilhas'>('cursos');
+  const [selectedTrilha, setSelectedTrilha] = useState<string | null>(null);
+  const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
+
   // Secure Document/Link Viewer Modal states
   const [secureViewerOpen, setSecureViewerOpen] = useState(false);
   const [secureViewerUrl, setSecureViewerUrl] = useState('');
   const [secureViewerTitle, setSecureViewerTitle] = useState('');
 
+  // Trilha management states
+  const [trilhas, setTrilhas] = useState<Trilha[]>(() => {
+    const saved = localStorage.getItem('masonic_trilhas_v1');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [isEditingTrilha, setIsEditingTrilha] = useState(false);
+  const [editingTrilha, setEditingTrilha] = useState<Trilha | null>(null);
+  const [trilhaFormName, setTrilhaFormName] = useState('');
+  const [trilhaFormImage, setTrilhaFormImage] = useState('');
+  const [trilhaFormCourses, setTrilhaFormCourses] = useState<string[]>([]);
+  const [trilhaFormStatus, setTrilhaFormStatus] = useState<'Ativo' | 'Inativo' | 'Em Construção'>('Ativo');
+  const [isSavingTrilha, setIsSavingTrilha] = useState(false);
+
   // Custom access level verification state for degree lock screen modal
   const [accessBlockedCourseTitle, setAccessBlockedCourseTitle] = useState<string | null>(null);
   const [accessBlockedRequiredLevel, setAccessBlockedRequiredLevel] = useState<number | null>(null);
+
+  // Custom prerequisite verification states
+  const [prereqBlockedCourse, setPrereqBlockedCourse] = useState<ExecutiveReport | null>(null);
+  const [prereqRequiredCourse, setPrereqRequiredCourse] = useState<ExecutiveReport | null>(null);
 
   const handleAccessCourse = (report: ExecutiveReport) => {
     const isUserAdmin = isAdmin(currentUser?.email);
@@ -242,6 +264,15 @@ export default function App() {
       setAccessBlockedRequiredLevel(courseLevel);
       return;
     }
+
+    const prereqCourse = report.prerequisiteId ? reports.find(r => r.id === report.prerequisiteId) : undefined;
+    const isPrereqLocked = !isUserAdmin && prereqCourse && !isCourseCompleted(prereqCourse, currentUser?.email || 'guest');
+    if (isPrereqLocked) {
+      setPrereqBlockedCourse(report);
+      setPrereqRequiredCourse(prereqCourse || null);
+      return;
+    }
+
     setSelectedReport(report);
   };
 
@@ -305,6 +336,27 @@ export default function App() {
     }
   };
 
+  // Periodic heartbeat to track active user sessions in Firestore
+  useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
+    const { db } = initializeFirebase();
+    if (!db) return;
+
+    const updateHeartbeat = async () => {
+      try {
+        const userDocRef = doc(db, 'accessUsers', currentUser.id);
+        await setDoc(userDocRef, { lastActiveAt: new Date().toISOString() }, { merge: true });
+      } catch (err) {
+        console.error('Error updating heartbeat:', err);
+      }
+    };
+
+    updateHeartbeat();
+    const intervalId = setInterval(updateHeartbeat, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [currentUser]);
+
   // Load from Firestore (if configured) or LocalStorage fallback
   useEffect(() => {
     const savedCurrentUser = localStorage.getItem('masonic_current_user_v1');
@@ -328,6 +380,7 @@ export default function App() {
     let unsubBooks: () => void = () => {};
     let unsubLogs: () => void = () => {};
     let unsubLodges: () => void = () => {};
+    let unsubTrilhas: () => void = () => {};
 
     const loadInitialData = async () => {
       const { db } = initializeFirebase();
@@ -635,6 +688,27 @@ export default function App() {
             }
           });
 
+          // 8. Fetch trilhas in real-time
+          const trilhasCol = collection(db, 'trilhas');
+          unsubTrilhas = onSnapshot(trilhasCol, (trilhasSnapshot) => {
+            const loadedTrilhas: Trilha[] = [];
+            trilhasSnapshot.forEach(docSnap => {
+              loadedTrilhas.push(docSnap.data() as Trilha);
+            });
+            setTrilhas(loadedTrilhas);
+            localStorage.setItem('masonic_trilhas_v1', JSON.stringify(loadedTrilhas));
+          }, (err) => {
+            console.error('Erro de permissão ou rede no onSnapshot trilhas:', err);
+            const saved = localStorage.getItem('masonic_trilhas_v1');
+            if (saved) {
+              try {
+                setTrilhas(JSON.parse(saved));
+              } catch (e) {
+                console.error('Failed to parse cached trilhas:', e);
+              }
+            }
+          });
+
           return; // Skip local storage fallback
         } catch (err) {
           console.error('Falha de inicialização em tempo real do Firestore:', err);
@@ -714,6 +788,11 @@ export default function App() {
         setAccessLogs(JSON.parse(savedLogs));
       }
 
+      const savedTrilhas = localStorage.getItem('masonic_trilhas_v1');
+      if (savedTrilhas) {
+        setTrilhas(JSON.parse(savedTrilhas));
+      }
+
       setIsSessionLoaded(true);
     };
 
@@ -727,6 +806,7 @@ export default function App() {
       unsubBooks();
       unsubLogs();
       unsubLodges();
+      unsubTrilhas();
     };
   }, []);
 
@@ -740,7 +820,7 @@ export default function App() {
   // Synchronize currentUser with the latest from accessUsers list whenever accessUsers is updated!
   useEffect(() => {
     if (currentUser && accessUsers.length > 0) {
-      const match = accessUsers.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
+      const match = accessUsers.find(u => (u.email || '').toLowerCase() === (currentUser.email || '').toLowerCase());
       if (match) {
         if (
           match.status !== currentUser.status ||
@@ -763,6 +843,26 @@ export default function App() {
   }, [accessUsers, currentUser]);
 
   // Cloud sync helpers
+  const syncTrilhaToCloud = async (trilha: Trilha) => {
+    const { db } = initializeFirebase();
+    if (!db) return;
+    try {
+      await setDoc(doc(db, 'trilhas', trilha.id), cleanObjectForFirestore(trilha));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `trilhas/${trilha.id}`);
+    }
+  };
+
+  const deleteTrilhaFromCloud = async (id: string) => {
+    const { db } = initializeFirebase();
+    if (!db) return;
+    try {
+      await deleteDoc(doc(db, 'trilhas', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `trilhas/${id}`);
+    }
+  };
+
   const syncReportToCloud = async (rep: ExecutiveReport) => {
     const { db } = initializeFirebase();
     if (!db) return;
@@ -951,6 +1051,206 @@ export default function App() {
     }
   };
 
+  // Trilha management handlers
+  const handleOpenTrilhaForm = (trilhaItem: any | null) => {
+    if (trilhaItem) {
+      setEditingTrilha(trilhaItem);
+      setTrilhaFormName(trilhaItem.name);
+      setTrilhaFormImage(trilhaItem.imageUrl || '');
+      setTrilhaFormStatus(trilhaItem.status || 'Ativo');
+      
+      // Get all current course IDs assigned to this Trilha
+      const currentCourses = getTrilhaCourses(trilhaItem.name);
+      setTrilhaFormCourses(currentCourses.map(c => c.id));
+    } else {
+      setEditingTrilha(null);
+      setTrilhaFormName('');
+      setTrilhaFormImage('');
+      setTrilhaFormStatus('Ativo');
+      setTrilhaFormCourses([]);
+    }
+    setIsEditingTrilha(true);
+  };
+
+  const moveCourse = (index: number, direction: 'up' | 'down') => {
+    const updated = [...trilhaFormCourses];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= updated.length) return;
+    
+    // Swap
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    setTrilhaFormCourses(updated);
+  };
+
+  const submitTrilhaForm = async () => {
+    if (!trilhaFormName.trim()) {
+      alert("Por favor, digite o nome da Trilha.");
+      return;
+    }
+
+    setIsSavingTrilha(true);
+    try {
+      const isNew = !editingTrilha;
+      const tId = editingTrilha ? editingTrilha.id : `trilha-${Date.now()}`;
+      const oldName = editingTrilha ? editingTrilha.name : '';
+      const newName = trilhaFormName.trim();
+      const newImage = trilhaFormImage.trim();
+
+      // 1. Build Trilha object
+      const updatedTrilha: Trilha = {
+        id: tId,
+        name: newName,
+        imageUrl: newImage || undefined,
+        courseIds: trilhaFormCourses,
+        lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros',
+        status: trilhaFormStatus
+      };
+
+      // 2. Save Trilha to Firestore
+      await syncTrilhaToCloud(updatedTrilha);
+
+      // 3. Update all courses (reports) in this sequence
+      // We set their category to the newName, and we chains their prerequisiteId accordingly!
+      const reportsMap = new Map<string, ExecutiveReport>();
+      for (const r of reports) {
+        reportsMap.set(r.id, { ...r });
+      }
+
+      // Loop over current sequence and update category and prerequisiteId
+      for (let i = 0; i < trilhaFormCourses.length; i++) {
+        const cId = trilhaFormCourses[i];
+        const prevCId = i > 0 ? trilhaFormCourses[i - 1] : undefined;
+        
+        const course = reportsMap.get(cId);
+        if (course) {
+          course.category = newName;
+          course.prerequisiteId = prevCId || '';
+        }
+      }
+
+      // If we renamed the Trilha, we should also rename the category for any other courses that had the old category name
+      if (!isNew && oldName && oldName.toLowerCase() !== newName.toLowerCase()) {
+        for (const [id, course] of reportsMap.entries()) {
+          if ((course.category || '').trim().toLowerCase() === oldName.trim().toLowerCase()) {
+            course.category = newName;
+          }
+        }
+      }
+
+      // If courses were removed from this Trilha, let's reset their category and prerequisite
+      if (editingTrilha) {
+        const currentCourses = getTrilhaCourses(oldName);
+        for (const course of currentCourses) {
+          if (!trilhaFormCourses.includes(course.id)) {
+            const rDoc = reportsMap.get(course.id);
+            if (rDoc) {
+              rDoc.category = 'Geral'; // set to default
+              rDoc.prerequisiteId = '';
+            }
+          }
+        }
+      }
+
+      // 4. Save all updated courses (reports) back to Firestore
+      const updatedReportsList = Array.from(reportsMap.values());
+      saveReportsState(updatedReportsList);
+
+      const { db } = initializeFirebase();
+      if (db) {
+        // Batch write course changes
+        const changedCourses = updatedReportsList.filter(r => {
+          const original = reports.find(o => o.id === r.id);
+          return !original || original.category !== r.category || original.prerequisiteId !== r.prerequisiteId;
+        });
+
+        await Promise.all(changedCourses.map(c => 
+          setDoc(doc(db!, 'reports', c.id), cleanObjectForFirestore(c))
+        ));
+      }
+
+      // Add a system alert logging the update/creation
+      const newAlert: SystemAlert = {
+        id: `alert-trilha-${Date.now()}`,
+        title: isNew ? 'Nova Trilha Criada' : 'Trilha Atualizada',
+        description: `A trilha "${newName}" foi ${isNew ? 'criada' : 'atualizada'} com sucesso por ${currentUser?.name || 'Administrador'}.`,
+        time: 'Agora mesmo',
+        type: 'update',
+        read: false,
+        lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
+      };
+      saveAlertsState([newAlert, ...alerts]);
+      await syncAlertToCloud(newAlert);
+
+      setIsEditingTrilha(false);
+      setEditingTrilha(null);
+    } catch (err) {
+      console.error("Error saving trilha:", err);
+      alert("Ocorreu um erro ao salvar a Trilha.");
+    } finally {
+      setIsSavingTrilha(false);
+    }
+  };
+
+  const handleDeleteTrilhaClick = async (trilhaItem: any) => {
+    const confirmDelete = window.confirm(`Tem certeza que deseja deletar a trilha "${trilhaItem.name}"? Os cursos não serão deletados, apenas voltarão para a categoria Geral.`);
+    if (!confirmDelete) return;
+
+    try {
+      // 1. Delete Trilha doc from cloud
+      if (trilhaItem.isCustom) {
+        await deleteTrilhaFromCloud(trilhaItem.id);
+      }
+
+      // 2. Set category of courses inside this Trilha back to "Geral"
+      const currentCourses = getTrilhaCourses(trilhaItem.name);
+      const reportsMap = new Map<string, ExecutiveReport>();
+      for (const r of reports) {
+        reportsMap.set(r.id, { ...r });
+      }
+
+      for (const course of currentCourses) {
+        const rDoc = reportsMap.get(course.id);
+        if (rDoc) {
+          rDoc.category = 'Geral';
+          rDoc.prerequisiteId = '';
+        }
+      }
+
+      const updatedReportsList = Array.from(reportsMap.values());
+      saveReportsState(updatedReportsList);
+
+      const { db } = initializeFirebase();
+      if (db) {
+        const changedCourses = updatedReportsList.filter(r => {
+          const original = reports.find(o => o.id === r.id);
+          return !original || original.category !== r.category || original.prerequisiteId !== r.prerequisiteId;
+        });
+
+        await Promise.all(changedCourses.map(c => 
+          setDoc(doc(db!, 'reports', c.id), cleanObjectForFirestore(c))
+        ));
+      }
+
+      // Add a system alert logging the deletion
+      const newAlert: SystemAlert = {
+        id: `alert-trilha-del-${Date.now()}`,
+        title: 'Trilha Deletada',
+        description: `A trilha "${trilhaItem.name}" foi removida com sucesso do sistema por ${currentUser?.name || 'Administrador'}.`,
+        time: 'Agora mesmo',
+        type: 'update',
+        read: false,
+        lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
+      };
+      saveAlertsState([newAlert, ...alerts]);
+      await syncAlertToCloud(newAlert);
+    } catch (err) {
+      console.error("Error deleting trilha:", err);
+      alert("Erro ao deletar a Trilha.");
+    }
+  };
+
   // Bind custom direct image url to a report
   const handleUpdateReportImage = async (reportId: string, imageUrl: string) => {
     let finalUrl = imageUrl.trim();
@@ -1064,8 +1364,8 @@ export default function App() {
   // Import a list of access users from spreadsheet
   const handleImportAccessUsers = async (newUsers: AccessUser[]) => {
     // Avoid duplicates by email
-    const existingEmails = new Set(accessUsers.map(u => u.email.toLowerCase()));
-    const filteredNewUsers = newUsers.filter(u => !existingEmails.has(u.email.toLowerCase()));
+    const existingEmails = new Set(accessUsers.map(u => (u.email || '').toLowerCase()));
+    const filteredNewUsers = newUsers.filter(u => !existingEmails.has((u.email || '').toLowerCase()));
 
     if (filteredNewUsers.length === 0) return;
 
@@ -1443,13 +1743,143 @@ export default function App() {
   };
 
   const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
-  const isMasterAdmin = currentUser?.email.toLowerCase().trim() === 'dani.nanda.lucas@gmail.com';
+  const isMasterAdmin = (currentUser?.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com';
 
   const lodgeReports = reports.filter(r => {
     if (isMasterAdmin) return true;
     const rLodge = r.lodgeId || 'lodge-cavaleiros';
     return rLodge === userLodgeId;
   });
+
+  const getTrilhaCourses = (trilhaName: string) => {
+    // Check if there is a custom trilha with custom course sequencing
+    const matchedTrilha = trilhas.find(t => t.name.trim().toLowerCase() === trilhaName.trim().toLowerCase());
+    if (matchedTrilha && matchedTrilha.courseIds && matchedTrilha.courseIds.length > 0) {
+      const courseIdToIndex = new Map<string, number>();
+      matchedTrilha.courseIds.forEach((id, idx) => courseIdToIndex.set(id, idx));
+
+      // Get courses matching either the category display name OR present in courseIds
+      const baseCourses = lodgeReports.filter(r => 
+        ((r.category || 'Geral').trim().toLowerCase() === trilhaName.trim().toLowerCase() || courseIdToIndex.has(r.id))
+      );
+
+      return [...baseCourses].sort((a, b) => {
+        const idxA = courseIdToIndex.has(a.id) ? courseIdToIndex.get(a.id)! : 9999;
+        const idxB = courseIdToIndex.has(b.id) ? courseIdToIndex.get(b.id)! : 9999;
+        return idxA - idxB;
+      });
+    }
+
+    // 1. Get base courses directly under this category/trilha
+    const baseCourses = lodgeReports.filter(r => 
+      (r.category || 'Geral').trim().toLowerCase() === trilhaName.trim().toLowerCase()
+    );
+
+    // 2. Track down all prerequisites recursively
+    const allCoursesMap = new Map<string, ExecutiveReport>();
+    for (const c of baseCourses) {
+      allCoursesMap.set(c.id, c);
+    }
+
+    const addPrerequisites = (course: ExecutiveReport) => {
+      if (course.prerequisiteId) {
+        const prereq = lodgeReports.find(r => r.id === course.prerequisiteId);
+        if (prereq && !allCoursesMap.has(prereq.id)) {
+          allCoursesMap.set(prereq.id, prereq);
+          addPrerequisites(prereq);
+        }
+      }
+    };
+
+    for (const c of baseCourses) {
+      addPrerequisites(c);
+    }
+
+    const combinedCourses = Array.from(allCoursesMap.values());
+
+    // 3. Perform topological sort based on prerequisiteId
+    const sorted: ExecutiveReport[] = [];
+    const visited = new Set<string>();
+    const visiting = new Set<string>();
+
+    const visit = (course: ExecutiveReport) => {
+      if (visited.has(course.id)) return;
+      if (visiting.has(course.id)) return; // prevent loop
+
+      visiting.add(course.id);
+
+      if (course.prerequisiteId) {
+        const prereq = combinedCourses.find(r => r.id === course.prerequisiteId);
+        if (prereq) {
+          visit(prereq);
+        }
+      }
+
+      visiting.delete(course.id);
+      visited.add(course.id);
+      sorted.push(course);
+    };
+
+    for (const c of combinedCourses) {
+      visit(c);
+    }
+
+    return sorted;
+  };
+
+  // Combine custom trilhas from DB with any extra dynamic categories from courses
+  const allAvailableTrilhasList = useMemo(() => {
+    const customTrilhasMap = new Map<string, Trilha>();
+    for (const t of trilhas) {
+      customTrilhasMap.set(t.name.trim().toLowerCase(), t);
+    }
+
+    const dynamicCategories = Array.from(new Set<string>(
+      lodgeReports
+        .filter(r => {
+          // Inactive courses must not appear on the home screen ("inicio"), even for admins
+          if (r.status === 'Inativo') return false;
+          return true;
+        })
+        .map(r => (r.category || 'Geral').trim())
+        .filter(Boolean)
+    ));
+
+    const combined: { id: string; name: string; imageUrl?: string; isCustom: boolean; courseIds?: string[]; status?: 'Ativo' | 'Inativo' | 'Em Construção' }[] = [];
+    
+    // First, add all defined custom trilhas
+    for (const t of trilhas) {
+      const isUserAdmin = isAdmin(currentUser?.email);
+      // Inactive trilhas must not appear for non-admin users
+      if (!isUserAdmin && t.status === 'Inativo') {
+        continue;
+      }
+      combined.push({
+        id: t.id,
+        name: t.name,
+        imageUrl: t.imageUrl,
+        isCustom: true,
+        courseIds: t.courseIds,
+        status: t.status || 'Ativo'
+      });
+    }
+
+    // Next, add any dynamic categories that don't have a matching custom trilha
+    for (const cat of dynamicCategories) {
+      const normalizedCat = cat.trim().toLowerCase();
+      if (!customTrilhasMap.has(normalizedCat)) {
+        combined.push({
+          id: `dyn-${normalizedCat}`,
+          name: cat,
+          imageUrl: undefined,
+          isCustom: false,
+          courseIds: undefined
+        });
+      }
+    }
+
+    return combined;
+  }, [trilhas, lodgeReports, currentUser]);
 
   const lodgeBooks = books.filter(b => {
     if (isMasterAdmin) return true;
@@ -1464,16 +1894,16 @@ export default function App() {
   });
 
   // Compute unique categories from reports dynamics
-  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(lodgeReports.map(r => r.category.trim()).filter(Boolean)))];
+  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(lodgeReports.map(r => (r.category || '').trim()).filter(Boolean)))];
 
   // Filter computation logic (Search string + Active Category tab selection)
   const filteredReports = lodgeReports.filter((report) => {
-    const matchesCategory = activeCategory === 'TODOS' || report.category.trim().toLowerCase() === activeCategory.trim().toLowerCase();
+    const matchesCategory = activeCategory === 'TODOS' || (report.category || '').trim().toLowerCase() === activeCategory.trim().toLowerCase();
     const matchesSearch = 
-      report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      (report.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (report.department || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (report.summary || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (report.tags || []).some(t => (t || '').toLowerCase().includes(searchQuery.toLowerCase()));
       
     return matchesCategory && matchesSearch;
   });
@@ -1491,9 +1921,8 @@ export default function App() {
   const allowedReportsForUser = filteredReports.filter((report) => {
     if (!currentUser) return false;
     
-    // If report is inactive, do not show to standard users
-    const isStandard = currentUser.tipoUsuario === 'padrao';
-    if (isStandard && report.status === 'Inativo') {
+    // Inactive courses must not appear on the home screen ("inicio"), even for admins
+    if (report.status === 'Inativo') {
       return false;
     }
 
@@ -1505,7 +1934,7 @@ export default function App() {
       .split(',')
       .map(id => id.trim().toLowerCase())
       .filter(Boolean);
-    return allowedList.includes(report.id.toLowerCase());
+    return allowedList.includes((report.id || '').toLowerCase());
   }).filter((report) => {
     if (progressFilter === 'todos') return true;
 
@@ -1527,6 +1956,18 @@ export default function App() {
     if (report.material3Link) {
       totalCount++;
       if (completedMaterials['material3']) completedCount++;
+    }
+    if (report.material4Link) {
+      totalCount++;
+      if (completedMaterials['material4']) completedCount++;
+    }
+    if (report.material5Link) {
+      totalCount++;
+      if (completedMaterials['material5']) completedCount++;
+    }
+    if (report.material6Link) {
+      totalCount++;
+      if (completedMaterials['material6']) completedCount++;
     }
     if (report.linkedQuestionnaireId) {
       totalCount++;
@@ -1704,134 +2145,555 @@ export default function App() {
               </div>
             ) : (
               <>
-                {/* View switcher header row */}
-                <div className="flex items-center justify-between pb-3.5 border-b border-[#1c2c36]/50 mb-2">
-                  <h3 className="font-sans font-bold text-xs text-[#9cbfd5] tracking-widest uppercase mb-0">
-                    Catálogo de Títulos
-                  </h3>
-                  <div className="flex items-center gap-1.5 bg-[#081721] border border-[#1c2c36] p-1 rounded-lg">
-                    <button
-                      onClick={() => handleToggleViewMode('grid')}
-                      title="Exibição em Grade"
-                      className={`p-1.5 rounded transition-all flex items-center justify-center hover:text-[#E9C349] cursor-pointer ${
-                        viewMode === 'grid' 
-                          ? 'bg-[#11212b] text-[#E9C349] border border-[#1c2c36]/60 shadow-xs' 
-                          : 'text-[#99907c] border border-transparent'
-                      }`}
-                    >
-                      <LayoutGrid className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleToggleViewMode('list')}
-                      title="Exibição em Lista"
-                      className={`p-1.5 rounded transition-all flex items-center justify-center hover:text-[#E9C349] cursor-pointer ${
-                        viewMode === 'list' 
-                          ? 'bg-[#11212b] text-[#E9C349] border border-[#1c2c36]/60 shadow-xs' 
-                          : 'text-[#99907c] border border-transparent'
-                      }`}
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
+                {/* Cursos / Trilhas Tab switcher matching the screenshots */}
+                <div className="flex border-b border-[#1c2c36] mb-5 font-sans relative">
+                  <button
+                    onClick={() => {
+                      setCatalogTab('cursos');
+                      setSelectedTrilha(null);
+                    }}
+                    className={`px-8 py-3.5 font-sans font-bold text-sm tracking-widest uppercase transition-all cursor-pointer relative z-10 ${
+                      catalogTab === 'cursos' && !selectedTrilha
+                        ? 'text-white border-b-4 border-[#00D2FF] pb-3 -mb-[2px] font-black'
+                        : 'text-[#9cbfd5]/70 hover:text-white pb-3 -mb-[2px]'
+                    }`}
+                  >
+                    Cursos
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCatalogTab('trilhas');
+                      setSelectedTrilha(null);
+                    }}
+                    className={`px-8 py-3.5 font-sans font-bold text-sm tracking-widest uppercase transition-all cursor-pointer relative z-10 ${
+                      catalogTab === 'trilhas' || selectedTrilha
+                        ? 'text-white border-b-4 border-[#00D2FF] pb-3 -mb-[2px] font-black'
+                        : 'text-[#9cbfd5]/70 hover:text-white pb-3 -mb-[2px]'
+                    }`}
+                  >
+                    Trilhas
+                  </button>
                 </div>
 
-                {/* Discrete status filter & sort options */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 mt-1 font-mono text-[11px] border-b border-[#1c2c36]/20 mb-3.5 w-full">
-                  <div id="course-status-filter" className="flex flex-wrap items-center gap-1.5 animate-fadeIn">
-                    <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Filtrar por:</span>
-                    {[
-                      { id: 'todos', label: 'Todos os Títulos' },
-                      { id: 'concluidos', label: 'Somente Concluídos' },
-                      { id: 'andamento', label: 'Somente em Andamento' },
-                      { id: 'não-iniciados', label: 'Não Iniciados' }
-                    ].map((item) => {
-                      const active = progressFilter === item.id;
-                      return (
+                {catalogTab === 'cursos' && !selectedTrilha ? (
+                  <>
+                    {/* View switcher header row */}
+                    <div className="flex items-center justify-between pb-3.5 border-b border-[#1c2c36]/50 mb-2">
+                      <h3 className="font-sans font-bold text-xs text-[#9cbfd5] tracking-widest uppercase mb-0">
+                        Catálogo de Cursos
+                      </h3>
+                      <div className="flex items-center gap-1.5 bg-[#081721] border border-[#1c2c36] p-1 rounded-lg">
                         <button
-                          key={item.id}
-                          id={`prog-filter-${item.id}`}
-                          onClick={() => setProgressFilter(item.id as any)}
-                          className={`px-3 py-1 rounded-full border text-[10px] font-bold tracking-tight cursor-pointer transition-all ${
-                            active
-                              ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/40 shadow-xs'
-                              : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2] hover:bg-[#11212b]'
+                          onClick={() => handleToggleViewMode('grid')}
+                          title="Exibição em Grade"
+                          className={`p-1.5 rounded transition-all flex items-center justify-center hover:text-[#E9C349] cursor-pointer ${
+                            viewMode === 'grid' 
+                              ? 'bg-[#11212b] text-[#E9C349] border border-[#1c2c36]/60 shadow-xs' 
+                              : 'text-[#99907c] border border-transparent'
                           }`}
                         >
-                          {item.label}
+                          <LayoutGrid className="w-4 h-4" />
                         </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Ordenar por:</span>
-                    {[
-                      { id: 'id', label: 'ID' },
-                      { id: 'titulo', label: 'Título' },
-                      { id: 'grau', label: 'Grau' },
-                      { id: 'atualizacao', label: 'Última Atualização' }
-                    ].map((item) => {
-                      const active = sortBy === item.id;
-                      return (
                         <button
-                          key={item.id}
-                          onClick={() => setSortBy(item.id as any)}
-                          className={`px-2.5 py-1 rounded border text-[10px] font-bold tracking-right cursor-pointer transition-all ${
-                            active
-                              ? 'bg-[#66d9cc]/15 text-[#66d9cc] border-[#66d9cc]/40 shadow-xs'
-                              : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2] hover:bg-[#11212b]'
+                          onClick={() => handleToggleViewMode('list')}
+                          title="Exibição em Lista"
+                          className={`p-1.5 rounded transition-all flex items-center justify-center hover:text-[#E9C349] cursor-pointer ${
+                            viewMode === 'list' 
+                              ? 'bg-[#11212b] text-[#E9C349] border border-[#1c2c36]/60 shadow-xs' 
+                              : 'text-[#99907c] border border-transparent'
                           }`}
                         >
-                          {item.label}
+                          <List className="w-4 h-4" />
                         </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </div>
+                    </div>
 
-                {/* Grid or List display of cards */}
-                <div 
-                  id="reports-grid" 
-                  className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-x-5" : "flex flex-col gap-1.5"}
-                >
-                  {allowedReportsForUser.map((report) => (
-                    <ReportCard
-                      key={`${report.id}-${completedStateVersion}`}
-                      report={report}
-                      onAccess={handleAccessCourse}
-                      onEditImageLink={triggerQuickImageLink}
-                      isAdmin={isAdmin(currentUser.email)}
-                      onUpdateReportField={handleUpdateReportField}
-                      currentUser={currentUser}
-                      viewMode={viewMode}
-                      onBlockedAccess={handleBlockedAccess}
-                      onOpenSecureViewer={(url, title) => {
-                        setSecureViewerUrl(url);
-                        setSecureViewerTitle(title);
-                        setSecureViewerOpen(true);
-                      }}
-                    />
-                  ))}
+                    {/* Discrete status filter & sort options */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 mt-1 font-mono text-[11px] border-b border-[#1c2c36]/20 mb-3.5 w-full">
+                      <div id="course-status-filter" className="flex flex-wrap items-center gap-1.5 animate-fadeIn">
+                        <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Filtrar por:</span>
+                        {[
+                          { id: 'todos', label: 'Todos os Títulos' },
+                          { id: 'concluidos', label: 'Somente Concluídos' },
+                          { id: 'andamento', label: 'Somente em Andamento' },
+                          { id: 'não-iniciados', label: 'Não Iniciados' }
+                        ].map((item) => {
+                          const active = progressFilter === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              id={`prog-filter-${item.id}`}
+                              onClick={() => setProgressFilter(item.id as any)}
+                              className={`px-3 py-1 rounded-full border text-[10px] font-bold tracking-tight cursor-pointer transition-all ${
+                                active
+                                  ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/40 shadow-xs'
+                                  : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2] hover:bg-[#11212b]'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          );
+                        })}
+                      </div>
 
-                  {allowedReportsForUser.length === 0 && (
-                    <div className="col-span-1 md:col-span-2 text-center py-20 bg-[#0c1d27]/40 rounded-xl border border-dashed border-[#1c2c36]">
-                      <Layers className="w-10 h-10 text-[#99907c] mx-auto opacity-40 mb-3" />
-                      <p className="text-xs font-mono text-[#99907c]">Nenhum título disponível sob sua credencial ou filtro ativo.</p>
-                      {(searchQuery !== '' || progressFilter !== 'todos' || activeCategory !== 'TODOS') && (
-                        <button
-                          onClick={() => {
-                            setSearchQuery('');
-                            setActiveCategory('TODOS');
-                            setProgressFilter('todos');
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Ordenar por:</span>
+                        {[
+                          { id: 'id', label: 'ID' },
+                          { id: 'titulo', label: 'Título' },
+                          { id: 'grau', label: 'Grau' },
+                          { id: 'atualizacao', label: 'Última Atualização' }
+                        ].map((item) => {
+                          const active = sortBy === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setSortBy(item.id as any)}
+                              className={`px-2.5 py-1 rounded border text-[10px] font-bold tracking-right cursor-pointer transition-all ${
+                                active
+                                  ? 'bg-[#66d9cc]/15 text-[#66d9cc] border-[#66d9cc]/40 shadow-xs'
+                                  : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2] hover:bg-[#11212b]'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Grid or List display of cards */}
+                    <div 
+                      id="reports-grid" 
+                      className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-x-5" : "flex flex-col gap-1.5"}
+                    >
+                      {allowedReportsForUser.map((report) => (
+                        <ReportCard
+                          key={`${report.id}-${completedStateVersion}`}
+                          report={report}
+                          onAccess={handleAccessCourse}
+                          onEditImageLink={triggerQuickImageLink}
+                          isAdmin={isAdmin(currentUser.email)}
+                          onUpdateReportField={handleUpdateReportField}
+                          currentUser={currentUser}
+                          viewMode={viewMode}
+                          onBlockedAccess={handleBlockedAccess}
+                          reports={reports}
+                          hideTrilhaStep={true}
+                          onOpenSecureViewer={(url, title) => {
+                            setSecureViewerUrl(url);
+                            setSecureViewerTitle(title);
+                            setSecureViewerOpen(true);
                           }}
-                          className="mt-3 text-xs font-mono font-bold text-[#E9C349] hover:underline"
-                        >
-                          Redefinir filtros de busca
-                        </button>
+                        />
+                      ))}
+
+                      {allowedReportsForUser.length === 0 && (
+                        <div className="col-span-1 md:col-span-2 text-center py-20 bg-[#0c1d27]/40 rounded-xl border border-dashed border-[#1c2c36]">
+                          <Layers className="w-10 h-10 text-[#99907c] mx-auto opacity-40 mb-3" />
+                          <p className="text-xs font-mono text-[#99907c]">Nenhum título disponível sob sua credencial ou filtro ativo.</p>
+                          {(searchQuery !== '' || progressFilter !== 'todos' || activeCategory !== 'TODOS') && (
+                            <button
+                              onClick={() => {
+                                setSearchQuery('');
+                                setActiveCategory('TODOS');
+                                setProgressFilter('todos');
+                              }}
+                              className="mt-3 text-xs font-mono font-bold text-[#E9C349] hover:underline"
+                            >
+                              Redefinir filtros de busca
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </>
+                ) : (
+                  <div className="space-y-6">
+                    {/* TRILHAS VIEW SYSTEM */}
+                    {selectedTrilha === null ? (
+                      <div>
+                        {/* LIST OF AVAILABLE TRILHAS (Image 2) */}
+                        <div className="flex items-center justify-between border-b border-[#1c2c36]/50 pb-3 mb-6">
+                          <h3 className="font-sans font-black text-[#d4e5f2] text-sm uppercase tracking-wider select-none flex items-center justify-between w-full">
+                            <div className="flex items-center gap-3">
+                              <span>TRILHAS DISPONÍVEIS</span>
+                              {isAdmin(currentUser?.email) && (
+                                <button
+                                  onClick={() => handleOpenTrilhaForm(null)}
+                                  className="px-2.5 py-1 bg-[#00D2FF]/10 border border-[#00D2FF]/30 text-[#00D2FF] hover:bg-[#00D2FF]/20 rounded text-[11px] font-mono font-bold tracking-tight cursor-pointer flex items-center gap-1 transition-all"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Nova Trilha</span>
+                                </button>
+                              )}
+                            </div>
+                            <button 
+                              onClick={() => setCatalogTab('cursos')}
+                              className="text-xs font-bold text-[#00D2FF] hover:underline cursor-pointer flex items-center gap-1 normal-case font-sans"
+                            >
+                              <span>Acessar todos</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                          {allAvailableTrilhasList.map((trilhaItem) => {
+                            const trilhaName = trilhaItem.name;
+                            const trilhaImage = trilhaItem.imageUrl;
+                            const trilhaCourses = getTrilhaCourses(trilhaName);
+                            
+                            const completedCount = trilhaCourses.filter(r => isCourseCompleted(r, currentUser?.email || 'guest')).length;
+                            const percent = trilhaCourses.length > 0 ? Math.round((completedCount / trilhaCourses.length) * 100) : 0;
+                            
+                            // Visual color strategy
+                            const hash = trilhaName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                            const gradients = [
+                              'from-[#00c6ff]/20 to-[#0072ff]/20 border-[#00c6ff]/35 text-[#00D2FF]',
+                              'from-[#11998e]/20 to-[#38ef7d]/20 border-[#11998e]/35 text-[#1ea296]',
+                              'from-[#7f00ff]/20 to-[#e100ff]/20 border-[#7f00ff]/35 text-purple-400',
+                              'from-[#f12711]/20 to-[#f5af19]/20 border-[#f12711]/35 text-amber-400',
+                              'from-[#0575e6]/20 to-[#00f260]/20 border-[#0575e6]/35 text-emerald-400'
+                            ];
+                            const cardStyle = gradients[hash % gradients.length];
+
+                            return (
+                              <div
+                                key={trilhaName}
+                                onClick={() => {
+                                  const isEmConstrucao = trilhaItem.status === 'Em Construção';
+                                  const isUserAdmin = isAdmin(currentUser?.email);
+                                  if (isEmConstrucao && !isUserAdmin) return;
+                                  setSelectedTrilha(trilhaName);
+                                }}
+                                className={`bg-[#0a1b24]/90 border rounded-xl p-5 shadow-lg transition-all flex flex-col justify-between h-[230px] relative overflow-hidden ${
+                                  !(trilhaItem.status === 'Em Construção') || isAdmin(currentUser?.email) ? 'cursor-pointer group hover:shadow-[#00D2FF]/5' : 'cursor-default'
+                                } ${
+                                  trilhaItem.status === 'Inativo' 
+                                    ? 'border-dashed border-red-500/30 opacity-70 hover:opacity-100 hover:border-red-500/60' 
+                                    : trilhaItem.status === 'Em Construção'
+                                      ? 'border-dashed border-amber-500/35 opacity-80 hover:opacity-100'
+                                      : 'border-[#1c2c36] hover:border-[#00D2FF]/60'
+                                }`}
+                              >
+                                {/* Cosmic Mesh Network background element (Matches Image 2) */}
+                                <div className="absolute inset-0 z-0 overflow-hidden opacity-35 select-none pointer-events-none">
+                                  <svg className="w-full h-full stroke-[#d4e5f2]/5 stroke-[1.2]" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                    <line x1="15" y1="25" x2="45" y2="75" />
+                                    <line x1="45" y1="75" x2="75" y2="35" />
+                                    <line x1="75" y1="35" x2="90" y2="80" />
+                                    <line x1="15" y1="25" x2="75" y2="35" />
+                                    <circle cx="15" cy="25" r="1" className="fill-[#00D2FF]" />
+                                    <circle cx="45" cy="75" r="1.5" className="fill-[#00D2FF]/80" />
+                                    <circle cx="75" cy="35" r="1" className="fill-[#00D2FF]/80" />
+                                    <circle cx="90" cy="80" r="1" className="fill-[#00D2FF]" />
+                                  </svg>
+                                  <div className="absolute inset-0 bg-[radial-gradient(#ffffff_0.5px,transparent_0.5px)] [background-size:12px_12px] opacity-10"></div>
+                                </div>
+
+                                <div className="relative z-10 text-left flex justify-between items-start gap-2">
+                                  <div>
+                                    <h4 className={`text-base font-sans font-black text-white tracking-tight leading-tight transition-colors mb-1 uppercase ${
+                                      !(trilhaItem.status === 'Em Construção') || isAdmin(currentUser?.email) ? 'group-hover:text-[#00D2FF]' : ''
+                                    }`}>
+                                      {trilhaName}
+                                    </h4>
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                      <span className="font-mono text-[9px] text-[#9cbfd5] bg-[#11212b]/90 border border-[#1c2c36] px-2 py-0.5 rounded tracking-wider uppercase">
+                                        {trilhaCourses.length} Curso{trilhaCourses.length !== 1 ? 's' : ''}
+                                      </span>
+                                      {trilhaItem.status === 'Inativo' && (
+                                        <span className="font-mono text-[9px] text-red-400 bg-red-950/40 border border-red-500/30 px-2 py-0.5 rounded tracking-wider uppercase font-bold">
+                                          Inativo
+                                        </span>
+                                      )}
+                                      {trilhaItem.status === 'Em Construção' && (
+                                        <span className="font-mono text-[9px] text-[#E9C349] bg-amber-950/40 border border-[#E9C349]/35 px-2 py-0.5 rounded tracking-wider uppercase font-bold animate-pulse">
+                                          Em breve para você
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {isAdmin(currentUser?.email) && (
+                                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        onClick={() => handleOpenTrilhaForm(trilhaItem)}
+                                        title="Editar Trilha"
+                                        className="p-1.5 bg-[#1c2c36]/60 border border-[#1c2c36] hover:border-[#00D2FF] text-[#9cbfd5] hover:text-[#00D2FF] rounded transition-all cursor-pointer"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteTrilhaClick(trilhaItem)}
+                                        title="Deletar Trilha"
+                                        className="p-1.5 bg-[#1c2c36]/60 border border-red-500/20 hover:border-red-500 text-[#9cbfd5] hover:text-red-400 rounded transition-all cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Custom graphical element at the bottom as shown in Image 2 */}
+                                <div 
+                                  className={`relative z-10 w-full h-24 rounded-lg mt-3 overflow-hidden border flex items-center justify-center ${
+                                    trilhaImage ? '' : `bg-gradient-to-br ${cardStyle}`
+                                  }`}
+                                  style={trilhaImage ? { backgroundImage: `url(${trilhaImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                                >
+                                  {trilhaImage && <div className="absolute inset-0 bg-black/65 backdrop-blur-[1.2px]" />}
+                                  {/* Overlay content of the mesh */}
+                                  <div className="relative z-10 text-center p-3 select-none">
+                                    {trilhaItem.status === 'Em Construção' ? (
+                                      <Construction className="w-6 h-6 mx-auto mb-1 text-[#E9C349] opacity-90 animate-bounce" />
+                                    ) : (
+                                      <BookOpen className="w-6 h-6 mx-auto mb-1 opacity-75" />
+                                    )}
+                                    <span className="block text-[8px] font-mono tracking-widest uppercase opacity-65">Jornada de Estudo</span>
+                                    {trilhaItem.status === 'Em Construção' ? (
+                                      <span className="block text-[10px] font-mono font-bold mt-1 text-[#E9C349]">EM CONSTRUÇÃO</span>
+                                    ) : percent > 0 ? (
+                                      <span className="block text-[10px] font-mono font-bold mt-1 text-[#00D2FF]">{percent}% CONCLUÍDO</span>
+                                    ) : (
+                                      <span className="block text-[10px] font-mono font-bold mt-1 opacity-50">NÃO INICIADO</span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Tiny subtle progress gauge inside the mesh area */}
+                                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#1a0f12]/30">
+                                    <div className="h-full bg-[#00D2FF]" style={{ width: `${percent}%` }}></div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="animate-fade-in text-left">
+                        {/* TRILHA DETAIL PAGE VIEW (Image 3) */}
+                        <button
+                          onClick={() => {
+                            setSelectedTrilha(null);
+                            setExpandedCourseId(null);
+                          }}
+                          className="flex items-center gap-2 text-xs font-mono font-bold text-[#9cbfd5] hover:text-[#00D2FF] mb-5 cursor-pointer bg-transparent border-none transition-colors"
+                        >
+                          <ArrowLeft className="w-4 h-4" />
+                          <span>Voltar para as Trilhas</span>
+                        </button>
+
+                        {/* Progress Bar Header Area matching Image 3 */}
+                        {(() => {
+                          const trilhaCourses = getTrilhaCourses(selectedTrilha);
+                          const completedTrilhaCourses = trilhaCourses.filter(r => isCourseCompleted(r, currentUser?.email || 'guest'));
+                          const completedTrilhaCount = completedTrilhaCourses.length;
+                          const totalTrilhaCount = trilhaCourses.length;
+                          const trilhaPercent = totalTrilhaCount > 0 ? Math.round((completedTrilhaCount / totalTrilhaCount) * 100) : 0;
+
+                          return (
+                            <>
+                              <div className="bg-[#0a1b24] border border-[#1c2c36]/80 rounded-xl p-5 mb-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                  <div className="flex-1">
+                                    {/* Progress Track and Fill */}
+                                    <div className="relative w-full h-2.5 bg-[#05151e] rounded-full overflow-hidden border border-[#1c2c36]/60">
+                                      <div 
+                                        className="h-full bg-gradient-to-r from-[#00D2FF] to-[#0072ff] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(0,210,255,0.4)]"
+                                        style={{ width: `${trilhaPercent}%` }}
+                                      />
+                                    </div>
+                                    <div className="mt-2 text-xs font-mono font-bold text-[#9cbfd5] flex justify-between select-none">
+                                      <span>{trilhaPercent}% Cursos Finalizados</span>
+                                      <span>({completedTrilhaCount} de {totalTrilhaCount} Cursos)</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Play, ThumbsUp, Heart actions from Screenshot 3 */}
+                                  <div className="flex items-center gap-2 self-start sm:self-center">
+                                    <button 
+                                      title="Iniciar Trilha"
+                                      onClick={() => {
+                                        const nextCourse = trilhaCourses.find(c => !isCourseCompleted(c, currentUser?.email || 'guest')) || trilhaCourses[0];
+                                        if (nextCourse) {
+                                          setSelectedReport(nextCourse);
+                                        }
+                                      }}
+                                      className="p-2.5 bg-[#0e212d] hover:bg-[#153041] hover:text-[#00D2FF] text-[#d4e5f2] border border-[#1c2c36] rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
+                                    >
+                                      <Play className="w-4 h-4 fill-current text-white" />
+                                    </button>
+                                    <button 
+                                      title="Gostei da Trilha"
+                                      className="p-2.5 bg-[#0e212d] hover:bg-[#153041] hover:text-[#00D2FF] text-[#d4e5f2] border border-[#1c2c36] rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
+                                    >
+                                      <ThumbsUp className="w-4 h-4 text-white" />
+                                    </button>
+                                    <button 
+                                      title="Favoritar Trilha"
+                                      className="p-2.5 bg-[#0e212d] hover:bg-[#153041] hover:text-rose-500 text-[#d4e5f2] border border-[#1c2c36] rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center"
+                                    >
+                                      <Heart className="w-4 h-4 text-white" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mb-6">
+                                <span className="block text-[11px] font-black tracking-widest text-[#00D2FF] uppercase font-sans">
+                                  TRILHA
+                                </span>
+                                <h2 className="text-2xl md:text-3xl font-sans font-black text-white mt-1 leading-none uppercase">
+                                  {selectedTrilha}
+                                </h2>
+                              </div>
+
+                              {/* Accordion List of Courses inside the Trilha */}
+                              <div className="space-y-3.5">
+                                {trilhaCourses.map((course) => {
+                                  const isCompleted = isCourseCompleted(course, currentUser?.email || 'guest');
+                                  const coursePrereq = course.prerequisiteId ? reports.find(r => r.id === course.prerequisiteId) : undefined;
+                                  const isPrereqLocked = !isAdmin(currentUser?.email) && coursePrereq && !isCourseCompleted(coursePrereq, currentUser?.email || 'guest');
+                                  
+                                  return (
+                                    <div
+                                      key={course.id}
+                                      className="bg-[#0a1b24]/90 border border-[#1c2c36] rounded-xl p-4 md:p-5 transition-all text-left group"
+                                    >
+                                      <button
+                                        onClick={() => setExpandedCourseId(expandedCourseId === course.id ? null : course.id)}
+                                        className="w-full flex items-center justify-between gap-4 focus:outline-none"
+                                      >
+                                        <div className="flex items-center gap-3.5 text-left">
+                                          {isCompleted ? (
+                                            <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                                              <CheckCircle2 className="w-4 h-4" />
+                                            </div>
+                                          ) : isPrereqLocked ? (
+                                            <div className="w-6 h-6 rounded-full bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-[#E9C349] shrink-0">
+                                              <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
+                                            </div>
+                                          ) : (
+                                            <div className="w-6 h-6 rounded-full bg-[#11212b] border border-[#1c2c36] flex items-center justify-center text-[#00D2FF] shrink-0">
+                                              <Play className="w-2.5 h-2.5 fill-current ml-0.5 text-[#00D2FF]" />
+                                            </div>
+                                          )}
+                                          
+                                          <div>
+                                            <h4 className="text-sm font-sans font-extrabold text-white group-hover:text-[#00D2FF] transition-colors leading-tight">
+                                              {course.title}
+                                            </h4>
+                                            <div className="flex items-center gap-2 mt-1">
+                                              <span className="text-[10px] font-mono text-[#99907c] uppercase">Grau {course.nivelCurso || 1}</span>
+                                              {course.status === 'Inativo' && isAdmin(currentUser?.email) && (
+                                                <span className="text-[9px] font-mono text-red-400 uppercase bg-red-950/40 px-1.5 py-0.5 rounded border border-red-500/20">
+                                                  Oculto / Inativo
+                                                </span>
+                                              )}
+                                              {isPrereqLocked && (
+                                                <span className="text-[9px] font-mono text-[#E9C349] uppercase bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                                  Bloqueado por pré-requisito
+                                                </span>
+                                              )}
+                                              {isCompleted && (
+                                                <span className="text-[9px] font-mono text-emerald-400 uppercase bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                                  Concluído
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        
+                                        <ChevronDown 
+                                          className={`w-4 h-4 text-[#9cbfd5] transition-transform duration-300 shrink-0 ${
+                                            expandedCourseId === course.id ? 'rotate-180 text-[#00D2FF]' : ''
+                                          }`} 
+                                        />
+                                      </button>
+
+                                      {expandedCourseId === course.id && (
+                                        <div className="border-t border-[#1c2c36]/60 mt-4 pt-4 space-y-4 animate-fade-in text-left">
+                                          {/* Description */}
+                                          <div>
+                                            <span className="block text-[9px] font-mono text-[#99907c] uppercase tracking-wider mb-1.5">Resumo do Conteúdo</span>
+                                            <p className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed bg-[#05151e]/40 p-2.5 rounded border-l-2 border-[#00D2FF]/30">
+                                              {course.summary || 'Nenhum resumo cadastrado para este curso.'}
+                                            </p>
+                                          </div>
+                                          
+                                          {/* Structure checklist */}
+                                          <div className="bg-[#05151e]/60 p-3 rounded-lg border border-[#1c2c36]/40">
+                                            <span className="block text-[9px] font-mono text-[#99907c] uppercase tracking-wider mb-2">Estrutura do Aprendizado</span>
+                                            <div className="space-y-2">
+                                              {[
+                                                { key: 'material1', label: 'Material de Leitura Principal', link: course.material1Link },
+                                                { key: 'material2', label: 'Material de Apoio e Diretrizes', link: course.material2Link },
+                                                { key: 'material3', label: 'Leituras Complementares', link: course.material3Link },
+                                                { key: 'linked_questionnaire', label: 'Questionário de Avaliação', link: course.linkedQuestionnaireId ? 'quiz' : undefined },
+                                              ].filter(item => item.link).map((item, idx) => {
+                                                const isItemCompleted = (() => {
+                                                  const saved = localStorage.getItem(`masonic_completed_${currentUser?.email || 'guest'}_${course.id}`);
+                                                  if (!saved) return false;
+                                                  const completedObj = JSON.parse(saved);
+                                                  return !!completedObj[item.key];
+                                                })();
+                                                
+                                                return (
+                                                  <div key={idx} className="flex items-center justify-between text-xs font-mono bg-[#0c1d27]/40 px-2.5 py-1.5 rounded border border-[#1c2c36]/20">
+                                                    <span className="text-[#d4e5f2]/90">{item.label}</span>
+                                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                                                      isItemCompleted 
+                                                        ? 'bg-emerald-950/40 border border-emerald-500/20 text-emerald-400' 
+                                                        : 'bg-slate-900/40 border border-slate-700/20 text-slate-400'
+                                                    }`}>
+                                                      {isItemCompleted ? 'CONCLUÍDO' : 'PENDENTE'}
+                                                    </span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          </div>
+                                          
+                                          {/* Action button */}
+                                          <div className="flex justify-end pt-2">
+                                            {isPrereqLocked ? (
+                                              <button
+                                                onClick={() => {
+                                                  if (coursePrereq) {
+                                                    setPrereqBlockedCourse(course);
+                                                    setPrereqRequiredCourse(coursePrereq);
+                                                  }
+                                                }}
+                                                className="bg-[#11212b] border border-amber-500/30 text-amber-500 hover:border-[#E9C349] hover:text-[#E9C349] font-mono text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                                              >
+                                                <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
+                                                <span>BLOQUEADO (VER PRÉ-REQUISITO)</span>
+                                              </button>
+                                            ) : (
+                                              <button
+                                                onClick={() => handleAccessCourse(course)}
+                                                className="bg-[#00D2FF]/10 border border-[#00D2FF]/40 text-[#00D2FF] hover:bg-[#00D2FF]/20 font-mono text-xs font-black px-5 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                                              >
+                                                <BookOpen className="w-3.5 h-3.5" />
+                                                <span>ACESSAR CURSO COMPLETO</span>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -2154,6 +3016,85 @@ export default function App() {
         </div>
       )}
 
+      {/* Prerequisite Journey Blocked Modal */}
+      {prereqBlockedCourse && prereqRequiredCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md font-sans">
+          <div className="bg-[#0c1d27] border-2 border-[#E9C349] rounded-2xl p-6 sm:p-8 w-full max-w-lg text-center shadow-2xl relative animate-fade-in">
+            <div className="w-16 h-16 bg-[#E9C349]/10 border-2 border-[#E9C349] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Lock className="w-8 h-8 text-[#E9C349]" />
+            </div>
+
+            <h3 className="font-sans font-black text-lg text-[#E9C349] uppercase tracking-wider mb-2">
+              Curso Bloqueado - Próxima Etapa da Trilha
+            </h3>
+
+            <p className="text-xs text-[#9cbfd5] font-mono mb-6">
+              Este curso faz parte de uma jornada de aprendizado sequencial.
+            </p>
+
+            {/* Visual Journey Connection Map */}
+            <div className="bg-[#04141d] rounded-2xl p-5 border border-[#1c2c36] mb-6 text-left space-y-4">
+              <span className="block text-[9px] font-mono text-[#99907c] uppercase tracking-wider">Jornada de Aprendizado</span>
+              
+              <div className="flex flex-col gap-3 relative">
+                {/* Step 1: Prerequisite */}
+                <div className="flex items-start gap-3 bg-[#11212b]/50 p-3 rounded-xl border border-[#1ea296]/20">
+                  <div className="w-6 h-6 rounded-full bg-[#1ea296]/10 border border-[#1ea296]/30 flex items-center justify-center text-xs text-[#66d9cc] font-mono shrink-0">
+                    1
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-mono text-[#99907c] uppercase">CURSO PRÉ-REQUISITO (FALTA CONCLUIR)</span>
+                    <h4 className="text-xs font-sans font-bold text-[#66d9cc]">{prereqRequiredCourse.title}</h4>
+                    <span className="text-[9px] font-mono text-[#9cbfd5] bg-[#11212b] px-1.5 py-0.5 rounded border border-[#1c2c36] mt-1 inline-block">
+                      {prereqRequiredCourse.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Vertical Connector Line */}
+                <div className="absolute left-6 top-11 bottom-11 w-[2px] bg-dashed border-l-2 border-dashed border-[#E9C349]/30 z-0"></div>
+
+                {/* Step 2: Target Course (Locked) */}
+                <div className="flex items-start gap-3 bg-[#11212b]/20 p-3 rounded-xl border border-amber-500/10 relative z-1">
+                  <div className="w-6 h-6 rounded-full bg-amber-950/20 border border-[#E9C349]/30 flex items-center justify-center text-xs text-[#E9C349] font-mono shrink-0">
+                    <Lock className="w-3 h-3 text-[#E9C349]" />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] font-mono text-[#99907c] uppercase">ESTE CURSO (BLOQUEADO)</span>
+                    <h4 className="text-xs font-sans font-bold text-[#a5b8c7]">{prereqBlockedCourse.title}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setPrereqBlockedCourse(null);
+                  setPrereqRequiredCourse(null);
+                }}
+                className="flex-1 bg-[#11212b] hover:bg-[#1a2e3b] text-[#d4e5f2] border border-[#1c2c36] font-sans font-extrabold text-xs py-3 rounded-lg transition-colors uppercase tracking-wider cursor-pointer"
+              >
+                Voltar ao Catálogo
+              </button>
+              <button
+                onClick={() => {
+                  const target = prereqRequiredCourse;
+                  setPrereqBlockedCourse(null);
+                  setPrereqRequiredCourse(null);
+                  setSelectedReport(target);
+                }}
+                className="flex-1 bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] font-sans font-extrabold text-xs py-3 rounded-lg transition-colors shadow-md uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Acessar Pré-requisito</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Global Embedded Protective Document Viewer */}
       <SecureViewerModal
         isOpen={secureViewerOpen}
@@ -2161,6 +3102,204 @@ export default function App() {
         url={secureViewerUrl}
         title={secureViewerTitle}
       />
+
+      {/* Trilha Create/Edit Modal */}
+      {isEditingTrilha && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md font-sans">
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-2xl w-full max-w-2xl text-left shadow-2xl relative flex flex-col max-h-[90vh] animate-fadeIn">
+            {/* Header */}
+            <div className="p-5 border-b border-[#1c2c36] flex items-center justify-between">
+              <h3 className="font-sans font-black text-sm text-[#d4e5f2] uppercase tracking-wider select-none">
+                {editingTrilha ? `Editar Trilha: ${editingTrilha.name}` : 'Criar Nova Trilha'}
+              </h3>
+              <button
+                onClick={() => setIsEditingTrilha(false)}
+                className="text-[#9cbfd5] hover:text-white font-mono text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content (Scrollable) */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {/* Name */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">
+                  Nome da Trilha
+                </label>
+                <input
+                  type="text"
+                  value={trilhaFormName}
+                  onChange={(e) => setTrilhaFormName(e.target.value)}
+                  placeholder="Ex: Aprendiz Maçom, Companheiro..."
+                  className="w-full bg-[#04141d] border border-[#1c2c36] rounded-lg px-3.5 py-2 text-xs font-sans text-white focus:outline-hidden focus:border-[#00D2FF]"
+                />
+              </div>
+
+              {/* Image URL */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">
+                  URL da Imagem da Trilha (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={trilhaFormImage}
+                  onChange={(e) => setTrilhaFormImage(e.target.value)}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  className="w-full bg-[#04141d] border border-[#1c2c36] rounded-lg px-3.5 py-2 text-xs font-sans text-white focus:outline-hidden focus:border-[#00D2FF]"
+                />
+                <p className="text-[10px] text-[#99907c] font-mono">Deixe vazio para usar a malha cósmica geométrica padrão.</p>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">
+                  Status da Trilha
+                </label>
+                <select
+                  value={trilhaFormStatus}
+                  onChange={(e) => setTrilhaFormStatus(e.target.value as 'Ativo' | 'Inativo' | 'Em Construção')}
+                  className="w-full bg-[#04141d] border border-[#1c2c36] rounded-lg px-3.5 py-2 text-xs font-sans text-white focus:outline-hidden focus:border-[#00D2FF]"
+                >
+                  <option value="Ativo">Ativo (Visível no Início)</option>
+                  <option value="Inativo">Inativo (Oculto no Início)</option>
+                  <option value="Em Construção">Em Construção (Visível com selo, mas bloqueado)</option>
+                </select>
+                <p className="text-[10px] text-[#99907c] font-mono">Trilhas em construção são visíveis aos alunos, mas exibem o selo "Em breve para você" e não podem ser abertas.</p>
+              </div>
+
+              {/* Course Sequence Builder */}
+              <div className="space-y-2.5">
+                <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider font-bold">
+                  Sequência de Cursos (Trilha de Aprendizado)
+                </label>
+
+                {trilhaFormCourses.length === 0 ? (
+                  <div className="border border-dashed border-[#1c2c36] rounded-xl p-6 text-center text-[#99907c]">
+                    <Layers className="w-8 h-8 mx-auto mb-2 opacity-30 text-[#99907c]" />
+                    <p className="text-xs font-mono">Nenhum curso associado a esta trilha ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {trilhaFormCourses.map((cId, idx) => {
+                      const course = reports.find(r => r.id === cId);
+                      return (
+                        <div
+                          key={cId}
+                          className="bg-[#04141d] border border-[#1c2c36] rounded-xl p-3 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-5 h-5 rounded-full bg-[#00D2FF]/10 border border-[#00D2FF]/30 text-[#00D2FF] flex items-center justify-center font-mono text-[10px] font-bold shrink-0">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <span className="block text-[8px] font-mono text-[#99907c] uppercase">
+                                Grau {course?.securityLevel || 1}
+                              </span>
+                              <h4 className="text-xs font-sans font-bold text-[#d4e5f2] leading-tight line-clamp-1">
+                                {course ? course.title : 'Curso Deletado ou Inexistente'}
+                              </h4>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => moveCourse(idx, 'up')}
+                              disabled={idx === 0}
+                              className="p-1 bg-[#11212b] hover:bg-[#1c2c36] text-[#9cbfd5] hover:text-[#00D2FF] disabled:opacity-30 border border-[#1c2c36] rounded cursor-pointer transition-colors"
+                              title="Mover para cima"
+                            >
+                              <MoveUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveCourse(idx, 'down')}
+                              disabled={idx === trilhaFormCourses.length - 1}
+                              className="p-1 bg-[#11212b] hover:bg-[#1c2c36] text-[#9cbfd5] hover:text-[#00D2FF] disabled:opacity-30 border border-[#1c2c36] rounded cursor-pointer transition-colors"
+                              title="Mover para baixo"
+                            >
+                              <MoveDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTrilhaFormCourses(trilhaFormCourses.filter(id => id !== cId));
+                              }}
+                              className="p-1 bg-[#11212b] hover:bg-red-950/20 text-[#9cbfd5] hover:text-red-400 border border-[#1c2c36] hover:border-red-500/20 rounded cursor-pointer transition-colors"
+                              title="Remover da trilha"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Dropdown to add more courses */}
+                {reports.filter(r => !trilhaFormCourses.includes(r.id)).length > 0 ? (
+                  <div className="bg-[#04141d]/55 border border-[#1c2c36] rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-2">
+                    <div className="flex-1">
+                      <span className="block text-[8px] font-mono text-[#99907c] uppercase mb-1">Adicionar Curso à Trilha</span>
+                      <select
+                        id="add-course-to-trilha-select"
+                        defaultValue=""
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) {
+                            setTrilhaFormCourses([...trilhaFormCourses, val]);
+                            e.target.value = ""; // Reset
+                          }
+                        }}
+                        className="w-full bg-[#0c1d27] border border-[#1c2c36] rounded px-2.5 py-1.5 text-xs text-[#d4e5f2] focus:outline-hidden"
+                      >
+                        <option value="" disabled>Selecione um curso para adicionar...</option>
+                        {reports
+                          .filter(r => !trilhaFormCourses.includes(r.id))
+                          .map(r => (
+                            <option key={r.id} value={r.id}>
+                              [{r.category || 'Geral'}] {r.title}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-[#99907c] font-mono italic">Todos os cursos disponíveis no sistema já estão incluídos nesta trilha.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-[#1c2c36] flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsEditingTrilha(false)}
+                className="text-xs font-mono font-bold text-[#99907c] hover:text-[#d4e5f2] px-4 py-2.5 rounded hover:bg-[#11212b] cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={submitTrilhaForm}
+                disabled={isSavingTrilha}
+                className="bg-[#00D2FF] hover:bg-[#33dfff] text-slate-950 text-xs font-mono font-black px-5 py-2.5 rounded disabled:opacity-50 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {isSavingTrilha ? (
+                  <span>Salvando...</span>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Salvar Trilha</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sticky Bottom Nav Bar with Alarms count badge */}
       <BottomNav

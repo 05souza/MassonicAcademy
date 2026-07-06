@@ -60,3 +60,51 @@ export const compressImage = (
     };
   });
 };
+
+import { ExecutiveReport } from './types';
+
+export const isCourseCompleted = (report: ExecutiveReport, userEmail: string): boolean => {
+  const emailKey = userEmail || 'guest';
+  const saved = localStorage.getItem(`masonic_completed_${emailKey}_${report.id}`);
+  const completedMaterials = saved ? JSON.parse(saved) : {};
+  
+  let totalCount = 0;
+  let completedCount = 0;
+  
+  if (report.material1Link) {
+    totalCount++;
+    if (completedMaterials['material1']) completedCount++;
+  }
+  if (report.material2Link) {
+    totalCount++;
+    if (completedMaterials['material2']) completedCount++;
+  }
+  if (report.material3Link) {
+    totalCount++;
+    if (completedMaterials['material3']) completedCount++;
+  }
+  if (report.material4Link) {
+    totalCount++;
+    if (completedMaterials['material4']) completedCount++;
+  }
+  if (report.material5Link) {
+    totalCount++;
+    if (completedMaterials['material5']) completedCount++;
+  }
+  if (report.material6Link) {
+    totalCount++;
+    if (completedMaterials['material6']) completedCount++;
+  }
+  if (report.linkedQuestionnaireId) {
+    totalCount++;
+    if (completedMaterials['linked_questionnaire']) completedCount++;
+  }
+  if (report.additionalLink && !report.conteudoSemProva) {
+    totalCount++;
+    if (completedMaterials['proof']) completedCount++;
+  }
+  
+  if (totalCount === 0) return false;
+  return completedCount === totalCount;
+};
+

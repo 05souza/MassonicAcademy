@@ -1,8 +1,9 @@
 import React from 'react';
 import { ExecutiveReport } from '../types';
 import { getDegreeLabel } from '../utils/degrees';
-import { Calendar, Shield, Image as ImageIcon } from 'lucide-react';
+import { Calendar, Shield, Image as ImageIcon, Lock } from 'lucide-react';
 import InlineEditable from './InlineEditable';
+import { isCourseCompleted } from '../utils';
 
 interface ReportCardProps {
   report: ExecutiveReport;
@@ -14,6 +15,8 @@ interface ReportCardProps {
   viewMode?: 'grid' | 'list';
   onBlockedAccess?: (courseTitle: string, requiredLevel: number) => void;
   onOpenSecureViewer?: (url: string, title: string) => void;
+  reports?: ExecutiveReport[];
+  hideTrilhaStep?: boolean;
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({ 
@@ -25,8 +28,14 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   currentUser,
   viewMode = 'grid',
   onBlockedAccess,
-  onOpenSecureViewer
+  onOpenSecureViewer,
+  reports = [],
+  hideTrilhaStep = false
 }) => {
+  const isUserAdmin = isAdmin;
+  const prereqCourse = report.prerequisiteId ? reports.find(r => r.id === report.prerequisiteId) : undefined;
+  const isPrereqLocked = !isUserAdmin && prereqCourse && !isCourseCompleted(prereqCourse, currentUser?.email || 'guest');
+
   const getBorderColorClass = (color: string) => {
     switch (color) {
       case 'gold':
@@ -59,6 +68,15 @@ export const ReportCard: React.FC<ReportCardProps> = ({
       return;
     }
 
+    const prereqCourse = report.prerequisiteId ? reports.find(r => r.id === report.prerequisiteId) : undefined;
+    const isPrereqLocked = !isUserAdmin && prereqCourse && !isCourseCompleted(prereqCourse, currentUser?.email || 'guest');
+    if (isPrereqLocked) {
+      e.preventDefault();
+      e.stopPropagation();
+      onAccess(report); // Let the parent's handleAccessCourse trigger the specific prerequisite lock modal
+      return;
+    }
+
     if (!isLink) {
       onAccess(report);
     }
@@ -85,6 +103,18 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     if (report.material3Link) {
       totalCount++;
       if (completedMaterials['material3']) completedCount++;
+    }
+    if (report.material4Link) {
+      totalCount++;
+      if (completedMaterials['material4']) completedCount++;
+    }
+    if (report.material5Link) {
+      totalCount++;
+      if (completedMaterials['material5']) completedCount++;
+    }
+    if (report.material6Link) {
+      totalCount++;
+      if (completedMaterials['material6']) completedCount++;
     }
     if (report.linkedQuestionnaireId) {
       totalCount++;
@@ -152,6 +182,19 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                   className="font-sans font-bold text-base md:text-lg text-[#d4e5f2] leading-tight"
                 />
               </h3>
+              {prereqCourse && !hideTrilhaStep && (
+                <div className="flex items-center gap-1.5 mt-1.5 select-none text-left">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-[#9cbfd5]">Trilha:</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 font-bold ${
+                    isPrereqLocked 
+                      ? 'bg-amber-950/35 border-amber-500/25 text-[#E9C349]' 
+                      : 'bg-[#185347]/20 border-[#1ea296]/20 text-[#66d9cc]'
+                  }`}>
+                    {isPrereqLocked ? <Lock className="w-2.5 h-2.5 text-[#E9C349]" /> : <Shield className="w-2.5 h-2.5 text-[#66d9cc]" />}
+                    Próxima etapa de: {prereqCourse.title}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -226,7 +269,18 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         {/* Right Action Area & Thumbnail Media */}
         <div className="w-full md:w-auto mt-4 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-[#1c2c36]/40 flex flex-col sm:flex-row items-center gap-4 shrink-0 md:pl-4 justify-between md:justify-end">
           <div className="w-full sm:w-auto">
-            {report.customAccessUrl ? (
+            {isPrereqLocked ? (
+              <button
+                id={`access-btn-${report.id}`}
+                onClick={(e) => {
+                  handleAccessClick(e, false);
+                }}
+                className="flex items-center gap-1.5 bg-[#11212b]/80 border border-amber-500/30 text-amber-500 font-mono text-center text-xs font-bold px-4 py-2 rounded hover:border-[#E9C349] hover:text-[#E9C349] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
+                <span>BLOQUEADO</span>
+              </button>
+            ) : report.customAccessUrl ? (
               <a
                 id={`access-btn-${report.id}`}
                 href={report.customAccessUrl}
@@ -332,9 +386,19 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           )}
         </div>
 
-
-
-        {/* Cursive/Italic summary description exactly matching the screenshot style */}
+        {prereqCourse && !hideTrilhaStep && (
+          <div className="flex items-center gap-1.5 mt-1 select-none text-left">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-[#9cbfd5]">Trilha:</span>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 font-bold ${
+              isPrereqLocked 
+                ? 'bg-amber-950/35 border-amber-500/25 text-[#E9C349]' 
+                : 'bg-[#185347]/20 border-[#1ea296]/20 text-[#66d9cc]'
+            }`}>
+              {isPrereqLocked ? <Lock className="w-2.5 h-2.5 text-[#E9C349]" /> : <Shield className="w-2.5 h-2.5 text-[#66d9cc]" />}
+              Próxima etapa de: {prereqCourse.title}
+            </span>
+          </div>
+        )}
         <div className="text-left w-full">
           <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider mb-1">Resumo do Conteúdo</span>
           <p className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed bg-[#05151e]/40 p-2.5 rounded border-l-2 border-[#1ea296]/30">
@@ -404,7 +468,18 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {report.customAccessUrl ? (
+          {isPrereqLocked ? (
+            <button
+              id={`access-btn-${report.id}`}
+              onClick={(e) => {
+                handleAccessClick(e, false);
+              }}
+              className="flex items-center gap-1.5 bg-[#11212b]/80 border border-amber-500/30 text-amber-500 font-mono text-center text-xs font-bold px-5 py-2.5 rounded hover:border-[#E9C349] hover:text-[#E9C349] transition-all transform active:scale-95 shadow-sm cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
+              <span>BLOQUEADO</span>
+            </button>
+          ) : report.customAccessUrl ? (
             <a
               id={`access-btn-${report.id}`}
               href={report.customAccessUrl}

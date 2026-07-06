@@ -16,10 +16,14 @@ export interface ExecutiveReport {
   material1Link?: string;
   material2Link?: string;
   material3Link?: string;
+  material4Link?: string;
+  material5Link?: string;
+  material6Link?: string;
   nivelCurso?: number;
   conteudoSemProva?: boolean;
   status?: 'Ativo' | 'Inativo';
   linkedQuestionnaireId?: string;
+  prerequisiteId?: string;
   lodgeId?: string;
 }
 
@@ -51,6 +55,7 @@ export interface AccessUser {
   userAcesso?: string;
   avatarUrl?: string;
   lodgeId?: string;
+  lastActiveAt?: string;
 }
 
 export interface Lodge {
@@ -122,4 +127,14 @@ export interface Book {
   link: string;
   lodgeId?: string;
 }
+
+export interface Trilha {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  courseIds?: string[];
+  lodgeId?: string;
+  status?: 'Ativo' | 'Inativo' | 'Em Construção';
+}
+
 

@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Books
+    match /books/{bookId} {
+      allow read, write: if true;
+    }
+
+    // 2. Reports (Courses)
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+
+    // 3. Alerts
+    match /alerts/{alertId} {
+      allow read, write: if true;
+    }
+
+    // 4. AccessUsers
+    match /accessUsers/{userId} {
+      allow read, write: if true;
+    }
+
+    // 5. Access Logs
+    match /access_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // 6. Lodges
+    match /lodges/{lodgeId} {
+      allow read, write: if true;
+    }
+
+    // 7. Trilhas
+    match /trilhas/{trilhaId} {
+      allow read, write: if true;
+    }
+
+    // 8. Categories
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    // 9. Questionnaires
+    match /questionnaires/{questionnaireId} {
+      allow read, write: if true;
+    }
+
+    // 10. Simulation Attempts
+    match /simulation_attempts/{attemptId} {
+      allow read, write: if true;
+    }
+
+    // 11. Completions
+    match /completions/{completionId} {
+      allow read, write: if true;
+    }
+
+    // 12. Settings
+    match /settings/{settingsId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -80,11 +80,12 @@ export default function ProfileView({
   onUpdateLodge,
   onDeleteLodge
 }: ProfileViewProps) {
-  const getInitials = (name: string) => {
+  const getInitials = (name: any) => {
+    if (!name || typeof name !== 'string') return 'DL';
     return name
       .trim()
       .split(/\s+/)
-      .map(part => part[0])
+      .map(part => part[0] || '')
       .slice(0, 2)
       .join('')
       .toUpperCase();
@@ -105,13 +106,31 @@ export default function ProfileView({
 
   const isStandardUser = currentUser?.tipoUsuario === 'padrao';
 
+  const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTimeTick(Date.now());
+    }, 30000); // refresh every 30 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   const visibleAccessUsers = (accessUsers || []).filter(u => {
     if (isMaster) return true;
-    if (u.email.toLowerCase().trim() === 'dani.nanda.lucas@gmail.com') return false;
+    if ((u.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com') return false;
     const uLodge = u.lodgeId || 'lodge-cavaleiros';
     const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
     return uLodge === userLodgeId;
   });
+
+  const onlineUsers = useMemo(() => {
+    return visibleAccessUsers.filter(u => {
+      if (currentUser && u.id === currentUser.id) return true; // always online if it is the current user logged in on this tab
+      if (!u.lastActiveAt) return false;
+      const lastActiveTime = new Date(u.lastActiveAt).getTime();
+      return (currentTimeTick - lastActiveTime) < 5 * 60 * 1000; // 5 minutes
+    });
+  }, [visibleAccessUsers, currentTimeTick, currentUser]);
 
   // Main settings tabs
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges'>('profile');
@@ -648,10 +667,14 @@ export default function ProfileView({
   const [formMaterial1Link, setFormMaterial1Link] = useState('');
   const [formMaterial2Link, setFormMaterial2Link] = useState('');
   const [formMaterial3Link, setFormMaterial3Link] = useState('');
+  const [formMaterial4Link, setFormMaterial4Link] = useState('');
+  const [formMaterial5Link, setFormMaterial5Link] = useState('');
+  const [formMaterial6Link, setFormMaterial6Link] = useState('');
   const [formNivelCurso, setFormNivelCurso] = useState<number>(1);
   const [formConteudoSemProva, setFormConteudoSemProva] = useState(false);
   const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [formLinkedQuestionnaireId, setFormLinkedQuestionnaireId] = useState<string>('');
+  const [formPrerequisiteId, setFormPrerequisiteId] = useState<string>('');
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
 
   useEffect(() => {
@@ -1246,10 +1269,14 @@ export default function ProfileView({
     setFormMaterial1Link(rep.material1Link || '');
     setFormMaterial2Link(rep.material2Link || '');
     setFormMaterial3Link(rep.material3Link || '');
+    setFormMaterial4Link(rep.material4Link || '');
+    setFormMaterial5Link(rep.material5Link || '');
+    setFormMaterial6Link(rep.material6Link || '');
     setFormNivelCurso(rep.nivelCurso || 1);
     setFormConteudoSemProva(!!rep.conteudoSemProva);
     setFormStatus(rep.status || 'Ativo');
     setFormLinkedQuestionnaireId(rep.linkedQuestionnaireId || '');
+    setFormPrerequisiteId(rep.prerequisiteId || '');
 
     setShowForm(true);
     setCrudError(null);
@@ -1282,10 +1309,14 @@ export default function ProfileView({
     setFormMaterial1Link('');
     setFormMaterial2Link('');
     setFormMaterial3Link('');
+    setFormMaterial4Link('');
+    setFormMaterial5Link('');
+    setFormMaterial6Link('');
     setFormNivelCurso(1);
     setFormConteudoSemProva(false);
     setFormStatus('Ativo');
     setFormLinkedQuestionnaireId('');
+    setFormPrerequisiteId('');
     // Pre-fill today's formatted date
     const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '');
     setFormLastUpdated(today);
@@ -1367,10 +1398,14 @@ export default function ProfileView({
       material1Link: formMaterial1Link.trim() || undefined,
       material2Link: formMaterial2Link.trim() || undefined,
       material3Link: formMaterial3Link.trim() || undefined,
+      material4Link: formMaterial4Link.trim() || undefined,
+      material5Link: formMaterial5Link.trim() || undefined,
+      material6Link: formMaterial6Link.trim() || undefined,
       nivelCurso: formNivelCurso,
       conteudoSemProva: formConteudoSemProva,
       status: formStatus,
       linkedQuestionnaireId: formLinkedQuestionnaireId || undefined,
+      prerequisiteId: formPrerequisiteId || undefined,
       lodgeId: isCreatingNew ? (currentUser?.lodgeId || 'lodge-cavaleiros') : (reports.find(r => r.id === finalId)?.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros')
     };
 
@@ -1591,7 +1626,7 @@ export default function ProfileView({
                   : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
               }`}
             >
-              <Sliders className="w-3.5 h-3.5 text-[#66d9cc]" /> CADASTRO DE TÍTULOS ({reports.length})
+              <Sliders className="w-3.5 h-3.5 text-[#66d9cc]" /> CADASTRO DE CURSOS ({reports.length})
             </button>
             <button
               onClick={() => setActiveSubTab('accesses')}
@@ -1952,7 +1987,7 @@ export default function ProfileView({
           <div className="lg:col-span-4 bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] space-y-4">
             <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3 flex-wrap gap-2">
               <div>
-                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Títulos</h3>
+                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Cursos</h3>
                 <p className="text-[10px] font-mono text-[#99907c] mt-0.5">Clique para selecionar e editar dados</p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -2359,6 +2394,27 @@ export default function ProfileView({
                         </select>
                       </div>
 
+                      <div className="sm:col-span-2">
+                        <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Curso Pré-requisito (Jornada / Trilha de Aprendizado)</label>
+                        <select
+                          value={formPrerequisiteId}
+                          onChange={(e) => setFormPrerequisiteId(e.target.value)}
+                          className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono cursor-pointer"
+                        >
+                          <option value="">-- Nenhum (Curso Inicial ou Independente) --</option>
+                          {reports
+                            .filter((r) => isCreatingNew || r.id !== editReportId)
+                            .map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {r.title} ({r.category})
+                              </option>
+                            ))}
+                        </select>
+                        <p className="text-[9px] font-mono text-[#99907c] mt-1">
+                          Se selecionado, este curso só será desbloqueado para o aluno após a conclusão total do curso pré-requisito selecionado, criando uma jornada/trilha de estudos.
+                        </p>
+                      </div>
+
                       <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Resumo do Conteúdo (Exibido no cartão)</label>
@@ -2540,6 +2596,39 @@ export default function ProfileView({
                               placeholder="https://exemplo.com/material3"
                               value={formMaterial3Link}
                               onChange={(e) => setFormMaterial3Link(e.target.value)}
+                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 4 / Referência Direta (URL)</label>
+                            <input
+                              type="url"
+                              id="input-material-4-link"
+                              placeholder="https://exemplo.com/material4"
+                              value={formMaterial4Link}
+                              onChange={(e) => setFormMaterial4Link(e.target.value)}
+                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 5 / Referência Direta (URL)</label>
+                            <input
+                              type="url"
+                              id="input-material-5-link"
+                              placeholder="https://exemplo.com/material5"
+                              value={formMaterial5Link}
+                              onChange={(e) => setFormMaterial5Link(e.target.value)}
+                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 6 / Referência Direta (URL)</label>
+                            <input
+                              type="url"
+                              id="input-material-6-link"
+                              placeholder="https://exemplo.com/material6"
+                              value={formMaterial6Link}
+                              onChange={(e) => setFormMaterial6Link(e.target.value)}
                               className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
                             />
                           </div>
@@ -4178,8 +4267,8 @@ export default function ProfileView({
           {(() => {
             const allLogs = getLogsToRender().filter(log => {
               if (!searchLogUser) return true;
-              return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
-                     log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+              return (log.userName || '').toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                     (log.userEmail || '').toLowerCase().includes(searchLogUser.toLowerCase());
             });
 
             const totalLogins = allLogs.filter(l => l.type === 'login').length;
@@ -4187,15 +4276,15 @@ export default function ProfileView({
             const totalBookAccess = allLogs.filter(l => l.type === 'book').length;
             
             // Count unique users who either have logs or have active status (active sessions)
-            const loggedEmails = allLogs.map(l => l.userEmail.toLowerCase().trim());
+            const loggedEmails = allLogs.map(l => (l.userEmail || '').toLowerCase().trim());
             const activeUserEmails = accessUsers
               .filter(u => u.status === 'Ativo')
-              .map(u => u.email.toLowerCase().trim())
+              .map(u => (u.email || '').toLowerCase().trim())
               .filter(email => {
                 if (!searchLogUser) return true;
                 const query = searchLogUser.toLowerCase();
-                const u = accessUsers.find(user => user.email.toLowerCase().trim() === email);
-                return u && (u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
+                const u = accessUsers.find(user => (user.email || '').toLowerCase().trim() === email);
+                return u && ((u.name || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query));
               });
             const allActiveEmails = new Set([...loggedEmails, ...activeUserEmails]);
             const uniqueUsers = allActiveEmails.size;
@@ -4282,22 +4371,22 @@ export default function ProfileView({
             <div className="relative group select-none py-1 px-2.5 self-end md:self-center">
               <span className="text-[11px] font-mono text-[#99907c] cursor-pointer flex items-center gap-1.5 hover:text-[#66d9cc] transition-colors py-1">
                 <span className="w-2 h-2 rounded-full bg-[#66d9cc] animate-pulse"></span>
-                Sessões Ativas: <strong className="text-[#66d9cc] font-sans">{visibleAccessUsers.filter(u => u.status === 'Ativo').length}</strong>
+                Sessões Ativas: <strong className="text-[#66d9cc] font-sans">{onlineUsers.length}</strong>
               </span>
               
               {/* Hover dropdown list of active users */}
               <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block w-64 bg-[#0c1d27] border border-[#1c2c36] rounded-lg p-3 shadow-2xl z-50 animate-fadeIn">
                 <div className="text-[9px] font-mono text-[#94a9b8] uppercase tracking-wider mb-2 pb-1.5 border-b border-[#1c2c36] flex items-center justify-between">
-                  <span>Usuários Ativos</span>
-                  <span className="text-[#66d9cc] font-bold">{visibleAccessUsers.filter(u => u.status === 'Ativo').length}</span>
+                  <span>Usuários Online</span>
+                  <span className="text-[#66d9cc] font-bold">{onlineUsers.length}</span>
                 </div>
                 <div className="max-h-48 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-[#1c2c36] pr-1">
-                  {visibleAccessUsers.filter(u => u.status === 'Ativo').length === 0 ? (
+                  {onlineUsers.length === 0 ? (
                     <div className="text-[10px] font-mono text-gray-500 italic p-1">
                       Nenhum usuário ativo
                     </div>
                   ) : (
-                    visibleAccessUsers.filter(u => u.status === 'Ativo').map((u) => (
+                    onlineUsers.map((u) => (
                       <div key={u.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-[#11212b] transition-colors text-left">
                         <div className="w-1.5 h-1.5 rounded-full bg-[#66d9cc]" />
                         <div className="min-w-0 flex-1">
@@ -4332,8 +4421,8 @@ export default function ProfileView({
                   const filtered = getLogsToRender().filter(log => {
                     if (log.type !== 'login') return false;
                     if (!searchLogUser) return true;
-                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
-                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                    return (log.userName || '').toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           (log.userEmail || '').toLowerCase().includes(searchLogUser.toLowerCase());
                   });
 
                   // Group by email
@@ -4342,16 +4431,17 @@ export default function ProfileView({
                   // Pre-populate with all active users (users with active sessions) so they are tracked
                   accessUsers.forEach(u => {
                     if (u.status === 'Ativo') {
-                      const key = u.email.toLowerCase().trim();
+                      const key = (u.email || '').toLowerCase().trim();
+                      if (!key) return;
                       if (searchLogUser) {
                         const query = searchLogUser.toLowerCase();
-                        if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                        if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
                           return;
                         }
                       }
                       groupedMap[key] = {
-                        name: u.name,
-                        email: u.email,
+                        name: u.name || 'Sem Nome',
+                        email: u.email || '',
                         count: 0,
                         lastAccess: ''
                       };
@@ -4359,17 +4449,18 @@ export default function ProfileView({
                   });
 
                   filtered.forEach(log => {
-                    const key = log.userEmail.toLowerCase().trim();
+                    const key = (log.userEmail || '').toLowerCase().trim();
+                    if (!key) return;
                     if (!groupedMap[key]) {
                       groupedMap[key] = {
-                        name: log.userName,
-                        email: log.userEmail,
+                        name: log.userName || 'Sem Nome',
+                        email: log.userEmail || '',
                         count: 0,
-                        lastAccess: log.timestamp
+                        lastAccess: log.timestamp || ''
                       };
                     }
                     groupedMap[key].count++;
-                    if (!groupedMap[key].lastAccess || new Date(log.timestamp) > new Date(groupedMap[key].lastAccess)) {
+                    if (log.timestamp && (!groupedMap[key].lastAccess || new Date(log.timestamp) > new Date(groupedMap[key].lastAccess))) {
                       groupedMap[key].lastAccess = log.timestamp;
                     }
                   });
@@ -4389,7 +4480,7 @@ export default function ProfileView({
                     <div className="space-y-3">
                       {groupedList.map((userStats, idx) => {
                         const pct = (userStats.count / maxCount) * 100;
-                        const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                        const avatarUrl = accessUsers.find(u => (u.email || '').toLowerCase() === (userStats.email || '').toLowerCase())?.avatarUrl;
                         return (
                           <div 
                             key={`log-usr-${idx}`}
@@ -4494,8 +4585,8 @@ export default function ProfileView({
                   const filtered = getLogsToRender().filter(log => {
                     if (log.type !== 'course') return false;
                     if (!searchLogUser) return true;
-                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
-                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                    return (log.userName || '').toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           (log.userEmail || '').toLowerCase().includes(searchLogUser.toLowerCase());
                   });
 
                   if (filtered.length === 0) {
@@ -4520,10 +4611,10 @@ export default function ProfileView({
                       }
                       groupedMap[key].count++;
                       
-                      const userKey = log.userEmail.toLowerCase();
+                      const userKey = (log.userEmail || '').toLowerCase();
                       if (!groupedMap[key].users[userKey]) {
                         groupedMap[key].users[userKey] = {
-                          name: log.userName,
+                          name: log.userName || 'Sem Nome',
                           count: 0
                         };
                       }
@@ -4596,16 +4687,17 @@ export default function ProfileView({
                     // Pre-populate with all active users (users with active sessions) so they are tracked
                     accessUsers.forEach(u => {
                       if (u.status === 'Ativo') {
-                        const key = u.email.toLowerCase().trim();
+                        const key = (u.email || '').toLowerCase().trim();
+                        if (!key) return;
                         if (searchLogUser) {
                           const query = searchLogUser.toLowerCase();
-                          if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                          if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
                             return;
                           }
                         }
                         groupedMap[key] = {
-                          name: u.name,
-                          email: u.email,
+                          name: u.name || 'Sem Nome',
+                          email: u.email || '',
                           count: 0,
                           items: {}
                         };
@@ -4613,12 +4705,13 @@ export default function ProfileView({
                     });
 
                     filtered.forEach(log => {
-                      const key = log.userEmail.toLowerCase().trim();
+                      const key = (log.userEmail || '').toLowerCase().trim();
+                      if (!key) return;
                       const courseTitle = log.targetTitle || 'Curso Sem Título';
                       if (!groupedMap[key]) {
                         groupedMap[key] = {
-                          name: log.userName,
-                          email: log.userEmail,
+                          name: log.userName || 'Sem Nome',
+                          email: log.userEmail || '',
                           count: 0,
                           items: {}
                         };
@@ -4632,7 +4725,7 @@ export default function ProfileView({
                     return (
                       <div className="space-y-3">
                         {sortedList.map((userStats, idx) => {
-                          const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                          const avatarUrl = accessUsers.find(u => (u.email || '').toLowerCase() === (userStats.email || '').toLowerCase())?.avatarUrl;
                           return (
                             <div 
                               key={`user-course-stat-${idx}`}
@@ -4731,8 +4824,8 @@ export default function ProfileView({
                   const filtered = getLogsToRender().filter(log => {
                     if (log.type !== 'book') return false;
                     if (!searchLogUser) return true;
-                    return log.userName.toLowerCase().includes(searchLogUser.toLowerCase()) || 
-                           log.userEmail.toLowerCase().includes(searchLogUser.toLowerCase());
+                    return (log.userName || '').toLowerCase().includes(searchLogUser.toLowerCase()) || 
+                           (log.userEmail || '').toLowerCase().includes(searchLogUser.toLowerCase());
                   });
 
                   if (filtered.length === 0) {
@@ -4757,10 +4850,10 @@ export default function ProfileView({
                       }
                       groupedMap[key].count++;
 
-                      const userKey = log.userEmail.toLowerCase();
+                      const userKey = (log.userEmail || '').toLowerCase();
                       if (!groupedMap[key].users[userKey]) {
                         groupedMap[key].users[userKey] = {
-                          name: log.userName,
+                          name: log.userName || 'Sem Nome',
                           count: 0
                         };
                       }
@@ -4833,16 +4926,17 @@ export default function ProfileView({
                     // Pre-populate with all active users (users with active sessions) so they are tracked
                     accessUsers.forEach(u => {
                       if (u.status === 'Ativo') {
-                        const key = u.email.toLowerCase().trim();
+                        const key = (u.email || '').toLowerCase().trim();
+                        if (!key) return;
                         if (searchLogUser) {
                           const query = searchLogUser.toLowerCase();
-                          if (!u.name.toLowerCase().includes(query) && !u.email.toLowerCase().includes(query)) {
+                          if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
                             return;
                           }
                         }
                         groupedMap[key] = {
-                          name: u.name,
-                          email: u.email,
+                          name: u.name || 'Sem Nome',
+                          email: u.email || '',
                           count: 0,
                           items: {}
                         };
@@ -4850,12 +4944,13 @@ export default function ProfileView({
                     });
 
                     filtered.forEach(log => {
-                      const key = log.userEmail.toLowerCase().trim();
+                      const key = (log.userEmail || '').toLowerCase().trim();
+                      if (!key) return;
                       const bookTitle = log.targetTitle || 'Obra Virtual';
                       if (!groupedMap[key]) {
                         groupedMap[key] = {
-                          name: log.userName,
-                          email: log.userEmail,
+                          name: log.userName || 'Sem Nome',
+                          email: log.userEmail || '',
                           count: 0,
                           items: {}
                         };
@@ -4869,7 +4964,7 @@ export default function ProfileView({
                     return (
                       <div className="space-y-3">
                         {sortedList.map((userStats, idx) => {
-                          const avatarUrl = accessUsers.find(u => u.email.toLowerCase() === userStats.email.toLowerCase())?.avatarUrl;
+                          const avatarUrl = accessUsers.find(u => (u.email || '').toLowerCase() === (userStats.email || '').toLowerCase())?.avatarUrl;
                           return (
                             <div 
                               key={`user-book-stat-${idx}`}
