@@ -361,20 +361,53 @@ export default function ProfileView({
           let title = '';
           let owner = '';
           let nivelCurso = 1;
+          let status: 'Ativo' | 'Inativo' = 'Ativo';
+          let summary = '';
+          let tags: string[] = [];
+          let material1Link = '';
+          let material2Link = '';
+          let material3Link = '';
+          let material4Link = '';
+          let material5Link = '';
+          let material6Link = '';
 
           Object.keys(row).forEach(key => {
             const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const val = row[key];
+            if (val === undefined || val === null) return;
+            const strVal = String(val).trim();
 
             if (k === 'titulo' || k === 'title' || k === 'nome' || k === 'name') {
-              title = String(val).trim();
+              title = strVal;
             } else if (k === 'instrutor' || k === 'owner' || k === 'instructor' || k === 'responsavel' || k === 'autor' || k === 'author') {
-              owner = String(val).trim();
+              owner = strVal;
             } else if (k === 'grau' || k === 'nivelcurso' || k === 'level' || k === 'degree' || k === 'nivel') {
-              const num = parseInt(String(val).replace(/\D/g, ''), 10);
+              const num = parseInt(strVal.replace(/\D/g, ''), 10);
               nivelCurso = !isNaN(num) ? num : 1;
               if (nivelCurso < 1) nivelCurso = 1;
               if (nivelCurso > 33) nivelCurso = 33;
+            } else if (k === 'status') {
+              if (strVal.toLowerCase() === 'inativo') {
+                status = 'Inativo';
+              } else {
+                status = 'Ativo';
+              }
+            } else if (k === 'resumo' || k === 'summary' || k === 'descricao' || k === 'description') {
+              summary = strVal;
+            } else if (k === 'tags' || k === 'tag' || k === 'palavras-chave' || k === 'palavras chave') {
+              tags = strVal ? strVal.split(',').map(t => t.trim()).filter(Boolean) : [];
+            } else if (k === 'link material 1' || k === 'linkmaterial1' || k === 'material1link' || k === 'material 1') {
+              material1Link = strVal;
+            } else if (k === 'link material 2' || k === 'linkmaterial2' || k === 'material2link' || k === 'material 2') {
+              material2Link = strVal;
+            } else if (k === 'link material 3' || k === 'linkmaterial3' || k === 'material3link' || k === 'material 3') {
+              material3Link = strVal;
+            } else if (k === 'link material 4' || k === 'linkmaterial4' || k === 'material4link' || k === 'material 4') {
+              material4Link = strVal;
+            } else if (k === 'link material 5' || k === 'linkmaterial5' || k === 'material5link' || k === 'material 5') {
+              material5Link = strVal;
+            } else if (k === 'link material 6' || k === 'linkmaterial6' || k === 'material6link' || k === 'material 6') {
+              material6Link = strVal;
             }
           });
 
@@ -395,24 +428,30 @@ export default function ProfileView({
             id: cleanId,
             title: title,
             category: 'Geral',
-            tags: [],
+            tags: tags,
             department: 'Masonic Academy',
-            summary: `Importado de planilha Excel por Daniel Luciano. Instrutor: ${owner || 'Não especificado'}.`,
-            fullMarkdown: `# ${title}\n\n**Instrutor:** ${owner || 'Daniel Luciano'}\n**Grau Requerido:** Grau ${nivelCurso}\n\n### Diretrizes do Curso\nInsira os tópicos, atualizações e informações específicas para este título aqui.`,
+            summary: summary || `Importado de planilha Excel por Daniel Luciano. Instrutor: ${owner || 'Não especificado'}.`,
+            fullMarkdown: `# ${title}\n\n**Instrutor:** ${owner || 'Daniel Luciano'}\n**Grau Requerido:** Grau ${nivelCurso}\n\n### Diretrizes do Curso\n${summary || 'Insira os tópicos, atualizações e informações específicas para este título aqui.'}`,
             leftBorderColor: 'gold',
             lastUpdated: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', ''),
             owner: owner || 'Daniel Luciano',
             confidentiality: 'Interno',
             nivelCurso: nivelCurso,
             conteudoSemProva: false,
-            status: 'Ativo'
+            status: status,
+            material1Link: material1Link || undefined,
+            material2Link: material2Link || undefined,
+            material3Link: material3Link || undefined,
+            material4Link: material4Link || undefined,
+            material5Link: material5Link || undefined,
+            material6Link: material6Link || undefined,
           };
 
           parsedReports.push(newRep);
         }
 
         if (parsedReports.length === 0) {
-          setImportError("Não foram encontrados registros válidos. Verifique as colunas (titulo, instrutor, grau).");
+          setImportError("Não foram encontrados registros válidos. Verifique as colunas (titulo, status).");
           return;
         }
 
@@ -448,18 +487,45 @@ export default function ProfileView({
     const modelData = [
       {
         "titulo": "Simbologia do Templo de Salomão",
+        "status": "Ativo",
         "instrutor": "Daniel Luciano",
-        "grau": 1
+        "grau": 1,
+        "resumo": "Uma introdução aos símbolos fundamentais do Templo de Salomão e sua aplicação prática nos estudos de Grau 1.",
+        "tags": "Símbolos, Templo, História",
+        "link material 1": "https://exemplo.com/apostila1.pdf",
+        "link material 2": "https://exemplo.com/anexo.pdf",
+        "link material 3": "",
+        "link material 4": "",
+        "link material 5": "",
+        "link material 6": ""
       },
       {
         "titulo": "O Segredo dos Símbolos Antigos",
+        "status": "Ativo",
         "instrutor": "Almir de Alencar",
-        "grau": 2
+        "grau": 2,
+        "resumo": "Exploração avançada de iconografia mística em ordens de cavalaria clássicas.",
+        "tags": "Filosofia, Símbolos",
+        "link material 1": "https://exemplo.com/material-cavaleiros.pdf",
+        "link material 2": "",
+        "link material 3": "",
+        "link material 4": "",
+        "link material 5": "",
+        "link material 6": ""
       },
       {
-        "titulo": "A Lenda de Hiram Abiff",
+        "titulo": "Curso em Construção Exemplar",
+        "status": "Inativo",
         "instrutor": "Daniel Luciano",
-        "grau": 3
+        "grau": 3,
+        "resumo": "Este curso está atualmente arquivado ou em fase de planejamento, por isso o status é Inativo.",
+        "tags": "Filosofia, História",
+        "link material 1": "",
+        "link material 2": "",
+        "link material 3": "",
+        "link material 4": "",
+        "link material 5": "",
+        "link material 6": ""
       }
     ];
 
@@ -468,9 +534,18 @@ export default function ProfileView({
     XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo Cursos");
 
     worksheet["!cols"] = [
-      { wch: 35 },
-      { wch: 25 },
-      { wch: 10 }
+      { wch: 35 }, // titulo
+      { wch: 10 }, // status
+      { wch: 20 }, // instrutor
+      { wch: 8 },  // grau
+      { wch: 45 }, // resumo
+      { wch: 25 }, // tags
+      { wch: 30 }, // link material 1
+      { wch: 30 }, // link material 2
+      { wch: 30 }, // link material 3
+      { wch: 30 }, // link material 4
+      { wch: 30 }, // link material 5
+      { wch: 30 }  // link material 6
     ];
 
     XLSX.writeFile(workbook, "modelo_importacao_cursos.xlsx");
@@ -2059,12 +2134,13 @@ export default function ProfileView({
                 </div>
                 
                 <p className="text-[10px] text-[#9cbfd5] leading-relaxed">
-                  Envie um arquivo Excel (.xlsx, .xls) ou .csv contendo as seguintes colunas sugeridas (em qualquer ordem):
+                  Envie um arquivo Excel (.xlsx, .xls) contendo os dados dos cursos. Os campos <strong className="text-white">titulo</strong> e <strong className="text-white">status</strong> são obrigatórios.
                 </p>
                 <div className="bg-[#0c1d27]/60 p-2 rounded border border-[#1c2c36] font-mono text-[9px] text-[#a5b8c7] space-y-1">
-                  <div>• <strong className="text-white">titulo</strong> ou <strong className="text-white">title</strong> (Título do Curso)</div>
-                  <div>• <strong className="text-white">instrutor</strong> ou <strong className="text-white">owner</strong> ou <strong className="text-white">instructor</strong> (Instrutor)</div>
-                  <div>• <strong className="text-white">grau</strong> ou <strong className="text-white">nivelCurso</strong> ou <strong className="text-white">level</strong> (Grau do Curso: 1 a 33)</div>
+                  <div>• <strong className="text-white">titulo</strong> (Obrigatório - Nome do curso)</div>
+                  <div>• <strong className="text-white">status</strong> (Obrigatório - 'Ativo' ou 'Inativo')</div>
+                  <div>• <strong className="text-white">instrutor</strong>, <strong className="text-white">grau</strong>, <strong className="text-white">resumo</strong>, <strong className="text-white">tags</strong> (Opcionais)</div>
+                  <div>• <strong className="text-white">link material 1</strong> até <strong className="text-white">link material 6</strong> (Opcionais)</div>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-[#1c2c36]/40 pt-2">
