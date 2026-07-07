@@ -444,6 +444,38 @@ export default function ProfileView({
     }, 4000);
   };
 
+  const downloadCourseModelExcel = () => {
+    const modelData = [
+      {
+        "titulo": "Simbologia do Templo de Salomão",
+        "instrutor": "Daniel Luciano",
+        "grau": 1
+      },
+      {
+        "titulo": "O Segredo dos Símbolos Antigos",
+        "instrutor": "Almir de Alencar",
+        "grau": 2
+      },
+      {
+        "titulo": "A Lenda de Hiram Abiff",
+        "instrutor": "Daniel Luciano",
+        "grau": 3
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(modelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Modelo Cursos");
+
+    worksheet["!cols"] = [
+      { wch: 35 },
+      { wch: 25 },
+      { wch: 10 }
+    ];
+
+    XLSX.writeFile(workbook, "modelo_importacao_cursos.xlsx");
+  };
+
   // Access Import Helper Functions
   const downloadAccessModelExcel = () => {
     const modelData = [
@@ -2033,6 +2065,17 @@ export default function ProfileView({
                   <div>• <strong className="text-white">titulo</strong> ou <strong className="text-white">title</strong> (Título do Curso)</div>
                   <div>• <strong className="text-white">instrutor</strong> ou <strong className="text-white">owner</strong> ou <strong className="text-white">instructor</strong> (Instrutor)</div>
                   <div>• <strong className="text-white">grau</strong> ou <strong className="text-white">nivelCurso</strong> ou <strong className="text-white">level</strong> (Grau do Curso: 1 a 33)</div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-[#1c2c36]/40 pt-2">
+                  <span className="text-[10px] text-[#99907c] font-mono">Deseja usar um modelo?</span>
+                  <button
+                    type="button"
+                    onClick={downloadCourseModelExcel}
+                    className="text-[#66d9cc] hover:text-[#83f7eb] text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> Baixar Modelo Excel
+                  </button>
                 </div>
 
                 <div className="space-y-2">
