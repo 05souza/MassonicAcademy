@@ -2971,12 +2971,14 @@ export default function ProfileView({
               ] : [])
                 .filter(m => {
                   if (accessStatusFilter === 'Inativo') return false; // Masters are always Ativo
-                  return m.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
-                    m.email.toLowerCase().includes(accessSearchQuery.toLowerCase());
+                  return (m.name || '').toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
+                    (m.email || '').toLowerCase().includes(accessSearchQuery.toLowerCase());
                 })
                 .map((m, idx) => {
-                  const masterAvatarUrl = (currentUser?.email.toLowerCase() === m.email.toLowerCase() ? currentUser?.avatarUrl : null) || 
-                    accessUsers.find(u => u.email.toLowerCase() === m.email.toLowerCase())?.avatarUrl;
+                  const currentUserEmailLower = (currentUser?.email || '').toLowerCase();
+                  const mEmailLower = (m.email || '').toLowerCase();
+                  const masterAvatarUrl = (currentUserEmailLower === mEmailLower ? currentUser?.avatarUrl : null) || 
+                    accessUsers.find(u => (u.email || '').toLowerCase() === mEmailLower)?.avatarUrl;
                   return (
                     <div
                       key={`static-m-${idx}`}
@@ -3025,8 +3027,8 @@ export default function ProfileView({
 
               {visibleAccessUsers
                 .filter(u => {
-                  const matchesSearch = u.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
-                    u.email.toLowerCase().includes(accessSearchQuery.toLowerCase()) ||
+                  const matchesSearch = (u.name || '').toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
+                    (u.email || '').toLowerCase().includes(accessSearchQuery.toLowerCase()) ||
                     (u.userAcesso && u.userAcesso.toLowerCase().includes(accessSearchQuery.toLowerCase()));
                   
                   if (!matchesSearch) return false;
@@ -3143,8 +3145,8 @@ export default function ProfileView({
                 })}
 
               {visibleAccessUsers.filter(u => 
-                u.name.toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
-                u.email.toLowerCase().includes(accessSearchQuery.toLowerCase())
+                (u.name || '').toLowerCase().includes(accessSearchQuery.toLowerCase()) || 
+                (u.email || '').toLowerCase().includes(accessSearchQuery.toLowerCase())
               ).length === 0 && (
                 <div className="text-center py-10 bg-[#0c1d27]/40 rounded-lg border border-dashed border-[#1c2c36]/60 text-[#99907c] space-y-2">
                   <Layers className="w-8 h-8 mx-auto opacity-30" />
@@ -3465,7 +3467,7 @@ export default function ProfileView({
                       <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                         {reports.map((r) => {
                           const currentList = userFormAllowedReports.split(',').map(s => s.trim().toLowerCase());
-                          const isSelected = currentList.includes(r.id.toLowerCase());
+                          const isSelected = currentList.includes((r.id || '').toLowerCase());
                           return (
                             <button
                               type="button"
@@ -3475,7 +3477,7 @@ export default function ProfileView({
                                   .split(',')
                                   .map(s => s.trim())
                                   .filter(Boolean);
-                                const index = list.findIndex(s => s.toLowerCase() === r.id.toLowerCase());
+                                const index = list.findIndex(s => s.toLowerCase() === (r.id || '').toLowerCase());
                                 if (index > -1) {
                                   list.splice(index, 1);
                                 } else {

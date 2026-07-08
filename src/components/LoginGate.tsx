@@ -243,6 +243,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
               </button>
             </form>
 
+            {/* 
             <div className="relative py-2 flex items-center justify-center select-none">
               <span className="absolute inset-x-0 h-px bg-[#1c2c36]/60"></span>
               <span className="relative bg-[#0c1d27] px-3 font-mono text-[9px] text-[#99907c] uppercase tracking-wide">
@@ -250,7 +251,6 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
               </span>
             </div>
 
-            {/* Register Block */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
@@ -262,6 +262,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
                 </button>
               </div>
             </div>
+            */}
           </div>
         ) : (
           /* Custom registration form to bypass any lockout comfortably */
