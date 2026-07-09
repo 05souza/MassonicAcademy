@@ -140,7 +140,7 @@ export default function App() {
     ];
   });
   
-  const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('id');
+  const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('grau');
 
   // Simulated active user & accesses database
   const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
@@ -177,7 +177,7 @@ export default function App() {
         id: 'usr-nanda',
         name: 'Daniel Luciano',
         email: 'dani.nanda.lucas@gmail.com',
-        allowedReportIds: '*',
+        allowedReportIds: '*, todos_do_grau',
         status: 'Ativo',
         nivelAcesso: '33'
       },
@@ -185,7 +185,7 @@ export default function App() {
         id: 'usr-gisela',
         name: 'Gisela S. (CEO)',
         email: 'gisela.ceo@masonicacademy.com.br',
-        allowedReportIds: 'rep-estrategia-segmentos',
+        allowedReportIds: 'rep-estrategia-segmentos, todos_do_grau',
         status: 'Ativo',
         nivelAcesso: '15'
       },
@@ -193,7 +193,7 @@ export default function App() {
         id: 'usr-rodrigo',
         name: 'Rodrigo M. (Produtos)',
         email: 'rodrigo.rm@masonicacademy.com.br',
-        allowedReportIds: 'rep-visao-uso-rm',
+        allowedReportIds: 'rep-visao-uso-rm, todos_do_grau',
         status: 'Ativo',
         nivelAcesso: '10'
       },
@@ -201,7 +201,7 @@ export default function App() {
         id: 'usr-fabio',
         name: 'Fábio T. (Serviços)',
         email: 'fabio.sve@masonicacademy.com.br',
-        allowedReportIds: 'rep-servico-praticas',
+        allowedReportIds: 'rep-servico-praticas, todos_do_grau',
         status: 'Inativo',
         nivelAcesso: '5'
       }
@@ -220,7 +220,7 @@ export default function App() {
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('TODOS');
-  const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados'>('todos');
+  const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados' | 'meu-grau'>('todos');
   const [selectedReport, setSelectedReport] = useState<ExecutiveReport | null>(null);
 
   // Catalog layout switcher (Cursos / Trilhas)
@@ -356,6 +356,56 @@ export default function App() {
 
     return () => clearInterval(intervalId);
   }, [currentUser]);
+
+  // One-time migration to grant "Acesso a Todos os Cursos do Grau" to all existing users
+  useEffect(() => {
+    if (accessUsers && accessUsers.length > 0) {
+      const hasMigrated = localStorage.getItem('masonic_todos_do_grau_migrated_v5') === 'true';
+      if (!hasMigrated) {
+        const { db } = initializeFirebase();
+        
+        const updatedUsers = accessUsers.map(user => {
+          const list = user.allowedReportIds 
+            ? user.allowedReportIds.split(',').map(s => s.trim().toLowerCase()) 
+            : [];
+          if (!list.includes('todos_do_grau') && !list.includes('all_of_degree')) {
+            const currentIds = user.allowedReportIds ? user.allowedReportIds.trim() : '';
+            const newAllowed = currentIds ? `${currentIds}, todos_do_grau` : 'todos_do_grau';
+            return {
+              ...user,
+              allowedReportIds: newAllowed
+            };
+          }
+          return user;
+        });
+
+        const wasUpdated = updatedUsers.some((u, idx) => u.allowedReportIds !== accessUsers[idx].allowedReportIds);
+        if (wasUpdated) {
+          setAccessUsers(updatedUsers);
+          localStorage.setItem('masonic_access_users_v1', JSON.stringify(updatedUsers));
+
+          if (currentUser) {
+            const updatedMe = updatedUsers.find(u => u.id === currentUser.id);
+            if (updatedMe) {
+              setCurrentUser(updatedMe);
+              localStorage.setItem('masonic_current_user_v1', JSON.stringify(updatedMe));
+            }
+          }
+
+          if (db) {
+            updatedUsers.forEach(async (u) => {
+              try {
+                await setDoc(doc(db, 'accessUsers', u.id), cleanObjectForFirestore(u), { merge: true });
+              } catch (e) {
+                console.error('Error migrating Firestore user:', e);
+              }
+            });
+          }
+        }
+        localStorage.setItem('masonic_todos_do_grau_migrated_v5', 'true');
+      }
+    }
+  }, [accessUsers, currentUser]);
 
   // Load from Firestore (if configured) or LocalStorage fallback
   useEffect(() => {
@@ -519,7 +569,7 @@ export default function App() {
                 id: 'usr-nanda',
                 name: 'Daniel Luciano',
                 email: 'dani.nanda.lucas@gmail.com',
-                allowedReportIds: '*',
+                allowedReportIds: '*, todos_do_grau',
                 status: 'Ativo',
                 nivelAcesso: '33'
               },
@@ -527,7 +577,7 @@ export default function App() {
                 id: 'usr-gisela',
                 name: 'Gisela S. (CEO)',
                 email: 'gisela.ceo@masonicacademy.com.br',
-                allowedReportIds: 'rep-estrategia-segmentos',
+                allowedReportIds: 'rep-estrategia-segmentos, todos_do_grau',
                 status: 'Ativo',
                 nivelAcesso: '15'
               },
@@ -535,7 +585,7 @@ export default function App() {
                 id: 'usr-rodrigo',
                 name: 'Rodrigo M. (Produtos)',
                 email: 'rodrigo.rm@masonicacademy.com.br',
-                allowedReportIds: 'rep-visao-uso-rm',
+                allowedReportIds: 'rep-visao-uso-rm, todos_do_grau',
                 status: 'Ativo',
                 nivelAcesso: '10'
               },
@@ -543,7 +593,7 @@ export default function App() {
                 id: 'usr-fabio',
                 name: 'Fábio T. (Serviços)',
                 email: 'fabio.sve@masonicacademy.com.br',
-                allowedReportIds: 'rep-servico-praticas',
+                allowedReportIds: 'rep-servico-praticas, todos_do_grau',
                 status: 'Inativo',
                 nivelAcesso: '5'
               }
@@ -750,7 +800,7 @@ export default function App() {
             id: 'usr-nanda',
             name: 'Daniel Luciano',
             email: 'dani.nanda.lucas@gmail.com',
-            allowedReportIds: '*',
+            allowedReportIds: '*, todos_do_grau',
             status: 'Ativo',
             nivelAcesso: '33'
           },
@@ -758,7 +808,7 @@ export default function App() {
             id: 'usr-gisela',
             name: 'Gisela S. (CEO)',
             email: 'gisela.ceo@masonicacademy.com.br',
-            allowedReportIds: 'rep-estrategia-segmentos',
+            allowedReportIds: 'rep-estrategia-segmentos, todos_do_grau',
             status: 'Ativo',
             nivelAcesso: '15'
           },
@@ -766,7 +816,7 @@ export default function App() {
             id: 'usr-rodrigo',
             name: 'Rodrigo M. (Produtos)',
             email: 'rodrigo.rm@masonicacademy.com.br',
-            allowedReportIds: 'rep-visao-uso-rm',
+            allowedReportIds: 'rep-visao-uso-rm, todos_do_grau',
             status: 'Ativo',
             nivelAcesso: '10'
           },
@@ -774,7 +824,7 @@ export default function App() {
             id: 'usr-fabio',
             name: 'Fábio T. (Serviços)',
             email: 'fabio.sve@masonicacademy.com.br',
-            allowedReportIds: 'rep-servico-praticas',
+            allowedReportIds: 'rep-servico-praticas, todos_do_grau',
             status: 'Inativo',
             nivelAcesso: '5'
           }
@@ -1934,8 +1984,23 @@ export default function App() {
       .split(',')
       .map(id => id.trim().toLowerCase())
       .filter(Boolean);
+    
+    const hasAllOfDegreeAccess = allowedList.includes('todos_do_grau') || allowedList.includes('all_of_degree');
+    if (hasAllOfDegreeAccess) {
+      const userDegree = Number(currentUser.nivelAcesso || '1');
+      if (report.nivelCurso === userDegree) {
+        return true;
+      }
+    }
+
     return allowedList.includes((report.id || '').toLowerCase());
   }).filter((report) => {
+    if (progressFilter === 'meu-grau') {
+      const userLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || '1'), 10) : 1;
+      const reportLevel = parseInt(String(report.nivelCurso || '1'), 10);
+      return reportLevel <= userLevel;
+    }
+
     if (progressFilter === 'todos') return true;
 
     const emailKey = currentUser?.email || 'guest';
@@ -2214,8 +2279,9 @@ export default function App() {
                         <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Filtrar por:</span>
                         {[
                           { id: 'todos', label: 'Todos os Títulos' },
-                          { id: 'concluidos', label: 'Somente Concluídos' },
-                          { id: 'andamento', label: 'Somente em Andamento' },
+                          { id: 'meu-grau', label: 'Do meu grau' },
+                          { id: 'concluidos', label: 'Concluídos' },
+                          { id: 'andamento', label: 'Em Andamento' },
                           { id: 'não-iniciados', label: 'Não Iniciados' }
                         ].map((item) => {
                           const active = progressFilter === item.id;
@@ -2239,9 +2305,8 @@ export default function App() {
                       <div className="flex items-center gap-1.5">
                         <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Ordenar por:</span>
                         {[
-                          { id: 'id', label: 'ID' },
-                          { id: 'titulo', label: 'Título' },
                           { id: 'grau', label: 'Grau' },
+                          { id: 'titulo', label: 'Título' },
                           { id: 'atualizacao', label: 'Última Atualização' }
                         ].map((item) => {
                           const active = sortBy === item.id;
@@ -2265,7 +2330,7 @@ export default function App() {
                     {/* Grid or List display of cards */}
                     <div 
                       id="reports-grid" 
-                      className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-x-5" : "flex flex-col gap-1.5"}
+                      className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-1.5"}
                     >
                       {allowedReportsForUser.map((report) => (
                         <ReportCard

@@ -3464,6 +3464,36 @@ export default function ProfileView({
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Checkbox for Acesso a todos do Grau */}
+                      <div className="flex items-center gap-2 pb-1.5 border-b border-[#1c2c36]/50 mb-1">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-[#E9C349]">
+                          <input
+                            type="checkbox"
+                            checked={userFormAllowedReports.split(',').map(s => s.trim().toLowerCase()).includes('todos_do_grau')}
+                            onChange={(e) => {
+                              let list = userFormAllowedReports
+                                .split(',')
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                              const idx = list.findIndex(s => s.toLowerCase() === 'todos_do_grau');
+                              if (e.target.checked) {
+                                if (idx === -1) {
+                                  list.push('todos_do_grau');
+                                }
+                              } else {
+                                if (idx > -1) {
+                                  list.splice(idx, 1);
+                                }
+                              }
+                              setUserFormAllowedReports(list.join(', '));
+                            }}
+                            className="w-3.5 h-3.5 accent-[#E9C349] rounded border-[#1c2c36] bg-[#04141d] cursor-pointer"
+                          />
+                          <span className="font-bold uppercase tracking-wider text-[8px] sm:text-[9px]">Acesso a Todos os Cursos do Grau</span>
+                        </label>
+                      </div>
+
                       <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                         {reports.map((r) => {
                           const currentList = userFormAllowedReports.split(',').map(s => s.trim().toLowerCase());

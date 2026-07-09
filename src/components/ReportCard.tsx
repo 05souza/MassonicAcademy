@@ -134,7 +134,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     return (
       <div
         id={`report-card-${report.id}`}
-        className={`bg-[#0c1d27] rounded-lg overflow-hidden flex flex-col md:flex-row md:items-center justify-between p-4 mb-3.5 shadow-md hover:shadow-lg transition-all duration-200 border border-[#1c2c36]/50 ${getBorderColorClass(
+        className={`bg-white dark:bg-[#0c1d27] rounded-2xl overflow-hidden flex flex-col md:flex-row md:items-center justify-between p-4 mb-3.5 shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 dark:border-[#1c2c36]/50 ${getBorderColorClass(
           report.leftBorderColor
         )}`}
       >
@@ -144,22 +144,22 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           <div className="flex items-start justify-between md:justify-start gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                <span className="font-mono text-[9px] text-[#E9C349] uppercase tracking-widest font-black block">
+                <span className="font-mono text-[9px] text-slate-500 dark:text-[#E9C349] uppercase tracking-widest font-black block">
                   <InlineEditable
-                    value={report.department}
+                    value={report.department || "Curso"}
                     isAdmin={isAdmin}
                     onSave={(val) => onUpdateReportField(report.id, 'department', val)}
-                    className="font-mono text-[9px] text-[#E9C349] uppercase tracking-widest font-black"
+                    className="font-mono text-[9px] text-slate-500 dark:text-[#E9C349] uppercase tracking-widest font-black"
                   />
                 </span>
                 {report.nivelCurso && (
-                  <span className="font-mono text-[9px] text-[#E9C349] bg-[#E9C349]/10 border border-[#E9C349]/25 px-1.5 py-0.2 rounded uppercase tracking-wider font-extrabold flex items-center gap-1 select-none">
+                  <span className="font-mono text-[8px] text-[#E9C349] bg-[#E9C349]/10 border border-[#E9C349]/25 px-1.5 py-0.5 rounded-md uppercase tracking-wider font-extrabold flex items-center gap-1 select-none">
                     <Shield className="w-2.5 h-2.5 text-[#26a69a]" /> {getDegreeLabel(report.nivelCurso)}
                   </span>
                 )}
               </div>
               <h3 
-                className="font-sans font-bold text-base md:text-lg text-[#d4e5f2] leading-tight hover:text-[#f2ca50] transition-colors cursor-pointer text-left" 
+                className="font-sans font-bold text-base md:text-lg text-slate-800 dark:text-[#d4e5f2] leading-tight hover:text-blue-600 dark:hover:text-[#ffe088] transition-colors cursor-pointer text-left" 
                 onClick={(e) => {
                   if (report.customAccessUrl) {
                     handleAccessClick(e, true, report.customAccessUrl);
@@ -179,18 +179,18 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                   value={report.title}
                   isAdmin={isAdmin}
                   onSave={(val) => onUpdateReportField(report.id, 'title', val)}
-                  className="font-sans font-bold text-base md:text-lg text-[#d4e5f2] leading-tight"
+                  className="font-sans font-bold text-base md:text-lg text-slate-800 dark:text-[#d4e5f2] leading-tight"
                 />
               </h3>
               {prereqCourse && !hideTrilhaStep && (
                 <div className="flex items-center gap-1.5 mt-1.5 select-none text-left">
-                  <span className="font-mono text-[9px] uppercase tracking-wider text-[#9cbfd5]">Trilha:</span>
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-[#9cbfd5]">Trilha:</span>
                   <span className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 font-bold ${
                     isPrereqLocked 
-                      ? 'bg-amber-950/35 border-amber-500/25 text-[#E9C349]' 
-                      : 'bg-[#185347]/20 border-[#1ea296]/20 text-[#66d9cc]'
+                      ? 'bg-amber-50 dark:bg-amber-950/35 border-amber-500/25 text-amber-600 dark:text-[#E9C349]' 
+                      : 'bg-emerald-50 dark:bg-[#185347]/20 border-emerald-500/20 dark:border-[#1ea296]/20 text-emerald-600 dark:text-[#66d9cc]'
                   }`}>
-                    {isPrereqLocked ? <Lock className="w-2.5 h-2.5 text-[#E9C349]" /> : <Shield className="w-2.5 h-2.5 text-[#66d9cc]" />}
+                    {isPrereqLocked ? <Lock className="w-2.5 h-2.5 text-amber-500" /> : <Shield className="w-2.5 h-2.5 text-emerald-500 dark:text-[#66d9cc]" />}
                     Próxima etapa de: {prereqCourse.title}
                   </span>
                 </div>
@@ -200,14 +200,14 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
           {/* Description */}
           <div className="text-left">
-            <span className="block text-[9px] font-mono text-[#99907c] uppercase tracking-wider mb-1">Resumo do Conteúdo</span>
-            <p className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed bg-[#05151e]/40 p-2.5 rounded border-l border-[#1ea296]/30 text-left">
+            <span className="block text-[9px] font-mono text-slate-400 dark:text-[#99907c] uppercase tracking-wider mb-1">Resumo do Conteúdo</span>
+            <p className="font-mono italic text-xs text-slate-600 dark:text-[#d4e5f2]/80 leading-relaxed bg-slate-50 dark:bg-[#05151e]/40 p-2.5 rounded border-l border-slate-300 dark:border-[#1ea296]/30 text-left">
               <InlineEditable
                 value={report.summary}
                 isAdmin={isAdmin}
                 type="textarea"
                 onSave={(val) => onUpdateReportField(report.id, 'summary', val)}
-                className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed block"
+                className="font-mono italic text-xs text-slate-600 dark:text-[#d4e5f2]/80 leading-relaxed block"
                 as="span"
               />
             </p>
@@ -221,20 +221,20 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 .map((tag, idx) => (
                   <span
                     key={idx}
-                    className="bg-[#11212b] text-[9px] text-[#99907c] font-mono px-1.5 py-0.5 rounded border border-[#1c2c36]"
+                    className="bg-slate-100 dark:bg-[#11212b] text-[9px] text-slate-500 dark:text-[#99907c] font-mono px-1.5 py-0.5 rounded border border-slate-200 dark:border-[#1c2c36]"
                   >
                     #{tag}
                   </span>
                 ))}
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-[#99907c] font-mono">
-              <Calendar className="w-3.5 h-3.5 text-[#26a69a]" />
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-[#99907c] font-mono">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-[#26a69a]" />
               <span>Atu: </span>
               <InlineEditable
                 value={report.lastUpdated}
                 isAdmin={isAdmin}
                 onSave={(val) => onUpdateReportField(report.id, 'lastUpdated', val)}
-                className="text-[10px] text-[#99907c] font-mono"
+                className="text-[10px] text-slate-500 dark:text-[#99907c] font-mono"
               />
             </div>
           </div>
@@ -242,23 +242,23 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 
         {/* Middle/Progress Bar for List view */}
         {totalCount > 0 && (
-          <div className="w-full md:w-52 mt-3 md:mt-0 p-2.5 bg-[#05151e]/45 rounded-lg border border-[#1c2c36]/40 flex flex-col justify-center gap-1 shrink-0 text-left">
+          <div className="w-full md:w-52 mt-3 md:mt-0 p-2.5 bg-slate-50 dark:bg-[#05151e]/45 rounded-lg border border-slate-200/60 dark:border-[#1c2c36]/40 flex flex-col justify-center gap-1 shrink-0 text-left">
             <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="text-[#9cbfd5]">Progresso:</span>
+              <span className="text-slate-500 dark:text-[#9cbfd5]">Progresso:</span>
               {percentage === 100 ? (
-                <span className="text-[#66d9cc] font-black text-[10px] tracking-wide uppercase px-1.5 py-0.2 bg-[#185347]/20 border border-[#1ea296]/30 rounded">
+                <span className="text-emerald-600 dark:text-[#66d9cc] font-black text-[10px] tracking-wide uppercase px-1.5 py-0.2 bg-emerald-50 dark:bg-[#185347]/20 border border-emerald-500/20 dark:border-[#1ea296]/30 rounded">
                   Título Concluído
                 </span>
               ) : (
-                <span className="text-[#E9C349] font-bold">
+                <span className="text-amber-600 dark:text-[#E9C349] font-bold">
                   {percentage}%
                 </span>
               )}
             </div>
-            <div className="w-full bg-[#11212b] rounded-full h-1 overflow-hidden border border-[#1c2c36]">
+            <div className="w-full bg-slate-100 dark:bg-[#11212b] rounded-full h-1 overflow-hidden border border-slate-200 dark:border-[#1c2c36]">
               <div 
                 className={`h-full transition-all duration-500 rounded-full ${
-                  percentage === 100 ? 'bg-gradient-to-r from-[#1ea296] to-[#66d9cc]' : 'bg-gradient-to-r from-[#E9C349] to-[#ffe088]'
+                  percentage === 100 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 dark:from-[#1ea296] dark:to-[#66d9cc]' : 'bg-gradient-to-r from-amber-500 to-amber-400 dark:from-[#E9C349] dark:to-[#ffe088]'
                 }`}
                 style={{ width: `${percentage}%` }}
               />
@@ -267,7 +267,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         )}
 
         {/* Right Action Area & Thumbnail Media */}
-        <div className="w-full md:w-auto mt-4 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-[#1c2c36]/40 flex flex-col sm:flex-row items-center gap-4 shrink-0 md:pl-4 justify-between md:justify-end">
+        <div className="w-full md:w-auto mt-4 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-[#1c2c36]/40 flex flex-col sm:flex-row items-center gap-4 shrink-0 md:pl-4 justify-between md:justify-end">
           <div className="w-full sm:w-auto">
             {isPrereqLocked ? (
               <button
@@ -275,9 +275,9 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 onClick={(e) => {
                   handleAccessClick(e, false);
                 }}
-                className="flex items-center gap-1.5 bg-[#11212b]/80 border border-amber-500/30 text-amber-500 font-mono text-center text-xs font-bold px-4 py-2 rounded hover:border-[#E9C349] hover:text-[#E9C349] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
+                className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#11212b]/80 border border-amber-500/30 text-amber-600 dark:text-amber-500 font-mono text-center text-xs font-bold px-4 py-2 rounded-xl hover:border-[#E9C349] hover:text-[#E9C349] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
               >
-                <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
+                <Lock className="w-3.5 h-3.5 text-amber-500" />
                 <span>BLOQUEADO</span>
               </button>
             ) : report.customAccessUrl ? (
@@ -293,7 +293,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                     onOpenSecureViewer(report.customAccessUrl || '', report.title);
                   }
                 }}
-                className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-4 py-2 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
+                className="flex items-center gap-1.5 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] font-mono text-center text-xs font-bold px-4 py-2 rounded-xl transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
               >
                 <span>ACESSAR</span>
               </a>
@@ -303,7 +303,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 onClick={(e) => {
                   handleAccessClick(e, false);
                 }}
-                className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-4 py-2 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center"
+                className="flex items-center gap-1.5 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] font-mono text-center text-xs font-bold px-4 py-2 rounded-xl transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center"
               >
                 <span>ACESSAR</span>
               </button>
@@ -315,7 +315,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
               src={report.thumbnailUrl}
               alt="Miniatura"
               referrerPolicy="no-referrer"
-              className="w-20 h-20 rounded object-cover border border-[#1c2c36]/80 grow-0 shrink-0 shadow-lg"
+              className="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-[#1c2c36]/80 grow-0 shrink-0 shadow-sm"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';
               }}
@@ -326,35 +326,61 @@ export const ReportCard: React.FC<ReportCardProps> = ({
     );
   }
 
+  const getBannerGradient = (color: string) => {
+    switch (color) {
+      case 'gold':
+        return 'from-[#fef08a] via-[#fef9c3]/50 to-white dark:from-[#E9C349]/20 dark:via-[#E9C349]/5 dark:to-[#0c1d27]';
+      case 'teal':
+        return 'from-[#ccfbf1] via-[#f0fdfa]/50 to-white dark:from-[#66D9CC]/20 dark:via-[#66D9CC]/5 dark:to-[#0c1d27]';
+      case 'blue':
+        return 'from-[#dbeafe] via-[#eff6ff]/50 to-white dark:from-[#3B82F6]/20 dark:via-[#3B82F6]/5 dark:to-[#0c1d27]';
+      case 'purple':
+        return 'from-[#f3e8ff] via-[#faf5ff]/50 to-white dark:from-[#A855F7]/20 dark:via-[#A855F7]/5 dark:to-[#0c1d27]';
+      default:
+        return 'from-[#fef08a] via-[#fef9c3]/50 to-white dark:from-[#E4C868]/20 dark:via-[#E4C868]/5 dark:to-[#0c1d27]';
+    }
+  };
+
   return (
     <div
       id={`report-card-${report.id}`}
-      className={`bg-[#0c1d27] rounded-lg overflow-hidden flex flex-col justify-between p-5 mb-5 shadow-md hover:shadow-lg transition-all duration-200 border border-[#1c2c36]/50 ${getBorderColorClass(
-        report.leftBorderColor
-      )}`}
+      className="bg-white dark:bg-[#0c1d27] rounded-2xl overflow-hidden flex flex-col justify-between hover:shadow-xl hover:border-slate-300 dark:hover:border-[#1ea296]/45 transition-all duration-300 border border-slate-100 dark:border-[#1c2c36]/50 relative group mb-5"
     >
-      <div className="space-y-3">
-        {/* Department Header */}
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] text-[#E9C349] uppercase tracking-widest font-black">
+      {/* Top Banner Cover - Full Cover Image */}
+      <div className="relative h-40 w-full bg-slate-100 dark:bg-[#081721] overflow-hidden flex items-center justify-center">
+        {report.thumbnailUrl ? (
+          <img 
+            src={report.thumbnailUrl} 
+            alt={report.title} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-b ${getBannerGradient(report.leftBorderColor)} flex items-center justify-center`}>
+            <ImageIcon className="w-10 h-10 text-[#99907c]/40" />
+          </div>
+        )}
+      </div>
+
+      {/* Course Body Info - compact spacing */}
+      <div className="pt-3.5 p-3.5 flex-1 flex flex-col justify-between text-center space-y-2">
+        <div className="space-y-1">
+          {/* Category/Department */}
+          <span className="font-mono text-[8px] text-slate-400 dark:text-[#99907c] uppercase tracking-widest font-black block text-center">
             <InlineEditable
-              value={report.department}
+              value={report.department || "Curso online"}
               isAdmin={isAdmin}
               onSave={(val) => onUpdateReportField(report.id, 'department', val)}
-              className="font-mono text-[10px] text-[#E9C349] uppercase tracking-widest font-black"
+              className="font-mono text-[8px] text-slate-400 dark:text-[#99907c] uppercase tracking-widest font-black text-center block"
             />
           </span>
-          {report.nivelCurso && (
-            <span className="font-mono text-[10px] text-[#E9C349] bg-[#E9C349]/10 border border-[#E9C349]/25 px-2 py-0.5 rounded uppercase tracking-wider font-extrabold flex items-center gap-1 select-none">
-              <Shield className="w-3 h-3 text-[#26a69a]" /> {getDegreeLabel(report.nivelCurso)}
-            </span>
-          )}
-        </div>
 
-        {/* Title */}
-        <div className="flex items-start gap-3 justify-between">
+          {/* Centered Title with consistent height constraint */}
           <h3 
-            className="font-sans font-bold text-lg md:text-xl text-[#d4e5f2] leading-tight hover:text-[#f2ca50] transition-colors cursor-pointer flex-1" 
+            className="font-sans font-bold text-xs sm:text-sm text-slate-800 dark:text-[#d4e5f2] leading-snug hover:text-blue-600 dark:hover:text-[#ffe088] transition-colors cursor-pointer text-center flex items-center justify-center h-10 line-clamp-2 px-1 overflow-hidden"
             onClick={(e) => {
               if (report.customAccessUrl) {
                 handleAccessClick(e, true, report.customAccessUrl);
@@ -370,82 +396,46 @@ export const ReportCard: React.FC<ReportCardProps> = ({
               value={report.title}
               isAdmin={isAdmin}
               onSave={(val) => onUpdateReportField(report.id, 'title', val)}
-              className="font-sans font-bold text-lg md:text-xl text-[#d4e5f2] leading-tight flex-1"
+              className="font-sans font-bold text-xs sm:text-sm text-slate-800 dark:text-[#d4e5f2] leading-snug text-center line-clamp-2 block"
             />
           </h3>
-          {report.thumbnailUrl && (
-            <img
-              src={report.thumbnailUrl}
-              alt="Miniatura"
-              referrerPolicy="no-referrer"
-              className="w-24 h-24 rounded object-cover border border-[#1c2c36]/80 grow-0 shrink-0 shadow-lg"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
+
+          {/* Degree Badge below Title */}
+          {report.nivelCurso && (
+            <div className="flex items-center justify-center gap-1 select-none text-center pt-0.5">
+              <span className="font-mono text-[8px] font-extrabold text-[#E9C349] dark:text-[#ffe088] bg-[#E9C349]/10 border border-[#E9C349]/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                <Shield className="w-2.5 h-2.5 text-[#26a69a]" />
+                {getDegreeLabel(report.nivelCurso)}
+              </span>
+            </div>
+          )}
+
+          {/* Prerequisite label if applicable */}
+          {prereqCourse && !hideTrilhaStep && (
+            <div className="flex items-center justify-center gap-1 select-none text-center pt-0.5">
+              <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-0.5 font-bold ${
+                isPrereqLocked 
+                  ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-500/20 text-amber-600 dark:text-[#E9C349]' 
+                  : 'bg-emerald-50 dark:bg-[#185347]/10 border-emerald-500/10 dark:border-[#1ea296]/10 text-emerald-600 dark:text-[#66d9cc]'
+              }`}>
+                {isPrereqLocked ? <Lock className="w-2 h-2 text-amber-500" /> : <Shield className="w-2 h-2 text-emerald-500 dark:text-[#66d9cc]" />}
+                Requer: {prereqCourse.title.length > 15 ? `${prereqCourse.title.substring(0, 15)}...` : prereqCourse.title}
+              </span>
+            </div>
           )}
         </div>
 
-        {prereqCourse && !hideTrilhaStep && (
-          <div className="flex items-center gap-1.5 mt-1 select-none text-left">
-            <span className="font-mono text-[9px] uppercase tracking-wider text-[#9cbfd5]">Trilha:</span>
-            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 font-bold ${
-              isPrereqLocked 
-                ? 'bg-amber-950/35 border-amber-500/25 text-[#E9C349]' 
-                : 'bg-[#185347]/20 border-[#1ea296]/20 text-[#66d9cc]'
-            }`}>
-              {isPrereqLocked ? <Lock className="w-2.5 h-2.5 text-[#E9C349]" /> : <Shield className="w-2.5 h-2.5 text-[#66d9cc]" />}
-              Próxima etapa de: {prereqCourse.title}
-            </span>
-          </div>
-        )}
-        <div className="text-left w-full">
-          <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider mb-1">Resumo do Conteúdo</span>
-          <p className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed bg-[#05151e]/40 p-2.5 rounded border-l-2 border-[#1ea296]/30">
-            <InlineEditable
-              value={report.summary}
-              isAdmin={isAdmin}
-              type="textarea"
-              onSave={(val) => onUpdateReportField(report.id, 'summary', val)}
-              className="font-mono italic text-xs text-[#d4e5f2]/80 leading-relaxed block"
-              as="span"
-            />
-          </p>
-        </div>
-
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 pt-1 items-center">
-          {report.tags
-            .filter(tag => !tag.startsWith('img:'))
-            .map((tag, idx) => (
-              <span
-                key={idx}
-                className="bg-[#11212b] text-[10px] text-[#99907c] font-mono px-2 py-0.5 rounded border border-[#1c2c36]"
-              >
-                #{tag}
-              </span>
-            ))}
-        </div>
-
-        {/* Progress Bar */}
+        {/* Minimalist Progress Bar */}
         {totalCount > 0 && (
-          <div className="mt-4 bg-[#05151e]/45 p-3 rounded-lg border border-[#1c2c36]/40">
-            <div className="flex items-center justify-between mb-1.5 text-xs font-mono">
-              <span className="text-[#9cbfd5] font-medium">Progresso:</span>
-              {percentage === 100 ? (
-                <span className="text-[#66d9cc] font-black text-xs tracking-wide uppercase px-2 py-0.5 bg-[#185347]/20 border border-[#1ea296]/30 rounded">
-                  Título Concluído
-                </span>
-              ) : (
-                <span className="text-[#E9C349] font-bold">
-                  {percentage}%
-                </span>
-              )}
+          <div className="w-full bg-slate-50 dark:bg-[#05151e]/30 px-2 py-0.5 rounded-md border border-slate-200/40 dark:border-[#1c2c36]/20 mt-1">
+            <div className="flex items-center justify-between text-[8px] font-mono text-slate-400 dark:text-[#99907c] mb-0.5">
+              <span>Progresso:</span>
+              <span className={percentage === 100 ? 'text-emerald-500 dark:text-[#66d9cc] font-bold' : 'text-amber-500 dark:text-[#E9C349] font-bold'}>{percentage}%</span>
             </div>
-            <div className="w-full bg-[#11212b] rounded-full h-1.5 overflow-hidden border border-[#1c2c36]">
+            <div className="w-full bg-slate-100 dark:bg-[#11212b] rounded-full h-1 overflow-hidden border border-slate-200/40 dark:border-[#1c2c36]/50">
               <div 
                 className={`h-full transition-all duration-500 rounded-full ${
-                  percentage === 100 ? 'bg-gradient-to-r from-[#1ea296] to-[#66d9cc]' : 'bg-gradient-to-r from-[#E9C349] to-[#ffe088]'
+                  percentage === 100 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 dark:from-[#1ea296] dark:to-[#66d9cc]' : 'bg-gradient-to-r from-amber-500 to-amber-400 dark:from-[#E9C349] dark:to-[#ffe088]'
                 }`}
                 style={{ width: `${percentage}%` }}
               />
@@ -454,32 +444,25 @@ export const ReportCard: React.FC<ReportCardProps> = ({
         )}
       </div>
 
-      {/* Action Area */}
-      <div className="flex items-center justify-between pt-5 mt-4 border-t border-[#1c2c36]/40">
-        <div className="flex items-center gap-1.5 text-[11px] text-[#99907c] font-mono">
-          <Calendar className="w-3.5 h-3.5 text-[#26a69a]" />
-          <span>Atu: </span>
-          <InlineEditable
-            value={report.lastUpdated}
-            isAdmin={isAdmin}
-            onSave={(val) => onUpdateReportField(report.id, 'lastUpdated', val)}
-            className="text-[11px] text-[#99907c] font-mono"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isPrereqLocked ? (
+      {/* Action Footer Button Area - more compact */}
+      <div className="p-3 pt-0 mt-auto border-t border-slate-100 dark:border-[#1c2c36]/30 flex items-center justify-center gap-2">
+        {isPrereqLocked ? (
+          <button
+            id={`access-btn-${report.id}`}
+            onClick={(e) => handleAccessClick(e, false)}
+            className="w-full flex items-center justify-center gap-1 bg-slate-50 dark:bg-[#11212b] border border-amber-500/20 text-amber-600 dark:text-amber-500/80 font-mono text-center text-[10px] sm:text-xs font-bold py-2 rounded-xl hover:border-amber-500 transition-all transform active:scale-95 cursor-pointer"
+          >
+            <Lock className="w-3 h-3 text-amber-500" />
+            <span>BLOQUEADO</span>
+          </button>
+        ) : report.customAccessUrl ? (
+          <div className="flex items-center gap-2 w-full">
             <button
-              id={`access-btn-${report.id}`}
-              onClick={(e) => {
-                handleAccessClick(e, false);
-              }}
-              className="flex items-center gap-1.5 bg-[#11212b]/80 border border-amber-500/30 text-amber-500 font-mono text-center text-xs font-bold px-5 py-2.5 rounded hover:border-[#E9C349] hover:text-[#E9C349] transition-all transform active:scale-95 shadow-sm cursor-pointer"
+              onClick={(e) => handleAccessClick(e, false)}
+              className="flex-1 border border-blue-500/30 text-blue-600 hover:bg-blue-50/40 dark:border-[#1ea296]/45 dark:text-[#66d9cc] dark:hover:bg-[#66d9cc]/10 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
             >
-              <Lock className="w-3.5 h-3.5 text-[#E9C349]" />
-              <span>BLOQUEADO</span>
+              Detalhes
             </button>
-          ) : report.customAccessUrl ? (
             <a
               id={`access-btn-${report.id}`}
               href={report.customAccessUrl}
@@ -492,22 +475,21 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                   onOpenSecureViewer(report.customAccessUrl || '', report.title);
                 }
               }}
-              className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-5 py-2.5 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm cursor-pointer"
+              className="flex-1 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
             >
-              <span>ACESSAR</span>
+              <span>Acessar</span>
+              <span className="text-[10px]">↗</span>
             </a>
-          ) : (
-            <button
-              id={`access-btn-${report.id}`}
-              onClick={(e) => {
-                handleAccessClick(e, false);
-              }}
-              className="flex items-center gap-1.5 bg-[#E9C349] font-mono text-center text-xs font-bold text-[#241a00] px-5 py-2.5 rounded hover:bg-[#ffe088] transition-all transform active:scale-95 shadow-sm"
-            >
-              <span>ACESSAR</span>
-            </button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <button
+            id={`access-btn-${report.id}`}
+            onClick={(e) => handleAccessClick(e, false)}
+            className="w-full flex items-center justify-center border border-blue-500/30 text-blue-600 hover:bg-blue-50/40 dark:border-[#E9C349]/40 dark:text-[#E9C349] dark:hover:bg-[#E9C349]/10 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
+          >
+            Mostrar detalhes
+          </button>
+        )}
       </div>
     </div>
   );
