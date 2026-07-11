@@ -21,6 +21,8 @@ export interface ExecutiveReport {
   material6Link?: string;
   nivelCurso?: number;
   conteudoSemProva?: boolean;
+  hasCertificate?: boolean;
+  htmlContent?: string;
   status?: 'Ativo' | 'Inativo';
   linkedQuestionnaireId?: string;
   prerequisiteId?: string;
@@ -88,6 +90,7 @@ export interface Questionnaire {
   status?: 'Ativo' | 'Inativo';
   onlyFullForCertificate?: boolean;
   lodgeId?: string;
+  interactiveHtml?: string;
 }
 
 export interface SimulationAttempt {

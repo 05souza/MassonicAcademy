@@ -4,7 +4,7 @@ import { getDegreeLabel } from '../utils/degrees';
 import { 
   X, Calendar, Shield, User, FileText, Download, Share2, 
   Plus, CheckCircle2, Link as LinkIcon, Image as ImageIcon, Sparkles,
-  Lock, Upload, HelpCircle
+  Lock, Upload, HelpCircle, Award
 } from 'lucide-react';
 import InlineEditable from './InlineEditable';
 import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
@@ -20,7 +20,8 @@ interface ReportDetailProps {
   currentUser?: AccessUser | null;
   onToggleCompletion?: () => void;
   onGoToQuestionnaire?: (quizId: string) => void;
-  onOpenSecureViewer?: (url: string, title: string) => void;
+  onOpenSecureViewer?: (url: string, title: string, htmlContent?: string) => void;
+  onOpenCertificate?: (recipientName: string, title: string, type: 'course' | 'quiz', date: string, score?: string, grade?: string) => void;
 }
 
 export default function ReportDetail({ 
@@ -32,7 +33,8 @@ export default function ReportDetail({
   currentUser,
   onToggleCompletion,
   onGoToQuestionnaire,
-  onOpenSecureViewer
+  onOpenSecureViewer,
+  onOpenCertificate
 }: ReportDetailProps) {
   const [completedMaterials, setCompletedMaterials] = useState<Record<string, boolean>>(() => {
     try {
@@ -129,6 +131,7 @@ export default function ReportDetail({
   };
 
   const requiredMaterials = [
+    ...(report.htmlContent ? [{ key: 'htmlContent', link: report.htmlContent, label: 'Curso Interativo HTML' }] : []),
     { key: 'material1', link: report.material1Link, label: 'Material 1' },
     { key: 'material2', link: report.material2Link, label: 'Material 2' },
     { key: 'material3', link: report.material3Link, label: 'Material 3' },
@@ -139,6 +142,7 @@ export default function ReportDetail({
   ].filter(m => !!m.link);
 
   const onlyMaterials = [
+    ...(report.htmlContent ? [{ key: 'htmlContent', link: report.htmlContent, label: 'Curso Interativo HTML' }] : []),
     { key: 'material1', link: report.material1Link, label: 'Material 1' },
     { key: 'material2', link: report.material2Link, label: 'Material 2' },
     { key: 'material3', link: report.material3Link, label: 'Material 3' },
@@ -407,6 +411,55 @@ export default function ReportDetail({
               </div>
             </div>
           </div>
+
+          {/* Acesso ao Curso em formato HTML para todos os usuários */}
+          {report.htmlContent && (
+            <div className="bg-[#11212b]/80 border border-[#e9c34a]/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md mb-2 text-left">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="bg-[#e9c34a]/10 p-2 rounded-lg border border-[#e9c34a]/30 shrink-0">
+                  <span className="text-[#e9c34a] text-xs font-bold font-mono">HTML</span>
+                </div>
+                <div className="text-left min-w-0">
+                  <span className="block text-[9px] font-mono text-[#e9c34a] uppercase tracking-wider font-bold">Conteúdo Interativo</span>
+                  <span className="text-xs font-sans text-[#d4e5f1] font-semibold block truncate">
+                    Este curso possui uma versão interativa em HTML de alta fidelidade.
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 mt-2 md:mt-0 flex-wrap sm:flex-nowrap">
+                <button
+                  onClick={() => toggleMaterialCompletion('htmlContent')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-2 rounded-lg border transition-all cursor-pointer select-none ${
+                    completedMaterials['htmlContent']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['htmlContent'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded-full border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    if (onOpenSecureViewer) {
+                      onOpenSecureViewer('', report.title, report.htmlContent);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-2.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow"
+                >
+                  ACESSAR CURSO INTERATIVO
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Link Personalizado do Botão ACESSAR (URL) - Visível apenas para Administradores de acordo com a solicitação */}
           {isAdmin && report.customAccessUrl && (
@@ -975,6 +1028,61 @@ export default function ReportDetail({
             )
           )}
 
+
+          {/* Certificate section */}
+          {report.hasCertificate && (
+            <div className="mt-6 border-t border-[#1c2c36]/40 pt-6">
+              {allCompleted ? (
+                <div className="bg-[#05281b]/30 border-2 border-[#E9C349]/40 rounded-xl p-5 text-left flex flex-col md:flex-row items-start md:items-center justify-between gap-5 shadow-lg animate-fadeIn">
+                  <div className="space-y-1">
+                    <h4 className="font-sans font-extrabold text-sm text-[#E9C349] uppercase tracking-wider flex items-center gap-1.5">
+                      <Award className="w-5 h-5 text-[#E9C349] animate-pulse animate-duration-1000" /> Certificado Disponível!
+                    </h4>
+                    <p className="text-[11px] text-[#d4e5f2]/90 leading-relaxed">
+                      Parabéns! Você concluiu 100% das etapas e requisitos estabelecidos para o curso <strong>"{report.title}"</strong>. Seu certificado oficial digital já foi gerado e está pronto para visualização e impressão.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenCertificate) {
+                        const userName = currentUser?.name || 'Membro';
+                        const dateStr = new Date().toLocaleDateString('pt-BR');
+                        const gradeLabel = report.nivelCurso ? `Grau ${report.nivelCurso}` : undefined;
+                        onOpenCertificate(userName, report.title, 'course', dateStr, undefined, gradeLabel);
+                      }
+                    }}
+                    className="bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-bold text-xs font-mono px-5 py-3 rounded-lg flex items-center justify-center gap-2 shrink-0 transition-all active:scale-95 cursor-pointer uppercase tracking-wider w-full md:w-auto"
+                  >
+                    <Award className="w-4 h-4" /> Emitir Certificado
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-[#111921]/60 border border-[#1c2c36]/50 rounded-xl p-5 text-left flex items-start gap-4 shadow-inner">
+                  <div className="w-10 h-10 rounded-full bg-[#11212b] border border-[#E9C349]/35 flex items-center justify-center text-[#E9C349] font-bold text-lg shrink-0">
+                    ★
+                  </div>
+                  <div className="space-y-1.5 flex-1">
+                    <h4 className="font-sans font-bold text-xs text-[#E9C349] uppercase tracking-wider font-mono">Curso com Certificado Habilitado</h4>
+                    <p className="text-[11px] text-[#99907c] leading-relaxed">
+                      Este curso de instrução oferece outorga de certificado oficial digital após a sua conclusão integral. Conclua todos os materiais, simulados e testes obrigatórios para desbloquear seu diploma acadêmico.
+                    </p>
+                    <div className="pt-2">
+                      <div className="w-full bg-[#04141d] h-2 rounded-full overflow-hidden border border-[#1c2c36]">
+                        <div 
+                          className="bg-gradient-to-r from-[#d4af37] to-[#E9C349] h-full transition-all duration-500" 
+                          style={{ width: `${(requiredMaterials.filter(m => completedMaterials[m.key]).length / (requiredMaterials.length || 1)) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-mono text-[#E9C349]/80 mt-1 block">
+                        Progresso Atual: {requiredMaterials.filter(m => completedMaterials[m.key]).length} de {requiredMaterials.length} requisitos concluídos ({Math.round((requiredMaterials.filter(m => completedMaterials[m.key]).length / (requiredMaterials.length || 1)) * 100)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
 
         </div>

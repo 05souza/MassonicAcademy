@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
-import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge, Trilha } from './types';
+import { SENDA_VIRTUDE_COURSE } from './data/sendaVirtudeCourse';
+import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge, Trilha, Questionnaire } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -16,9 +17,11 @@ import QuestionnairesView from './components/QuestionnairesView';
 import UserManualView from './components/UserManualView';
 import LibraryView from './components/LibraryView';
 import SecureViewerModal from './components/SecureViewerModal';
+import { DEFAULT_QUESTIONNAIRES } from './data/defaultQuestionnaires';
 import { Search, Info, LogIn, ChevronRight, BookOpen, Layers, Shield, Image as ImageIcon, LayoutGrid, List, Upload, Lock, Play, ThumbsUp, Heart, ArrowLeft, ChevronDown, CheckCircle2, Plus, Trash2, Edit, MoveUp, MoveDown, Check, Construction } from 'lucide-react';
 import InlineEditable from './components/InlineEditable';
 import { compressImage, isCourseCompleted } from './utils';
+import { CertificateModal, CertificateData } from './components/CertificateModal';
 
 export const isAdmin = (email: string | undefined): boolean => {
   if (!email) return false;
@@ -111,6 +114,11 @@ export default function App() {
   const [books, setBooks] = useState<Book[]>(() => {
     const saved = localStorage.getItem('masonic_books_v5');
     return saved ? JSON.parse(saved) : INITIAL_BOOKS;
+  });
+
+  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>(() => {
+    const saved = localStorage.getItem('masonic_questionnaires_v1');
+    return saved ? JSON.parse(saved) : DEFAULT_QUESTIONNAIRES;
   });
 
   const [accessLogs, setAccessLogs] = useState<any[]>(() => {
@@ -232,6 +240,7 @@ export default function App() {
   const [secureViewerOpen, setSecureViewerOpen] = useState(false);
   const [secureViewerUrl, setSecureViewerUrl] = useState('');
   const [secureViewerTitle, setSecureViewerTitle] = useState('');
+  const [secureViewerHtmlContent, setSecureViewerHtmlContent] = useState('');
 
   // Trilha management states
   const [trilhas, setTrilhas] = useState<Trilha[]>(() => {
@@ -296,6 +305,7 @@ export default function App() {
   const [isEditingBanner, setIsEditingBanner] = useState(false);
   const [bannerImageInput, setBannerImageInput] = useState('');
   const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
+  const [activeCertificate, setActiveCertificate] = useState<CertificateData | null>(null);
 
   // Helper to log user accesses (logins, courses, books)
   const logAccess = async (
@@ -407,6 +417,27 @@ export default function App() {
     }
   }, [accessUsers, currentUser]);
 
+  // One-time migration to seed Senda da Virtude course
+  useEffect(() => {
+    if (reports && reports.length > 0) {
+      const hasSenda = reports.some(r => r.id === 'rep-senda-virtude-adonhiramita');
+      if (!hasSenda) {
+        const { db } = initializeFirebase();
+        const updatedReports = [SENDA_VIRTUDE_COURSE, ...reports];
+        setReports(updatedReports);
+        localStorage.setItem('masonic_reports_v1', JSON.stringify(updatedReports));
+
+        if (db) {
+          try {
+            setDoc(doc(db, 'reports', SENDA_VIRTUDE_COURSE.id), cleanObjectForFirestore(SENDA_VIRTUDE_COURSE));
+          } catch (e) {
+            console.error('Error seeding Senda da Virtude to Firestore:', e);
+          }
+        }
+      }
+    }
+  }, [reports]);
+
   // Load from Firestore (if configured) or LocalStorage fallback
   useEffect(() => {
     const savedCurrentUser = localStorage.getItem('masonic_current_user_v1');
@@ -431,6 +462,7 @@ export default function App() {
     let unsubLogs: () => void = () => {};
     let unsubLodges: () => void = () => {};
     let unsubTrilhas: () => void = () => {};
+    let unsubQuestionnaires: () => void = () => {};
 
     const loadInitialData = async () => {
       const { db } = initializeFirebase();
@@ -759,6 +791,34 @@ export default function App() {
             }
           });
 
+          // 9. Fetch questionnaires in real-time
+          const questionnairesCol = collection(db, 'questionnaires');
+          unsubQuestionnaires = onSnapshot(questionnairesCol, (questionnairesSnapshot) => {
+            if (questionnairesSnapshot.empty) {
+              setQuestionnaires(DEFAULT_QUESTIONNAIRES);
+              localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(DEFAULT_QUESTIONNAIRES));
+            } else {
+              const loadedQuizzes: Questionnaire[] = [];
+              questionnairesSnapshot.forEach(docSnap => {
+                loadedQuizzes.push(docSnap.data() as Questionnaire);
+              });
+              setQuestionnaires(loadedQuizzes);
+              localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(loadedQuizzes));
+            }
+          }, (err) => {
+            console.error('Erro de permissão ou rede no onSnapshot questionnaires:', err);
+            const saved = localStorage.getItem('masonic_questionnaires_v1');
+            if (saved) {
+              try {
+                setQuestionnaires(JSON.parse(saved));
+              } catch (e) {
+                setQuestionnaires(DEFAULT_QUESTIONNAIRES);
+              }
+            } else {
+              setQuestionnaires(DEFAULT_QUESTIONNAIRES);
+            }
+          });
+
           return; // Skip local storage fallback
         } catch (err) {
           console.error('Falha de inicialização em tempo real do Firestore:', err);
@@ -790,6 +850,14 @@ export default function App() {
       } else {
         setBooks(INITIAL_BOOKS);
         localStorage.setItem('masonic_books_v5', JSON.stringify(INITIAL_BOOKS));
+      }
+
+      const savedQuestionnaires = localStorage.getItem('masonic_questionnaires_v1');
+      if (savedQuestionnaires) {
+        setQuestionnaires(JSON.parse(savedQuestionnaires));
+      } else {
+        setQuestionnaires(DEFAULT_QUESTIONNAIRES);
+        localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(DEFAULT_QUESTIONNAIRES));
       }
 
       if (savedAccessUsers) {
@@ -857,6 +925,7 @@ export default function App() {
       unsubLogs();
       unsubLodges();
       unsubTrilhas();
+      unsubQuestionnaires();
     };
   }, []);
 
@@ -1346,6 +1415,57 @@ export default function App() {
     if (selectedReport && selectedReport.id === reportId) {
       const updatedSelected = updated.find(r => r.id === reportId);
       if (updatedSelected) setSelectedReport(updatedSelected);
+    }
+  };
+
+  // Questionnaire state management
+  const saveQuestionnairesState = (updated: Questionnaire[]) => {
+    setQuestionnaires(updated);
+    localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(updated));
+  };
+
+  const syncQuestionnaireToCloud = async (q: Questionnaire) => {
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'questionnaires', q.id), cleanObjectForFirestore(q));
+      } catch (e) {
+        console.error('Error syncing questionnaire to cloud:', e);
+      }
+    }
+  };
+
+  const handleAddQuestionnaire = (newQ: Questionnaire) => {
+    const finalQ: Questionnaire = {
+      ...newQ,
+      status: newQ.status || 'Ativo',
+      lodgeId: newQ.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = [...questionnaires, finalQ];
+    saveQuestionnairesState(updated);
+    syncQuestionnaireToCloud(finalQ);
+  };
+
+  const handleUpdateQuestionnaire = (updatedQ: Questionnaire) => {
+    const finalQ: Questionnaire = {
+      ...updatedQ,
+      lodgeId: updatedQ.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+    const updated = questionnaires.map(q => q.id === finalQ.id ? finalQ : q);
+    saveQuestionnairesState(updated);
+    syncQuestionnaireToCloud(finalQ);
+  };
+
+  const handleDeleteQuestionnaire = async (qId: string) => {
+    const updated = questionnaires.filter(q => q.id !== qId);
+    saveQuestionnairesState(updated);
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await deleteDoc(doc(db, 'questionnaires', qId));
+      } catch (e) {
+        console.error('Error deleting questionnaire from cloud:', e);
+      }
     }
   };
 
@@ -2010,6 +2130,10 @@ export default function App() {
     let totalCount = 0;
     let completedCount = 0;
     
+    if (report.htmlContent) {
+      totalCount++;
+      if (completedMaterials['htmlContent']) completedCount++;
+    }
     if (report.material1Link) {
       totalCount++;
       if (completedMaterials['material1']) completedCount++;
@@ -2345,9 +2469,10 @@ export default function App() {
                           onBlockedAccess={handleBlockedAccess}
                           reports={reports}
                           hideTrilhaStep={true}
-                          onOpenSecureViewer={(url, title) => {
+                          onOpenSecureViewer={(url, title, htmlContent) => {
                             setSecureViewerUrl(url);
                             setSecureViewerTitle(title);
+                            setSecureViewerHtmlContent(htmlContent || '');
                             setSecureViewerOpen(true);
                           }}
                         />
@@ -2693,6 +2818,7 @@ export default function App() {
                                             <span className="block text-[9px] font-mono text-[#99907c] uppercase tracking-wider mb-2">Estrutura do Aprendizado</span>
                                             <div className="space-y-2">
                                               {[
+                                                { key: 'htmlContent', label: 'Curso Interativo HTML', link: course.htmlContent },
                                                 { key: 'material1', label: 'Material de Leitura Principal', link: course.material1Link },
                                                 { key: 'material2', label: 'Material de Apoio e Diretrizes', link: course.material2Link },
                                                 { key: 'material3', label: 'Leituras Complementares', link: course.material3Link },
@@ -2801,6 +2927,18 @@ export default function App() {
           <QuestionnairesView
             currentUser={currentUser}
             isAdmin={isAdmin(currentUser.email)}
+            questionnaires={questionnaires}
+            onOpenCertificate={(recipientName, title, type, date, score, grade) => {
+              setActiveCertificate({
+                recipientName,
+                title,
+                type,
+                date,
+                score,
+                grade,
+                lodgeName: lodges.find(l => l.id === currentUser?.lodgeId)?.nome || currentUser?.loja
+              });
+            }}
           />
         )}
 
@@ -2834,6 +2972,10 @@ export default function App() {
             onAddLodge={handleAddLodge}
             onUpdateLodge={handleUpdateLodge}
             onDeleteLodge={handleDeleteLodge}
+            questionnaires={questionnaires}
+            onAddQuestionnaire={handleAddQuestionnaire}
+            onUpdateQuestionnaire={handleUpdateQuestionnaire}
+            onDeleteQuestionnaire={handleDeleteQuestionnaire}
           />
         )}
 
@@ -2859,10 +3001,22 @@ export default function App() {
             setActiveTab('questionarios');
             setSelectedReport(null);
           }}
-          onOpenSecureViewer={(url, title) => {
+          onOpenSecureViewer={(url, title, htmlContent) => {
             setSecureViewerUrl(url);
             setSecureViewerTitle(title);
+            setSecureViewerHtmlContent(htmlContent || '');
             setSecureViewerOpen(true);
+          }}
+          onOpenCertificate={(recipientName, title, type, date, score, grade) => {
+            setActiveCertificate({
+              recipientName,
+              title,
+              type,
+              date,
+              score,
+              grade,
+              lodgeName: lodges.find(l => l.id === currentUser?.lodgeId)?.nome || currentUser?.loja
+            });
           }}
         />
       )}
@@ -3163,9 +3317,13 @@ export default function App() {
       {/* Global Embedded Protective Document Viewer */}
       <SecureViewerModal
         isOpen={secureViewerOpen}
-        onClose={() => setSecureViewerOpen(false)}
+        onClose={() => {
+          setSecureViewerOpen(false);
+          setSecureViewerHtmlContent('');
+        }}
         url={secureViewerUrl}
         title={secureViewerTitle}
+        htmlContent={secureViewerHtmlContent}
       />
 
       {/* Trilha Create/Edit Modal */}
@@ -3364,6 +3522,14 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Visual Certificate Generator Modal */}
+      {activeCertificate && (
+        <CertificateModal
+          certificate={activeCertificate}
+          onClose={() => setActiveCertificate(null)}
+        />
       )}
 
       {/* Sticky Bottom Nav Bar with Alarms count badge */}

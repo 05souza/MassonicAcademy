@@ -71,6 +71,10 @@ export const isCourseCompleted = (report: ExecutiveReport, userEmail: string): b
   let totalCount = 0;
   let completedCount = 0;
   
+  if (report.htmlContent) {
+    totalCount++;
+    if (completedMaterials['htmlContent']) completedCount++;
+  }
   if (report.material1Link) {
     totalCount++;
     if (completedMaterials['material1']) completedCount++;

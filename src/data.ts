@@ -1,6 +1,8 @@
 import { ExecutiveReport, SystemAlert, Book } from './types';
+import { SENDA_VIRTUDE_COURSE } from './data/sendaVirtudeCourse';
 
 export const INITIAL_REPORTS: ExecutiveReport[] = [
+  SENDA_VIRTUDE_COURSE,
   {
     id: 'rep-estrategia-segmentos',
     title: 'ESTRATÉGIA DOS SEGMENTOS',

@@ -49,6 +49,12 @@ interface ProfileViewProps {
   onAddLodge?: (lodge: Lodge) => void;
   onUpdateLodge?: (lodge: Lodge) => void;
   onDeleteLodge?: (lodgeId: string) => void;
+
+  // Questionnaire Props
+  questionnaires?: Questionnaire[];
+  onAddQuestionnaire?: (newQ: Questionnaire) => void;
+  onUpdateQuestionnaire?: (updatedQ: Questionnaire) => void;
+  onDeleteQuestionnaire?: (qId: string) => void;
 }
 
 export default function ProfileView({ 
@@ -78,7 +84,11 @@ export default function ProfileView({
   lodges = [],
   onAddLodge,
   onUpdateLodge,
-  onDeleteLodge
+  onDeleteLodge,
+  questionnaires = [],
+  onAddQuestionnaire,
+  onUpdateQuestionnaire,
+  onDeleteQuestionnaire
 }: ProfileViewProps) {
   const getInitials = (name: any) => {
     if (!name || typeof name !== 'string') return 'DL';
@@ -133,7 +143,7 @@ export default function ProfileView({
   }, [visibleAccessUsers, currentTimeTick, currentUser]);
 
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires'>('profile');
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile') {
@@ -307,6 +317,233 @@ export default function ProfileView({
     }, 2000);
   };
   
+  // ==========================================
+  //  QUESTIONNAIRES ADMIN STATE (SUB-TAB)
+  // ==========================================
+  const [adminSelectedQuizId, setAdminSelectedQuizId] = useState<string>('quiz-grau-1');
+  const [adminSelectedQuestionId, setAdminSelectedQuestionId] = useState<string | null>(null);
+
+  // Search and filter for questionnaires
+  const [quizSearchQuery, setQuizSearchQuery] = useState<string>('');
+  const [quizStatusFilter, setQuizStatusFilter] = useState<'Todos' | 'Ativo' | 'Inativo'>('Todos');
+
+  // Fields for questionnaire editing
+  const [adminNameInput, setAdminNameInput] = useState<string>('');
+  const [adminDegreeRequiredInput, setAdminDegreeRequiredInput] = useState<number>(1);
+  const [adminApprovalInput, setAdminApprovalInput] = useState<number>(70);
+  const [adminOnlyFullForCertificateInput, setAdminOnlyFullForCertificateInput] = useState<boolean>(true);
+  const [adminQuizStatusInput, setAdminQuizStatusInput] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [adminInteractiveHtmlInput, setAdminInteractiveHtmlInput] = useState<string>('');
+
+  // Search and filter for questions inside the active questionnaire
+  const [searchQuestionQuery, setSearchQuestionQuery] = useState<string>('');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('Todas as Categorias');
+
+  // Fields for question editing
+  const [editQuestionText, setEditQuestionText] = useState<string>('');
+  const [editQuestionCategory, setEditQuestionCategory] = useState<string>('');
+  const [editIsFreeResponse, setEditIsFreeResponse] = useState<boolean>(false);
+  const [editQuestionOptions, setEditQuestionOptions] = useState<string[]>(['', '', '', '']);
+  const [editCorrectOptionIdx, setEditCorrectOptionIdx] = useState<number>(0);
+  const [editQuestionExplanation, setEditQuestionExplanation] = useState<string>('');
+
+  // New Quiz Modal state (when user clicks Novo on Questionnaire list)
+  const [isNewQuizModalOpen, setIsNewQuizModalOpen] = useState<boolean>(false);
+  const [newQuizTitle, setNewQuizTitle] = useState<string>('');
+  const [newQuizDegree, setNewQuizDegree] = useState<number>(1);
+  const [newQuizApproval, setNewQuizApproval] = useState<number>(70);
+  const [newQuizStatus, setNewQuizStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+
+  // Load selected questionnaire metadata into inputs
+  const adminQuiz = useMemo(() => {
+    return (questionnaires || []).find(q => q.id === adminSelectedQuizId);
+  }, [questionnaires, adminSelectedQuizId]);
+
+  useEffect(() => {
+    if (adminQuiz) {
+      setAdminNameInput(adminQuiz.title || '');
+      setAdminDegreeRequiredInput(adminQuiz.degreeRequired || 1);
+      setAdminApprovalInput(adminQuiz.approvalScore || 70);
+      setAdminOnlyFullForCertificateInput(adminQuiz.onlyFullForCertificate !== false);
+      setAdminQuizStatusInput(adminQuiz.status || 'Ativo');
+      setAdminInteractiveHtmlInput(adminQuiz.interactiveHtml || '');
+    }
+  }, [adminQuiz]);
+
+  // Load selected question metadata into inputs
+  const adminSelectedQuestion = useMemo(() => {
+    if (!adminQuiz || !adminSelectedQuestionId) return null;
+    if (adminSelectedQuestionId === 'NOT_SAVED_NEW_Q') return null;
+    return (adminQuiz.questions || []).find(q => q.id === adminSelectedQuestionId);
+  }, [adminQuiz, adminSelectedQuestionId]);
+
+  useEffect(() => {
+    if (adminSelectedQuestion) {
+      setEditQuestionText(adminSelectedQuestion.questionText || '');
+      setEditQuestionCategory(adminSelectedQuestion.category || '');
+      setEditIsFreeResponse(!!adminSelectedQuestion.isFreeResponse);
+      setEditQuestionOptions(adminSelectedQuestion.options || ['', '', '', '']);
+      const correctIdx = typeof adminSelectedQuestion.correctOptionIndex === 'number'
+        ? adminSelectedQuestion.correctOptionIndex
+        : (typeof adminSelectedQuestion.correctOptionIdx === 'number'
+          ? adminSelectedQuestion.correctOptionIdx
+          : 0);
+      setEditCorrectOptionIdx(correctIdx);
+      setEditQuestionExplanation(adminSelectedQuestion.explanation || '');
+    } else if (adminSelectedQuestionId === 'NOT_SAVED_NEW_Q') {
+      setEditQuestionText('');
+      setEditQuestionCategory('');
+      setEditIsFreeResponse(false);
+      setEditQuestionOptions(['', '', '', '']);
+      setEditCorrectOptionIdx(0);
+      setEditQuestionExplanation('');
+    }
+  }, [adminSelectedQuestion, adminSelectedQuestionId]);
+
+  // Helper actions
+  const handleCreateNewQuizBook = () => {
+    if (!newQuizTitle.trim()) {
+      alert('Por favor, informe o título do simulado.');
+      return;
+    }
+    const newId = `quiz-${Date.now()}`;
+    const newQuiz: Questionnaire = {
+      id: newId,
+      title: newQuizTitle.trim(),
+      degreeRequired: newQuizDegree,
+      approvalScore: newQuizApproval,
+      status: newQuizStatus,
+      questions: [],
+      onlyFullForCertificate: true,
+      interactiveHtml: ''
+    };
+    if (onAddQuestionnaire) {
+      onAddQuestionnaire(newQuiz);
+    }
+    setAdminSelectedQuizId(newId);
+    setAdminSelectedQuestionId(null);
+    setIsNewQuizModalOpen(false);
+    setNewQuizTitle('');
+  };
+
+  const handleDeleteQuizBook = () => {
+    if (!adminQuiz) return;
+    if (confirm(`Tem certeza de que deseja excluir permanentemente o simulado "${adminQuiz.title}"?`)) {
+      if (onDeleteQuestionnaire) {
+        onDeleteQuestionnaire(adminQuiz.id);
+      }
+      setAdminSelectedQuizId('quiz-grau-1');
+      setAdminSelectedQuestionId(null);
+    }
+  };
+
+  const handleUpdateQuizMeta = () => {
+    if (!adminQuiz) return;
+    if (!adminNameInput.trim()) {
+      alert('O título do simulado não pode ser vazio.');
+      return;
+    }
+    const updatedQuiz: Questionnaire = {
+      ...adminQuiz,
+      title: adminNameInput.trim(),
+      degreeRequired: adminDegreeRequiredInput,
+      approvalScore: adminApprovalInput,
+      status: adminQuizStatusInput,
+      onlyFullForCertificate: adminOnlyFullForCertificateInput,
+      interactiveHtml: adminInteractiveHtmlInput.trim()
+    };
+    if (onUpdateQuestionnaire) {
+      onUpdateQuestionnaire(updatedQuiz);
+    }
+    alert('Ajustes do simulado gravados com sucesso!');
+  };
+
+  const handleStartCreateNewQuestion = () => {
+    setAdminSelectedQuestionId('NOT_SAVED_NEW_Q');
+  };
+
+  const handleDeleteQuestion = (qId: string) => {
+    if (!adminQuiz) return;
+    if (confirm('Tem certeza de que deseja excluir permanentemente esta questão?')) {
+      const updatedQuestions = (adminQuiz.questions || []).filter(q => q.id !== qId);
+      const updatedQuiz: Questionnaire = {
+        ...adminQuiz,
+        questions: updatedQuestions
+      };
+      if (onUpdateQuestionnaire) {
+        onUpdateQuestionnaire(updatedQuiz);
+      }
+      setAdminSelectedQuestionId(null);
+    }
+  };
+
+  const handleSaveQuestion = () => {
+    if (!adminQuiz) return;
+    if (!editQuestionText.trim()) {
+      alert('Por favor, informe o texto do enunciado.');
+      return;
+    }
+
+    const currentQuestions = adminQuiz.questions || [];
+    
+    // Create new question object
+    const updatedQuestion = {
+      id: adminSelectedQuestionId === 'NOT_SAVED_NEW_Q' ? `q-${Date.now()}` : adminSelectedQuestionId!,
+      questionText: editQuestionText.trim(),
+      category: editQuestionCategory.trim() || 'Geral',
+      isFreeResponse: editIsFreeResponse,
+      options: editIsFreeResponse ? [] : editQuestionOptions.map(opt => opt.trim()),
+      correctOptionIdx: editIsFreeResponse ? 0 : editCorrectOptionIdx,
+      correctOptionIndex: editIsFreeResponse ? 0 : editCorrectOptionIdx,
+      explanation: editQuestionExplanation.trim()
+    };
+
+    let updatedQuestions;
+    if (adminSelectedQuestionId === 'NOT_SAVED_NEW_Q') {
+      updatedQuestions = [...currentQuestions, updatedQuestion];
+    } else {
+      updatedQuestions = currentQuestions.map(q => q.id === adminSelectedQuestionId ? updatedQuestion : q);
+    }
+
+    const updatedQuiz: Questionnaire = {
+      ...adminQuiz,
+      questions: updatedQuestions
+    };
+
+    if (onUpdateQuestionnaire) {
+      onUpdateQuestionnaire(updatedQuiz);
+    }
+
+    setAdminSelectedQuestionId(updatedQuestion.id);
+    alert('Questão gravada com sucesso!');
+  };
+
+  // Memoized lists for rendering
+  const filteredQuizzes = useMemo(() => {
+    return (questionnaires || []).filter(q => {
+      const matchSearch = (q.title || '').toLowerCase().includes(quizSearchQuery.toLowerCase()) || 
+                          (q.id || '').toLowerCase().includes(quizSearchQuery.toLowerCase());
+      const matchStatus = quizStatusFilter === 'Todos' || q.status === quizStatusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [questionnaires, quizSearchQuery, quizStatusFilter]);
+
+  const adminFilteredQuestions = useMemo(() => {
+    if (!adminQuiz) return [];
+    return (adminQuiz.questions || []).filter(q => {
+      const matchSearch = (q.questionText || '').toLowerCase().includes(searchQuestionQuery.toLowerCase()) || 
+                          (q.category || '').toLowerCase().includes(searchQuestionQuery.toLowerCase());
+      const matchCategory = selectedCategoryFilter === 'Todas as Categorias' || q.category === selectedCategoryFilter;
+      return matchSearch && matchCategory;
+    });
+  }, [adminQuiz, searchQuestionQuery, selectedCategoryFilter]);
+
+  const categoriesOfAdminQuiz = useMemo(() => {
+    if (!adminQuiz) return [];
+    const set = new Set((adminQuiz.questions || []).map(q => q.category || 'Geral'));
+    return Array.from(set);
+  }, [adminQuiz]);
+
   // CRUD Interface State
   const [reportsSearchQuery, setReportsSearchQuery] = useState('');
   const [reportsStatusFilter, setReportsStatusFilter] = useState<'todos' | 'Ativo' | 'Inativo'>('todos');
@@ -771,6 +1008,7 @@ export default function ProfileView({
   const [thumbnailUploadError, setThumbnailUploadError] = useState<string | null>(null);
   const [formAdditionalLink, setFormAdditionalLink] = useState('');
   const [formCustomAccessUrl, setFormCustomAccessUrl] = useState('');
+  const [formHtmlContent, setFormHtmlContent] = useState('');
   const [formMaterial1Link, setFormMaterial1Link] = useState('');
   const [formMaterial2Link, setFormMaterial2Link] = useState('');
   const [formMaterial3Link, setFormMaterial3Link] = useState('');
@@ -779,39 +1017,10 @@ export default function ProfileView({
   const [formMaterial6Link, setFormMaterial6Link] = useState('');
   const [formNivelCurso, setFormNivelCurso] = useState<number>(1);
   const [formConteudoSemProva, setFormConteudoSemProva] = useState(false);
+  const [formHasCertificate, setFormHasCertificate] = useState(false);
   const [formStatus, setFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [formLinkedQuestionnaireId, setFormLinkedQuestionnaireId] = useState<string>('');
   const [formPrerequisiteId, setFormPrerequisiteId] = useState<string>('');
-  const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
-
-  useEffect(() => {
-    const localQuizzes = localStorage.getItem('masonic_questionnaires_v1');
-    if (localQuizzes) {
-      setQuestionnaires(JSON.parse(localQuizzes));
-    }
-    
-    import('../firebase').then(({ initializeFirebase }) => {
-      const { db } = initializeFirebase();
-      if (db) {
-        import('firebase/firestore').then(({ collection, getDocs }) => {
-          getDocs(collection(db, 'questionnaires'))
-            .then((quizSnap) => {
-              if (!quizSnap.empty) {
-                const cloudQuizzes: Questionnaire[] = [];
-                quizSnap.forEach(docSnap => {
-                  cloudQuizzes.push(docSnap.data() as Questionnaire);
-                });
-                setQuestionnaires(cloudQuizzes);
-                localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(cloudQuizzes));
-              }
-            })
-            .catch((err) => {
-              console.warn('Error fetching questionnaires directly in ProfileView:', err);
-            });
-        });
-      }
-    });
-  }, []);
 
   // Book CRUD states
   const [bookFormId, setBookFormId] = useState('');
@@ -1373,6 +1582,7 @@ export default function ProfileView({
     setFormThumbnailUrl(rep.thumbnailUrl || '');
     setFormAdditionalLink(rep.additionalLink || '');
     setFormCustomAccessUrl(rep.customAccessUrl || '');
+    setFormHtmlContent(rep.htmlContent || '');
     setFormMaterial1Link(rep.material1Link || '');
     setFormMaterial2Link(rep.material2Link || '');
     setFormMaterial3Link(rep.material3Link || '');
@@ -1381,6 +1591,7 @@ export default function ProfileView({
     setFormMaterial6Link(rep.material6Link || '');
     setFormNivelCurso(rep.nivelCurso || 1);
     setFormConteudoSemProva(!!rep.conteudoSemProva);
+    setFormHasCertificate(!!rep.hasCertificate);
     setFormStatus(rep.status || 'Ativo');
     setFormLinkedQuestionnaireId(rep.linkedQuestionnaireId || '');
     setFormPrerequisiteId(rep.prerequisiteId || '');
@@ -1413,6 +1624,7 @@ export default function ProfileView({
     setFormThumbnailUrl('');
     setFormAdditionalLink('');
     setFormCustomAccessUrl('');
+    setFormHtmlContent('');
     setFormMaterial1Link('');
     setFormMaterial2Link('');
     setFormMaterial3Link('');
@@ -1421,6 +1633,7 @@ export default function ProfileView({
     setFormMaterial6Link('');
     setFormNivelCurso(1);
     setFormConteudoSemProva(false);
+    setFormHasCertificate(false);
     setFormStatus('Ativo');
     setFormLinkedQuestionnaireId('');
     setFormPrerequisiteId('');
@@ -1502,6 +1715,7 @@ export default function ProfileView({
       thumbnailUrl: formThumbnailUrl.trim() || undefined,
       additionalLink: formAdditionalLink.trim() || undefined,
       customAccessUrl: formCustomAccessUrl.trim() || undefined,
+      htmlContent: formHtmlContent.trim() || undefined,
       material1Link: formMaterial1Link.trim() || undefined,
       material2Link: formMaterial2Link.trim() || undefined,
       material3Link: formMaterial3Link.trim() || undefined,
@@ -1510,6 +1724,7 @@ export default function ProfileView({
       material6Link: formMaterial6Link.trim() || undefined,
       nivelCurso: formNivelCurso,
       conteudoSemProva: formConteudoSemProva,
+      hasCertificate: formHasCertificate,
       status: formStatus,
       linkedQuestionnaireId: formLinkedQuestionnaireId || undefined,
       prerequisiteId: formPrerequisiteId || undefined,
@@ -1791,6 +2006,16 @@ export default function ProfileView({
               }`}
             >
               <Home className="w-3.5 h-3.5 text-amber-500" /> CADASTRO DA LOJA ({(lodges || []).filter(l => isMaster || l.id === (currentUser?.lodgeId || 'lodge-cavaleiros')).length})
+            </button>
+            <button
+              onClick={() => setActiveSubTab('questionnaires')}
+              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'questionnaires'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-400" /> CADASTRO DE SIMULADOS ({(questionnaires || []).length})
             </button>
           </>
         )}
@@ -2681,6 +2906,20 @@ export default function ProfileView({
                               Opcional. Redireciona o botão ACESSAR diretamente para este endereço se preenchido.
                             </p>
                           </div>
+
+                          <div className="sm:col-span-2 mt-2">
+                            <label className="block text-[10px] font-mono text-[#e9c34a] mb-1 uppercase tracking-wider font-bold">Conteúdo do Curso em Código HTML</label>
+                            <textarea
+                              rows={8}
+                              placeholder="Cole o código HTML completo aqui. Ideal para cursos autônomos e interativos com questionários, animações e folhas de estilo incorporadas."
+                              value={formHtmlContent}
+                              onChange={(e) => setFormHtmlContent(e.target.value)}
+                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono leading-relaxed"
+                            />
+                            <p className="text-[9px] font-mono text-[#98907b] mt-1 italic">
+                              Opcional. Se preenchido, o curso será executado diretamente em um ambiente de visualização seguro dentro da plataforma, carregando toda a estrutura interativa do código fornecido.
+                            </p>
+                          </div>
                         </div>
 
                         {/* Novos Campos de Materiais Complementares */}
@@ -2768,17 +3007,32 @@ export default function ProfileView({
                           </p>
 
                           {/* Conteúdo Sem Prova Flag */}
-                          <div className="mt-3 flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id="input-conteudo-sem-prova"
-                              checked={formConteudoSemProva}
-                              onChange={(e) => setFormConteudoSemProva(e.target.checked)}
-                              className="w-4 h-4 rounded bg-[#04141d] border border-[#1c2c36] text-[#E9C349] focus:outline-none cursor-pointer accent-[#E9C349]"
-                            />
-                            <label htmlFor="input-conteudo-sem-prova" className="text-xs font-mono font-medium text-[#d4e5f2] cursor-pointer select-none">
-                              Conteúdo sem prova
-                            </label>
+                          <div className="mt-3 flex flex-wrap items-center gap-6">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="input-conteudo-sem-prova"
+                                checked={formConteudoSemProva}
+                                onChange={(e) => setFormConteudoSemProva(e.target.checked)}
+                                className="w-4 h-4 rounded bg-[#04141d] border border-[#1c2c36] text-[#E9C349] focus:outline-none cursor-pointer accent-[#E9C349]"
+                              />
+                              <label htmlFor="input-conteudo-sem-prova" className="text-xs font-mono font-medium text-[#d4e5f2] cursor-pointer select-none">
+                                Conteúdo sem prova
+                              </label>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="input-curso-com-certificado"
+                                checked={formHasCertificate}
+                                onChange={(e) => setFormHasCertificate(e.target.checked)}
+                                className="w-4 h-4 rounded bg-[#04141d] border border-[#1c2c36] text-[#E9C349] focus:outline-none cursor-pointer accent-[#E9C349]"
+                              />
+                              <label htmlFor="input-curso-com-certificado" className="text-xs font-mono font-medium text-[#d4e5f2] cursor-pointer select-none flex items-center gap-1.5">
+                                <span className="text-[#E9C349]">★</span> Curso com Certificado
+                              </label>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -5563,6 +5817,616 @@ export default function ProfileView({
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {activeSubTab === 'questionnaires' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* LEFT PANEL: Questionnaires Selector List */}
+          <div className="lg:col-span-4 bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] space-y-4 text-left">
+            <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3 flex-wrap gap-2">
+              <div>
+                <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Catálogo de Simulados</h3>
+                <p className="text-[10px] font-mono text-[#99907c] mt-0.5">Gestão de cadernos de questões</p>
+              </div>
+              <div>
+                <button
+                  onClick={() => {
+                    setNewQuizTitle('');
+                    setNewQuizDegree(1);
+                    setNewQuizApproval(70);
+                    setNewQuizStatus('Ativo');
+                    setIsNewQuizModalOpen(true);
+                  }}
+                  className="bg-[#66D9CC] text-[#02332e] text-[10px] font-mono font-bold px-3 py-1.5 rounded hover:bg-[#83f7eb] transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" /> Incluir
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#99907c]" />
+              <input
+                type="text"
+                placeholder="Busca por título ou ID..."
+                value={quizSearchQuery}
+                onChange={(e) => setQuizSearchQuery(e.target.value)}
+                className="w-full bg-[#04141d] border border-[#1c2c36] text-[11px] pl-8 pr-3 py-2 rounded text-[#d4e5f2] placeholder-[#99907c] focus:outline-none font-mono"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center justify-between border-t border-[#1c2c36]/40 pt-2 font-mono text-[10px]">
+              <span className="text-[#99907c] uppercase select-none font-bold">Status:</span>
+              <div className="flex gap-1">
+                {[
+                  { id: 'Todos', label: 'Todos' },
+                  { id: 'Ativo', label: 'Ativos' },
+                  { id: 'Inativo', label: 'Inativos' }
+                ].map((st) => {
+                  const active = quizStatusFilter === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      onClick={() => setQuizStatusFilter(st.id as any)}
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer border transition-colors ${
+                        active
+                          ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/40'
+                          : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2]'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* List Rows */}
+            <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-1">
+              {filteredQuizzes.map((quiz) => {
+                const isActive = adminSelectedQuizId === quiz.id;
+                return (
+                  <div
+                    key={quiz.id}
+                    onClick={() => {
+                      setAdminSelectedQuizId(quiz.id);
+                      setAdminSelectedQuestionId(null);
+                    }}
+                    className={`p-3 rounded-lg border text-left text-xs transition-all cursor-pointer flex items-center justify-between border-l-4 border-l-[#E9C349] ${
+                      isActive 
+                        ? 'bg-[#06273a] border-[#E9C349]/50' 
+                        : 'bg-[#11212b]/60 border-[#1c2c36] hover:bg-[#06273a]/30'
+                    }`}
+                  >
+                    <div className="space-y-1 pr-2 min-w-0 w-full">
+                      <div className="flex items-center justify-between gap-1.5 w-full">
+                        <span className="font-mono text-[9px] text-[#E9C349] bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold truncate max-w-[120px]">
+                          {quiz.id}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={`text-[8px] font-mono font-bold px-1 py-0.2 rounded border ${
+                            quiz.status !== 'Inativo'
+                              ? 'bg-[rgba(38,166,154,0.1)] border-[#26a69a]/40 text-[#66d9cc]'
+                              : 'bg-red-950/20 border-red-900/40 text-red-400'
+                          }`}>
+                            {quiz.status !== 'Inativo' ? 'Ativo' : 'Inativo'}
+                          </span>
+                          <span className="text-[9px] font-mono text-[#99907c] font-semibold bg-[#04141d] border border-[#1c2c36] px-1 py-0.2 rounded shrink-0">
+                            Grau {quiz.degreeRequired || 1}
+                          </span>
+                        </div>
+                      </div>
+                      <h4 className="font-sans font-bold text-[#d4e5f2] truncate text-[11px] mt-1">
+                        {quiz.title}
+                      </h4>
+                      <p className="text-[10px] font-mono text-[#99907c] flex justify-between items-center mt-1">
+                        <span>{(quiz.questions || []).length} questões</span>
+                        <span className="text-[#66d9cc]">Min: {quiz.approvalScore || 70}%</span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              {filteredQuizzes.length === 0 && (
+                <div className="text-center py-8 text-[#99907c] font-mono text-[10px] bg-[#04141d] rounded-lg border border-dashed border-[#1c2c36]">
+                  Nenhum simulado encontrado.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL: Details & Question Bank */}
+          <div className="lg:col-span-8 space-y-6 text-left font-sans">
+            {adminQuiz ? (
+              <>
+                {/* Section 1: Questionnaire Settings */}
+                <div className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3">
+                    <div>
+                      <span className="text-[9px] font-mono text-[#E9C349] uppercase tracking-wider font-extrabold block">Ajustes Gerais do Simulado</span>
+                      <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">{adminQuiz.title}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDeleteQuizBook}
+                      className="bg-red-950/20 text-rose-400 hover:text-rose-300 border border-rose-900/30 text-[10px] font-mono font-bold px-2.5 py-1.5 rounded hover:bg-rose-900/35 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" /> Excluir Caderno
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-xs">
+                    <div className="md:col-span-6 space-y-1">
+                      <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Nome do Simulado / Caderno</label>
+                      <input
+                        type="text"
+                        value={adminNameInput}
+                        onChange={(e) => setAdminNameInput(e.target.value)}
+                        className="w-full bg-[#04141d] text-xs text-white border border-[#1c2c36] p-2.5 rounded-lg focus:outline-none"
+                        placeholder="Ex: Exame de Avaliação do Grau 1"
+                      />
+                    </div>
+
+                    <div className="md:col-span-3 space-y-1">
+                      <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Grau Exigido</label>
+                      <select
+                        value={adminDegreeRequiredInput}
+                        onChange={(e) => setAdminDegreeRequiredInput(Number(e.target.value))}
+                        className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] p-2.5 rounded-lg focus:outline-none font-mono"
+                      >
+                        {Array.from({ length: 33 }, (_, i) => i + 1).map((dg) => (
+                          <option key={dg} value={dg}>
+                            Grau {dg} — {getGlobalDegreeLabel(dg)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-3 space-y-1">
+                      <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Status do Simulado</label>
+                      <div className="flex gap-1.5 h-[38px] items-center">
+                        <button
+                          type="button"
+                          onClick={() => setAdminQuizStatusInput('Ativo')}
+                          className={`flex-1 text-center py-2 rounded text-[10px] font-mono font-black uppercase transition-all cursor-pointer border ${
+                            adminQuizStatusInput === 'Ativo'
+                              ? 'bg-emerald-950/20 text-emerald-400 border-emerald-500/40'
+                              : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:text-[#d4e5f2]'
+                          }`}
+                        >
+                          Ativo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAdminQuizStatusInput('Inativo')}
+                          className={`flex-1 text-center py-2 rounded text-[10px] font-mono font-black uppercase transition-all cursor-pointer border ${
+                            adminQuizStatusInput === 'Inativo'
+                              ? 'bg-red-950/20 text-red-400 border-red-900/40'
+                              : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:text-[#d4e5f2]'
+                          }`}
+                        >
+                          Inativo
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4 space-y-1">
+                      <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Mínimo para Aprovação: <strong className="text-[#E9C349] font-black">{adminApprovalInput}%</strong></label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="30"
+                          max="100"
+                          step="5"
+                          value={adminApprovalInput}
+                          onChange={(e) => setAdminApprovalInput(Number(e.target.value))}
+                          className="w-full accent-[#E9C349] bg-[#04141d] border border-[#1c2c36] rounded-lg h-2 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-5 flex items-center pt-3.5">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={adminOnlyFullForCertificateInput}
+                          onChange={(e) => setAdminOnlyFullForCertificateInput(e.target.checked)}
+                          className="w-4.5 h-4.5 bg-[#04141d] border-[#1c2c36] rounded text-[#E9C349] focus:ring-0 cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono text-[#9cbfd5] leading-snug">
+                          Exigir 100% de progresso nos cursos de mesmo grau para emitir certificado
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="md:col-span-12 space-y-1.5 pt-2 border-t border-[#1c2c36]/40">
+                      <div className="flex justify-between items-center">
+                        <label className="font-mono text-[10px] text-[#E9C349] uppercase tracking-wider font-extrabold block">
+                          Código HTML para Questionário Interativo (Opcional)
+                        </label>
+                        <span className="text-[9px] font-mono text-[#99907c]">Suporta scripts, CSS e interações customizadas</span>
+                      </div>
+                      <textarea
+                        value={adminInteractiveHtmlInput}
+                        onChange={(e) => setAdminInteractiveHtmlInput(e.target.value)}
+                        className="w-full bg-[#04141d] text-[11px] font-mono text-cyan-200 border border-[#1c2c36] p-3 rounded-lg focus:outline-none min-h-[120px] max-h-[300px] placeholder-[#99907c]/50"
+                        placeholder="Ex: <div style='padding:20px;text-align:center;'><h3>Jogo de Tabuleiro Maçônico</h3><button onclick='alert(\&quot;Sucesso\&quot;)'>Verificar</button></div>"
+                      />
+                      <p className="text-[10px] font-mono text-[#99907c] leading-relaxed">
+                        Se preenchido, este HTML interativo será renderizado em um container seguro em substituição ao questionário padrão de múltipla escolha. Útil para jogos de tabuleiro virtuais, simuladores de rituais ou testes de arrastar-e-soltar.
+                      </p>
+                    </div>
+
+                    <div className="md:col-span-12 flex justify-end pt-3">
+                      <button
+                        type="button"
+                        onClick={handleUpdateQuizMeta}
+                        className="bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-mono font-black text-[10px] py-2.5 px-6 rounded-lg uppercase tracking-wide cursor-pointer text-center transition-all active:scale-95"
+                      >
+                        Salvar Ajustes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Questions Editor Grid */}
+                <div className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3 flex-wrap gap-2">
+                    <div>
+                      <span className="text-[9px] font-mono text-[#66d9cc] uppercase tracking-wider font-extrabold block">Banco de Questões</span>
+                      <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Gerenciar Perguntas ({(adminQuiz.questions || []).length})</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleStartCreateNewQuestion}
+                      className="bg-[#66D9CC] text-[#02332e] text-[10px] font-mono font-bold px-3 py-1.5 rounded hover:bg-[#83f7eb] transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Nova Questão
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Left side: Questions List inside active questionnaire */}
+                    <div className="md:col-span-5 space-y-3">
+                      <div className="space-y-2">
+                        {/* Search Question */}
+                        <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2.5 top-2.5 text-[#99907c]" />
+                          <input
+                            type="text"
+                            placeholder="Buscar pergunta..."
+                            value={searchQuestionQuery}
+                            onChange={(e) => setSearchQuestionQuery(e.target.value)}
+                            className="w-full bg-[#04141d] border border-[#1c2c36] text-[10px] pl-7.5 pr-2 py-2 rounded text-[#d4e5f2] placeholder-[#99907c] focus:outline-none font-mono"
+                          />
+                        </div>
+
+                        {/* Category filter */}
+                        <select
+                          value={selectedCategoryFilter}
+                          onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                          className="w-full bg-[#04141d] border border-[#1c2c36] text-[10px] p-2 rounded text-[#d4e5f2] focus:outline-none font-mono"
+                        >
+                          <option value="Todas as Categorias">Todas as Categorias ({categoriesOfAdminQuiz.length})</option>
+                          {categoriesOfAdminQuiz.map((cat, idx) => (
+                            <option key={idx} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-[350px] overflow-y-auto pr-1">
+                        {adminFilteredQuestions.length === 0 ? (
+                          <div className="py-12 text-center text-[#99907c] font-mono text-[10px] bg-[#04141d] rounded-lg border border-dashed border-[#1c2c36]">
+                            Nenhuma questão cadastrada.
+                          </div>
+                        ) : (
+                          adminFilteredQuestions.map((q, index) => {
+                            const isSel = adminSelectedQuestionId === q.id;
+                            return (
+                              <button
+                                key={q.id}
+                                type="button"
+                                onClick={() => setAdminSelectedQuestionId(q.id)}
+                                className={`w-full text-left rounded-lg p-3 text-xs border transition-all cursor-pointer block ${
+                                  isSel
+                                    ? 'border-[#E9C349] bg-[#E9C349]/5'
+                                    : 'border-[#1c2c36] hover:border-[#99907c]/30 bg-[#04141d]/70'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <span className="font-mono text-[9px] text-[#66d9cc] uppercase font-bold shrink-0">
+                                    Q#{index + 1} {q.isFreeResponse ? '(Livre)' : ''}
+                                  </span>
+                                  <span className="text-[8px] font-mono bg-[#11212b] px-2 py-0.5 rounded border border-[#1c2c36] text-[#99907c] truncate max-w-[120px]">
+                                    {q.category}
+                                  </span>
+                                </div>
+                                <p className="text-[#a5b8c7] font-sans mt-2 line-clamp-2 leading-snug">
+                                  {q.questionText || '(Nova Questão)'}
+                                </p>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right side: Questions Form Editor */}
+                    <div className="md:col-span-7">
+                      {adminSelectedQuestionId === null ? (
+                        <div className="bg-[#0c1d27]/40 rounded-xl p-12 border border-dashed border-[#1c2c36] text-center space-y-4 shadow-sm">
+                          <Sliders className="w-10 h-10 text-[#99907c] mx-auto opacity-40 animate-pulse" />
+                          <div className="max-w-md mx-auto space-y-2">
+                            <h5 className="font-sans font-bold text-xs text-[#d4e5f2]">Nenhuma Questão Selecionada</h5>
+                            <p className="text-[10px] text-[#99907c] leading-relaxed">
+                              Selecione uma pergunta cadastrada ao lado para revisar suas alternativas, gabaritos e anotações, ou clique em "Nova Questão" para incluir.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-[#04141d]/70 border border-[#1c2c36] rounded-xl overflow-hidden shadow-md animate-fadeIn text-xs text-left">
+                          <div className="bg-[#04141d] p-4 border-b border-[#1c2c36] flex items-center justify-between">
+                            <div>
+                              <span className="text-[9px] font-mono text-[#66d9cc] uppercase font-bold tracking-wider">
+                                Editor de Enunciado e Respostas
+                              </span>
+                              <h4 className="font-sans font-bold text-white text-xs mt-0.5">
+                                {adminSelectedQuestionId === 'NOT_SAVED_NEW_Q' ? 'Adicionando Nova Questão' : 'Editando Registro de Questão'}
+                              </h4>
+                            </div>
+
+                            {adminSelectedQuestionId !== 'NOT_SAVED_NEW_Q' && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteQuestion(adminSelectedQuestionId)}
+                                className="text-rose-400 hover:text-rose-300 p-1.5 hover:bg-rose-950/20 rounded cursor-pointer transition-colors"
+                                title="Remover Questão"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="p-4 space-y-4">
+                            {/* Question text */}
+                            <div className="space-y-1.5">
+                              <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Texto / Enunciado da Pergunta</label>
+                              <textarea
+                                value={editQuestionText}
+                                onChange={(e) => setEditQuestionText(e.target.value)}
+                                className="w-full bg-[#04141d] text-xs text-white border border-[#1c2c36] p-3 rounded-lg focus:outline-none min-h-[75px] max-h-[160px]"
+                                placeholder="Ex: Qual o significado dos três degraus na entrada do templo?"
+                              />
+                            </div>
+
+                            {/* Category input */}
+                            <div className="space-y-1.5">
+                              <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">Tema / Categoria de Estudos</label>
+                              <input
+                                type="text"
+                                value={editQuestionCategory}
+                                onChange={(e) => setEditQuestionCategory(e.target.value)}
+                                className="w-full bg-[#04141d] text-xs text-white border border-[#1c2c36] p-2.5 rounded-lg focus:outline-none font-mono"
+                                placeholder="Ex: Símbolos, História, Filosofia..."
+                              />
+                            </div>
+
+                            {/* Free response checkbox */}
+                            <div className="space-y-1.5 pt-2 border-t border-[#1c2c36]/40 flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                id="profileEditIsFreeResponse"
+                                checked={editIsFreeResponse}
+                                onChange={(e) => setEditIsFreeResponse(e.target.checked)}
+                                className="mt-1 w-4.5 h-4.5 bg-[#04141d] border-[#1c2c36] rounded text-[#E9C349] focus:ring-0 cursor-pointer"
+                              />
+                              <div className="space-y-0.5">
+                                <label htmlFor="profileEditIsFreeResponse" className="font-mono text-xs font-bold text-white cursor-pointer select-none">
+                                  Permitir resposta livre
+                                </label>
+                                <p className="text-[10px] text-[#99907c] leading-relaxed">
+                                  Sem alternativas pré-definidas. O estudante digitará a resposta livremente, excelente para dissertações ou perguntas abertas.
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Choices alternatives if not free response */}
+                            {!editIsFreeResponse ? (
+                              <div className="space-y-3 pt-2 border-t border-[#1c2c36]/40">
+                                <label className="font-mono text-[10px] text-[#E9C349] uppercase tracking-wider font-extrabold block">
+                                  Alternativas de Respostas (4 Opções)
+                                </label>
+                                
+                                <p className="text-[10px] text-[#99907c] font-mono leading-none">
+                                  Marque o círculo correspondente à alternativa correta (gabarito).
+                                </p>
+
+                                <div className="space-y-2">
+                                  {editQuestionOptions.map((opt, optIndex) => {
+                                    const letters = ['A', 'B', 'C', 'D'];
+                                    return (
+                                      <div key={optIndex} className="flex items-center gap-2">
+                                        <label className="flex items-center justify-center cursor-pointer select-none shrink-0" title="Marcar como Correta">
+                                          <input
+                                            type="radio"
+                                            name="profileCorrectOptionRadio"
+                                            checked={editCorrectOptionIdx === optIndex}
+                                            onChange={() => setEditCorrectOptionIdx(optIndex)}
+                                            className="w-4 h-4 bg-[#04141d] border-[#1c2c36] accent-[#E9C349] cursor-pointer"
+                                          />
+                                          <span className="ml-2 font-mono font-black text-xs text-[#99907c] bg-[#11212b] border border-[#1c2c36] rounded w-6 h-6 flex items-center justify-center uppercase shrink-0">
+                                            {letters[optIndex]}
+                                          </span>
+                                        </label>
+
+                                        <input
+                                          type="text"
+                                          value={opt}
+                                          onChange={(e) => {
+                                            const copy = [...editQuestionOptions];
+                                            copy[optIndex] = e.target.value;
+                                            setEditQuestionOptions(copy);
+                                          }}
+                                          className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] p-2.5 rounded-lg focus:outline-none placeholder-[#99907c]/70"
+                                          placeholder={`Alternativa da letra ${letters[optIndex]}`}
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-[#0c1d27]/60 border border-[#1c2c36]/40 rounded-xl space-y-1">
+                                <p className="text-[10px] text-[#E9C349] font-mono font-bold uppercase tracking-wider block">
+                                  Modo Resposta Livre Ativo
+                                </p>
+                                <p className="text-[10px] text-[#99907c] leading-relaxed">
+                                  Qualquer resposta digitada pelo estudante é pontuada para incentivar a reflexão literária livre.
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Explanation comments */}
+                            <div className="space-y-1.5 pt-2 border-t border-[#1c2c36]/40">
+                              <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">
+                                Justificativa / Comentário Literário do Professor
+                              </label>
+                              <textarea
+                                value={editQuestionExplanation}
+                                onChange={(e) => setEditQuestionExplanation(e.target.value)}
+                                className="w-full bg-[#04141d] text-xs text-white border border-[#1c2c36] p-3 rounded-lg focus:outline-none min-h-[60px]"
+                                placeholder="Insira dados históricos ou referências bibliográficas exibidos no feedback do simulado."
+                              />
+                            </div>
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="bg-[#04141d] p-3 border-t border-[#1c2c36] flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAdminSelectedQuestionId(null)}
+                              className="bg-[#11212b] border border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] px-4 py-2 rounded text-[10px] font-mono uppercase cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveQuestion}
+                              className="bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-mono px-5 py-2 rounded text-[10px] font-extrabold uppercase transition-all active:scale-95 cursor-pointer"
+                            >
+                              Gravar Questão
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-[#0c1d27] rounded-xl p-16 border border-dashed border-[#1c2c36] text-center space-y-4 shadow-sm">
+                <FileText className="w-12 h-12 text-[#99907c] mx-auto opacity-40 animate-pulse" />
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="font-sans font-bold text-sm text-[#d4e5f2]">Nenhum Simulado Selecionado</h3>
+                  <p className="text-xs text-[#99907c] leading-relaxed">
+                    Selecione um caderno de simulados na coluna lateral esquerda para gerenciar suas configurações e banco de questões.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NEW QUIZ MODAL */}
+      {isNewQuizModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl max-w-md w-full overflow-hidden shadow-2xl animate-scaleIn text-left text-xs">
+            <div className="bg-[#04141d] px-5 py-4 border-b border-[#1c2c36] flex items-center justify-between">
+              <span className="font-mono text-[9px] text-[#E9C349] font-black uppercase tracking-wider">Novo Simulado</span>
+              <button
+                onClick={() => setIsNewQuizModalOpen(false)}
+                className="text-[#99907c] hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="block font-mono text-[10px] text-[#9cbfd5] uppercase tracking-wider">Título do Simulado</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Simulado Avançado do Grau 3"
+                  value={newQuizTitle}
+                  onChange={(e) => setNewQuizTitle(e.target.value)}
+                  className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] text-[#9cbfd5] uppercase tracking-wider">Grau Exigido</label>
+                  <select
+                    value={newQuizDegree}
+                    onChange={(e) => setNewQuizDegree(Number(e.target.value))}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono"
+                  >
+                    {Array.from({ length: 33 }, (_, i) => i + 1).map((dg) => (
+                      <option key={dg} value={dg}>
+                        Grau {dg}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-mono text-[10px] text-[#9cbfd5] uppercase tracking-wider">Status Inicial</label>
+                  <select
+                    value={newQuizStatus}
+                    onChange={(e) => setNewQuizStatus(e.target.value as any)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono"
+                  >
+                    <option value="Ativo">Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block font-mono text-[10px] text-[#9cbfd5] uppercase tracking-wider">Aprovação Mínima: <strong className="text-[#E9C349]">{newQuizApproval}%</strong></label>
+                <input
+                  type="range"
+                  min="30"
+                  max="100"
+                  step="5"
+                  value={newQuizApproval}
+                  onChange={(e) => setNewQuizApproval(Number(e.target.value))}
+                  className="w-full accent-[#E9C349] bg-[#04141d] border border-[#1c2c36] rounded-lg h-1.5 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#04141d] px-5 py-3 border-t border-[#1c2c36] flex justify-end gap-2">
+              <button
+                onClick={() => setIsNewQuizModalOpen(false)}
+                className="bg-[#11212b] border border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] px-4 py-2 rounded text-[10px] font-mono uppercase cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateNewQuizBook}
+                className="bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-mono font-black px-5 py-2 rounded text-[10px] uppercase transition-all cursor-pointer"
+              >
+                Criar Simulado
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

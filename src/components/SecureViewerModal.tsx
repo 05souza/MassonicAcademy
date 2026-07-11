@@ -6,9 +6,10 @@ interface SecureViewerModalProps {
   onClose: () => void;
   url: string;
   title: string;
+  htmlContent?: string;
 }
 
-export default function SecureViewerModal({ isOpen, onClose, url, title }: SecureViewerModalProps) {
+export default function SecureViewerModal({ isOpen, onClose, url, title, htmlContent }: SecureViewerModalProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -219,7 +220,8 @@ export default function SecureViewerModal({ isOpen, onClose, url, title }: Secur
 
           <iframe
             ref={iframeRef}
-            src={embedUrl}
+            src={htmlContent ? undefined : embedUrl}
+            srcDoc={htmlContent || undefined}
             title={title}
             className="w-full h-full border-none bg-white"
             loading="lazy"

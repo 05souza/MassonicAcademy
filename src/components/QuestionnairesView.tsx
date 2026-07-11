@@ -21,7 +21,8 @@ import {
   Search, 
   SlidersHorizontal,
   ThumbsUp,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser } from '../types';
 import { getDegreeLabel } from '../utils/degrees';
@@ -53,13 +54,26 @@ const DEFAULT_QUESTIONNAIRES: Questionnaire[] = [
 interface QuestionnairesViewProps {
   currentUser: AccessUser;
   isAdmin: boolean;
+  questionnaires?: Questionnaire[];
+  onOpenCertificate?: (recipientName: string, title: string, type: 'course' | 'quiz', date: string, score?: string, grade?: string) => void;
 }
 
-export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin }: QuestionnairesViewProps) {
+export default function QuestionnairesView({ 
+  currentUser, 
+  isAdmin: isGlobalAdmin, 
+  questionnaires: propQuestionnaires,
+  onOpenCertificate
+}: QuestionnairesViewProps) {
   // Database core state
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
   const [simulationAttempts, setSimulationAttempts] = useState<SimulationAttempt[]>([]);
   const [sheetsUrl, setSheetsUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (propQuestionnaires && propQuestionnaires.length > 0) {
+      setQuestionnaires(propQuestionnaires);
+    }
+  }, [propQuestionnaires]);
   
   // Dashboard states
   const [selectedQuizId, setSelectedQuizId] = useState<string>(() => localStorage.getItem('masonic_selected_quiz_id') || 'quiz-grau-1');
@@ -79,6 +93,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
   const [secondsElapsed, setSecondsElapsed] = useState<number>(0);
   const [showResultPanel, setShowResultPanel] = useState<boolean>(false);
   const [finishedAttempt, setFinishedAttempt] = useState<SimulationAttempt | null>(null);
+  const [interactiveSelfScore, setInteractiveSelfScore] = useState<number>(100);
   
   // Admin Screen states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
@@ -102,6 +117,10 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
   // Status logs
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isSendingToSheets, setIsSendingToSheets] = useState<boolean>(false);
+
+  // New Quiz Book custom modal states
+  const [isNewQuizModalOpen, setIsNewQuizModalOpen] = useState<boolean>(false);
+  const [newQuizTitleInput, setNewQuizTitleInput] = useState<string>('');
 
   // Load database on start
   useEffect(() => {
@@ -354,8 +373,10 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
 
   // --- START SIMULATION ACTIVE ---
   const handleStartSimulation = () => {
-    if (!currentQuiz || currentQuiz.questions.length === 0) {
-      showToast('Este questionário selecionado não possui questões habilitadas.', 'error');
+    if (!currentQuiz) return;
+
+    if (currentQuiz.questions.length === 0 && !currentQuiz.interactiveHtml) {
+      showToast('Este questionário selecionado não possui questões ou módulo interativo habilitado.', 'error');
       return;
     }
 
@@ -367,14 +388,14 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
     }
 
     // Filter questions depending on selected simulation mode
-    let baseList = [...currentQuiz.questions];
+    let baseList = [...(currentQuiz.questions || [])];
     
     if (simulationMode === 'Amostra') {
       // Pick random studyQuestionsCount questions or total if less
       baseList = baseList.sort(() => 0.5 - Math.random()).slice(0, Math.min(studyQuestionsCount, baseList.length));
     } else if (simulationMode === 'Por Tema') {
       baseList = baseList.filter(q => q.category === selectedTheme);
-      if (baseList.length === 0) {
+      if (baseList.length === 0 && !currentQuiz.interactiveHtml) {
         showToast('Nenhuma questão encontrada para este tema.', 'error');
         return;
       }
@@ -394,6 +415,7 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
     setSecondsElapsed(0);
     setShowResultPanel(false);
     setFinishedAttempt(null);
+    setInteractiveSelfScore(100);
     
     setIsSimulationRunning(true);
   };
@@ -512,6 +534,61 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
     setFinishedAttempt(newAttempt);
     setShowResultPanel(true);
   };
+
+  const handleCompleteInteractiveQuiz = async (scorePct: number) => {
+    if (!currentQuiz) return;
+    const isApproved = scorePct >= (currentQuiz.approvalScore || 70);
+
+    const newAttempt: SimulationAttempt = {
+      id: `att-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: currentUser.id,
+      userEmail: currentUser.email,
+      userName: currentUser.name,
+      questionnaireId: currentQuiz.id,
+      questionnaireTitle: currentQuiz.title,
+      scorePercentage: scorePct,
+      correctAnswersCount: scorePct >= 100 ? 1 : 0,
+      totalQuestionsCount: 1,
+      simulationMode: 'Completo',
+      timeSpentSeconds: secondsElapsed,
+      dateTime: new Date().toLocaleString('pt-BR'),
+      approved: isApproved,
+      diplomaSent: false,
+      respostas: `Concluído via questionário interativo HTML com nota ${scorePct}%`,
+      lodgeId: currentUser?.lodgeId || 'lodge-cavaleiros'
+    };
+
+    // Save locally
+    const updatedAttempts = [newAttempt, ...simulationAttempts];
+    setSimulationAttempts(updatedAttempts);
+    localStorage.setItem('masonic_attempts_v1', JSON.stringify(updatedAttempts));
+
+    // Save cloud
+    const { db } = initializeFirebase();
+    if (db) {
+      try {
+        await setDoc(doc(db, 'simulation_attempts', newAttempt.id), cleanObjectForFirestore(newAttempt));
+      } catch (e) {
+        console.error('Error syncing attempt to Firestore:', e);
+      }
+    }
+
+    setFinishedAttempt(newAttempt);
+    setShowResultPanel(true);
+    setIsSimulationRunning(false);
+    showToast(`Questionário interativo concluído com sucesso! Desempenho: ${scorePct}%`, 'success');
+  };
+
+  useEffect(() => {
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'quiz-finished') {
+        const receivedScore = typeof event.data.score === 'number' ? event.data.score : 100;
+        handleCompleteInteractiveQuiz(receivedScore);
+      }
+    };
+    window.addEventListener('message', handleIframeMessage);
+    return () => window.removeEventListener('message', handleIframeMessage);
+  }, [currentQuiz, isSimulationRunning, secondsElapsed]);
 
   // Submit record to Google Sheets Script URL
   const handleRequestDiploma = async () => {
@@ -728,14 +805,22 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
     showToast('Configurações principais do simulado atualizadas!', 'success');
   };
 
-  const handleCreateNewQuizBook = async () => {
-    const title = window.prompt('Digite o título para o novo caderno de simulados:');
-    if (!title || !title.trim()) return;
+  const handleCreateNewQuizBook = () => {
+    setNewQuizTitleInput('');
+    setIsNewQuizModalOpen(true);
+  };
+
+  const handleConfirmCreateNewQuizBook = async () => {
+    const title = newQuizTitleInput.trim();
+    if (!title) {
+      showToast('O título do caderno não pode estar vazio.', 'error');
+      return;
+    }
 
     const newId = `quiz-custom-${Date.now()}`;
     const newQuiz: Questionnaire = {
       id: newId,
-      title: title.trim(),
+      title: title,
       degreeRequired: 1,
       approvalScore: 70,
       status: 'Ativo',
@@ -759,7 +844,9 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
 
     setAdminSelectedQuizId(newId);
     setAdminSelectedQuestionId(null);
-    showToast(`Dossiê \"${title}\" cadastrado com sucesso! Use o painel à direita para adicionar questões.`, 'success');
+    setIsNewQuizModalOpen(false);
+    setNewQuizTitleInput('');
+    showToast(`Dossiê "${title}" cadastrado com sucesso! Use o painel à direita para adicionar questões.`, 'success');
   };
 
   const handleDeleteQuizBook = async () => {
@@ -841,9 +928,15 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
             </div>
 
             {/* Questions tracker */}
-            <div className="font-mono text-[10px] text-[#99907c] bg-[#0c1d27]/70 py-1 px-3 rounded-full border border-[#1c2c36]">
-              Questão <span className="text-[#66d9cc] font-bold">{currentQuestionIdx + 1}</span> de <span className="text-white font-bold">{activeQuestions.length}</span>
-            </div>
+            {currentQuiz?.interactiveHtml ? (
+              <div className="font-mono text-[10px] text-[#E9C349] bg-[#0c1d27]/70 py-1 px-3 rounded-full border border-[#D4AF37]/30 uppercase font-black">
+                Simulador Interativo HTML
+              </div>
+            ) : (
+              <div className="font-mono text-[10px] text-[#99907c] bg-[#0c1d27]/70 py-1 px-3 rounded-full border border-[#1c2c36]">
+                Questão <span className="text-[#66d9cc] font-bold">{currentQuestionIdx + 1}</span> de <span className="text-white font-bold">{activeQuestions.length}</span>
+              </div>
+            )}
 
             {/* Force Exit Button */}
             <button
@@ -864,14 +957,73 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
         <div className="w-full bg-[#11212b] h-1.5">
           <div 
             className="bg-gradient-to-r from-[#66d9cc] to-[#E9C349] h-full transition-all duration-300"
-            style={{ width: `${((currentQuestionIdx + 1) / activeQuestions.length) * 100}%` }}
+            style={{ width: currentQuiz?.interactiveHtml ? '100%' : `${((currentQuestionIdx + 1) / activeQuestions.length) * 100}%` }}
           />
         </div>
 
         {/* Main interactive area */}
         <div className="p-6 md:p-8 flex-1 space-y-6">
           {!showResultPanel ? (
-            activeQuestions.length > 0 && activeQuestion ? (
+            currentQuiz?.interactiveHtml ? (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="bg-white border border-[#1c2c36] rounded-xl overflow-hidden shadow-inner">
+                  <iframe
+                    title="Módulo Interativo"
+                    srcDoc={currentQuiz.interactiveHtml}
+                    sandbox="allow-scripts allow-same-origin allow-modals allow-popups"
+                    className="w-full h-[520px] bg-white border-none rounded-lg"
+                  />
+                </div>
+
+                <div className="bg-[#0c1d27] border border-[#1c2c36] p-5 rounded-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h4 className="font-sans font-bold text-sm text-[#E9C349]">Painel de Controle e Autoavaliação</h4>
+                      <p className="text-[11px] text-[#9cbfd5] leading-relaxed mt-0.5">
+                        Interaja com o simulador acima. Ao concluir todas as etapas, registre seu progresso e sua autoavaliação de acertos para homologação.
+                      </p>
+                    </div>
+                    <div className="bg-[#04141d] px-3 py-2 rounded-lg border border-[#1c2c36] text-center shrink-0 min-w-[120px]">
+                      <span className="text-[9px] font-mono text-[#99907c] uppercase block">Desempenho</span>
+                      <strong className="text-base font-extrabold text-[#66d9cc] font-mono">{interactiveSelfScore}%</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row items-center gap-4 bg-[#04141d] p-4 rounded-xl border border-[#1c2c36]/70">
+                    <div className="w-full space-y-1 text-left">
+                      <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">
+                        Nota Autoavaliada / Aproveitamento (0% a 100%)
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={interactiveSelfScore}
+                          onChange={(e) => setInteractiveSelfScore(Number(e.target.value))}
+                          className="w-full accent-[#E9C349] bg-[#0c1d27] rounded-lg h-1.5 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleCompleteInteractiveQuiz(interactiveSelfScore)}
+                      className="w-full md:w-auto md:min-w-[220px] bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-sans font-extrabold text-xs uppercase py-3 px-5 rounded-lg tracking-wider active:scale-95 transition-all text-center cursor-pointer shadow"
+                    >
+                      Gravar Nota e Concluir
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-[#99907c] bg-[#04141d]/40 p-2.5 rounded border border-[#1c2c36]/40">
+                    <Info className="w-4 h-4 text-[#66d9cc] shrink-0" />
+                    <span>
+                      Dica técnica: Se o simulador interativo possuir envio programático de nota (chamando window.parent.postMessage com type "quiz-finished" e score correspondente), ele registrará seu desempenho de forma 100% automatizada.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : activeQuestions.length > 0 && activeQuestion ? (
               <div className="space-y-6">
                 {/* Visual Category badge */}
                 <div className="inline-flex items-center gap-1.5 text-[8px] font-mono leading-none bg-[#11212b] text-[#66d9cc] border border-[#1c2c36] px-3 py-1.5 rounded-full uppercase tracking-wider font-bold">
@@ -1063,30 +1215,51 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                   !(currentQuiz?.onlyFullForCertificate && (finishedAttempt.simulationMode === 'Amostra' || finishedAttempt.simulationMode === 'Por Tema')) ? (
                     <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-2xl p-5 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-inner">
                       <div className="space-y-1 md:max-w-md">
-                        <h4 className="font-sans font-bold text-sm text-[#d4e5f2]">Solicite seu certificado!</h4>
+                        <h4 className="font-sans font-bold text-sm text-[#E9C349] flex items-center gap-1.5 uppercase">
+                          <Award className="w-5 h-5 text-[#E9C349]" /> Certificado Disponível!
+                        </h4>
                         <p className="text-[10px] text-[#99907c] leading-relaxed">
-                          Com seu resultado você pode emitir o seu certificado.
+                          Parabéns! Sua aprovação qualifica você para obter o certificado oficial deste simulado. Você pode registrá-lo ou visualizar o arquivo digital imediatamente.
                         </p>
                       </div>
                       
-                      <button
-                        type="button"
-                        onClick={handleRequestDiploma}
-                        disabled={isSendingToSheets || finishedAttempt.diplomaSent}
-                        className={`px-5 py-2.5 rounded-lg text-[10px] font-mono font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto shrink-0 select-none ${
-                          finishedAttempt.diplomaSent 
-                            ? 'bg-[#185347]/40 text-[#66d9cc] border border-[#26a69a]/30'
-                            : 'bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-bold active:scale-95'
-                        }`}
-                      >
-                        {isSendingToSheets ? (
-                          <>Inscrito...</>
-                        ) : finishedAttempt.diplomaSent ? (
-                          <>✔ Registrado na Planilha</>
-                        ) : (
-                          <>Solicitar Certificado</>
-                        )}
-                      </button>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                        {/* New View Certificate local button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenCertificate) {
+                              const userName = finishedAttempt.userName || currentUser?.name || 'Membro';
+                              const dateStr = finishedAttempt.dateTime ? finishedAttempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                              const scoreVal = `${Math.round(finishedAttempt.scorePercentage)}%`;
+                              const gradeLabel = currentQuiz?.degreeRequired ? `Grau ${currentQuiz.degreeRequired}` : undefined;
+                              onOpenCertificate(userName, finishedAttempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                            }
+                          }}
+                          className="px-5 py-2.5 rounded-lg text-[10px] font-mono font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#004d40] hover:bg-[#00796b] text-[#e0f2f1] border border-[#00796b] active:scale-95 text-center select-none"
+                        >
+                          <Award className="w-4 h-4 text-[#e0f2f1]" /> Visualizar Certificado
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleRequestDiploma}
+                          disabled={isSendingToSheets || finishedAttempt.diplomaSent}
+                          className={`px-5 py-2.5 rounded-lg text-[10px] font-mono font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none ${
+                            finishedAttempt.diplomaSent 
+                              ? 'bg-[#185347]/40 text-[#66d9cc] border border-[#26a69a]/30'
+                              : 'bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-bold active:scale-95'
+                          }`}
+                        >
+                          {isSendingToSheets ? (
+                            <>Inscrito...</>
+                          ) : finishedAttempt.diplomaSent ? (
+                            <>✔ Registrado na Planilha</>
+                          ) : (
+                            <>Registrar na Planilha</>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="bg-[#111921]/60 border border-[#1c2c36]/50 rounded-2xl p-5 text-left flex items-start gap-3.5 shadow-inner">
@@ -1390,14 +1563,24 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                   </button>
                 </div>
               ) : (
-                <button
-                  id="btn-iniciar-simulado"
-                  type="button"
-                  onClick={handleStartSimulation}
-                  className="w-full bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-xs uppercase py-3.5 rounded-lg hover:bg-[#ffe088] tracking-widest active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 select-none shadow-md"
-                >
-                  <Play className="w-4 h-4 fill-current" /> Iniciar Simulado Ativo
-                </button>
+                <div className="space-y-3 pt-1">
+                  {currentQuiz?.interactiveHtml && (
+                    <div className="flex items-start gap-2.5 bg-[#66d9cc]/10 border border-[#66d9cc]/30 text-[#83f7eb] p-3 rounded-lg text-[10.5px] leading-relaxed font-mono">
+                      <Sparkles className="w-4 h-4 text-[#66d9cc] shrink-0 mt-0.5 animate-pulse" />
+                      <span>
+                        Este questionário possui um <strong>Módulo Interativo de Autoavaliação HTML</strong>. A atividade tradicional de múltipla escolha será substituída por um simulador integrado dinâmico.
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    id="btn-iniciar-simulado"
+                    type="button"
+                    onClick={handleStartSimulation}
+                    className="w-full bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-xs uppercase py-3.5 rounded-lg hover:bg-[#ffe088] tracking-widest active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 select-none shadow-md font-bold"
+                  >
+                    <Play className="w-4 h-4 fill-current" /> {currentQuiz?.interactiveHtml ? 'Iniciar Atividade Interativa' : 'Iniciar Simulado Ativo'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1897,6 +2080,62 @@ export default function QuestionnairesView({ currentUser, isAdmin: isGlobalAdmin
                 className="bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] text-[10px] font-mono font-extrabold uppercase py-2 px-5 rounded-lg hover:shadow-lg active:scale-95 transition-all w-full sm:w-auto shrink-0 cursor-pointer select-none"
               >
                 Salvar Integração
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Modal for New Quiz Book */}
+      {isNewQuizModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3">
+              <h3 className="font-sans font-black text-sm text-[#d4e5f2] uppercase tracking-wider">
+                Novo Caderno de Simulados
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsNewQuizModalOpen(false)}
+                className="text-[#99907c] hover:text-[#d4e5f2] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] text-[#99907c] uppercase font-bold block">
+                Título do Caderno
+              </label>
+              <input
+                type="text"
+                value={newQuizTitleInput}
+                onChange={(e) => setNewQuizTitleInput(e.target.value)}
+                className="w-full bg-[#04141d] text-xs text-white border border-[#1c2c36] p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E9C349]"
+                placeholder="Ex: Grau 3 - Mestre Maçom"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleConfirmCreateNewQuizBook();
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsNewQuizModalOpen(false)}
+                className="bg-[#11212b] border border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] px-4 py-2 rounded text-[10px] font-mono uppercase cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCreateNewQuizBook}
+                className="bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-mono px-5 py-2 rounded text-[10px] font-extrabold uppercase transition-all active:scale-95 cursor-pointer"
+              >
+                Criar Caderno
               </button>
             </div>
           </div>
