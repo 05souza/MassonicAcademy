@@ -46,6 +46,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
     iframe.style.width = '0';
     iframe.style.height = '0';
     iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow?.document || iframe.contentDocument;
@@ -82,16 +83,6 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                 padding: 20px;
                 background: #fdfbf7;
               }
-              .certificate-card {
-                width: 100%;
-                height: 100%;
-                max-width: 1120px;
-                max-height: 792px;
-                border: 24px double #d4af37;
-                background-color: #fdfbf7;
-                box-sizing: border-box;
-                position: relative;
-              }
             </style>
           </head>
           <body>
@@ -100,19 +91,23 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             </div>
             <script>
               window.onload = function() {
-                window.focus();
                 setTimeout(function() {
+                  window.focus();
                   window.print();
-                  setTimeout(function() {
-                    window.parent.document.body.removeChild(iframe);
-                  }, 500);
-                }, 500);
+                }, 300);
               };
             </script>
           </body>
         </html>
       `);
       doc.close();
+
+      // Clean up the iframe from the parent window safely after 10 seconds
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 10000);
     }
   };
 
@@ -159,7 +154,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
               <div className="flex items-center gap-2.5 mb-1.5">
                 <div className="w-1.5 h-1.5 bg-[#d4af37] rotate-45" />
                 <span className="text-[10px] font-semibold tracking-[0.25em] text-[#d4af37] font-sans">
-                  {certificate.lodgeName ? certificate.lodgeName.toUpperCase() : 'MAÇONARIA UNIFICADA • ACADEMIA'}
+                  MASONIC ACADEMY
                 </span>
                 <div className="w-1.5 h-1.5 bg-[#d4af37] rotate-45" />
               </div>
@@ -257,7 +252,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             <div className="flex flex-col items-center mt-4">
               <div className="flex items-center gap-2 mb-1.5" style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.25em', color: '#d4af37' }}>
-                  {certificate.lodgeName ? certificate.lodgeName.toUpperCase() : 'MAÇONARIA UNIFICADA • ACADEMIA'}
+                  MASONIC ACADEMY
                 </span>
               </div>
               <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#11212b', fontFamily: "'Playfair Display', serif", margin: '5px 0' }}>

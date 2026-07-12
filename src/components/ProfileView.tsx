@@ -6019,7 +6019,7 @@ export default function ProfileView({
                       <div className="flex items-center gap-2">
                         <input
                           type="range"
-                          min="30"
+                          min="5"
                           max="100"
                           step="5"
                           value={adminApprovalInput}
@@ -6402,7 +6402,7 @@ export default function ProfileView({
                 <label className="block font-mono text-[10px] text-[#9cbfd5] uppercase tracking-wider">Aprovação Mínima: <strong className="text-[#E9C349]">{newQuizApproval}%</strong></label>
                 <input
                   type="range"
-                  min="30"
+                  min="5"
                   max="100"
                   step="5"
                   value={newQuizApproval}

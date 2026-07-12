@@ -24,7 +24,7 @@ import {
   FileText,
   Sparkles
 } from 'lucide-react';
-import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser } from '../types';
+import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser, ExecutiveReport } from '../types';
 import { getDegreeLabel } from '../utils/degrees';
 import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
 import { doc, collection, getDocs, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -56,13 +56,15 @@ interface QuestionnairesViewProps {
   isAdmin: boolean;
   questionnaires?: Questionnaire[];
   onOpenCertificate?: (recipientName: string, title: string, type: 'course' | 'quiz', date: string, score?: string, grade?: string) => void;
+  reports?: ExecutiveReport[];
 }
 
 export default function QuestionnairesView({ 
   currentUser, 
   isAdmin: isGlobalAdmin, 
   questionnaires: propQuestionnaires,
-  onOpenCertificate
+  onOpenCertificate,
+  reports = []
 }: QuestionnairesViewProps) {
   // Database core state
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
@@ -94,6 +96,7 @@ export default function QuestionnairesView({
   const [showResultPanel, setShowResultPanel] = useState<boolean>(false);
   const [finishedAttempt, setFinishedAttempt] = useState<SimulationAttempt | null>(null);
   const [interactiveSelfScore, setInteractiveSelfScore] = useState<number>(100);
+  const [showSendEarlyConfirm, setShowSendEarlyConfirm] = useState<boolean>(false);
   
   // Admin Screen states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
@@ -147,6 +150,9 @@ export default function QuestionnairesView({
 
   // Handle auto-selected theme list depending on the selected quiz
   const currentQuiz = questionnaires.find(q => q.id === selectedQuizId);
+  const currentLinkedCourse = reports ? reports.find(r => r.linkedQuestionnaireId === selectedQuizId) : undefined;
+  const isCurrentQuizTiedToCourse = !!currentLinkedCourse;
+
   const questionnaireThemes = currentQuiz 
     ? Array.from(new Set(currentQuiz.questions.map(q => q.category))) 
     : [];
@@ -383,7 +389,7 @@ export default function QuestionnairesView({
     const userAccessLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || (isGlobalAdmin ? '33' : '1')), 10) : 1;
     const requiredLevel = currentQuiz.degreeRequired || 1;
     if (userAccessLevel < requiredLevel) {
-      showToast(`Acesso Bloqueado: Este questionário exige grau de acesso mínimo ${getDegreeLabel(requiredLevel)}. Seu grau atual é ${getDegreeLabel(userAccessLevel)}.`, 'error');
+      showToast('Acesso Restrito ao Grau: este material ainda não é do seu Grau.', 'error');
       return;
     }
 
@@ -416,6 +422,7 @@ export default function QuestionnairesView({
     setShowResultPanel(false);
     setFinishedAttempt(null);
     setInteractiveSelfScore(100);
+    setShowSendEarlyConfirm(false);
     
     setIsSimulationRunning(true);
   };
@@ -433,6 +440,14 @@ export default function QuestionnairesView({
       ...prev,
       [currentQuestionIdx]: optIdx
     }));
+
+    // If study mode, immediately confirm/freeze and show feedback
+    if (studyModeFeedback) {
+      setAnsweredFeedback(prev => ({
+        ...prev,
+        [currentQuestionIdx]: true
+      }));
+    }
   };
 
   // Perform feedback or jump to next question
@@ -1213,13 +1228,13 @@ export default function QuestionnairesView({
                 {/* Submitting Certificate action blocks */}
                 {finishedAttempt.approved && (
                   !(currentQuiz?.onlyFullForCertificate && (finishedAttempt.simulationMode === 'Amostra' || finishedAttempt.simulationMode === 'Por Tema')) ? (
-                    <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-2xl p-5 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-inner">
-                      <div className="space-y-1 md:max-w-md">
-                        <h4 className="font-sans font-bold text-sm text-[#E9C349] flex items-center gap-1.5 uppercase">
-                          <Award className="w-5 h-5 text-[#E9C349]" /> Certificado Disponível!
+                    <div className="bg-gradient-to-r from-[#E9C349]/15 via-[#0c1d27] to-[#E9C349]/5 border-2 border-[#E9C349] rounded-2xl p-6 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-[0_0_15px_rgba(233,195,73,0.15)]">
+                      <div className="space-y-1.5 md:max-w-md">
+                        <h4 className="font-sans font-extrabold text-base text-[#E9C349] flex items-center gap-2 uppercase tracking-wider">
+                          <Award className="w-6 h-6 text-[#E9C349] drop-shadow-[0_0_6px_rgba(233,195,73,0.5)]" /> Certificado Disponível!
                         </h4>
-                        <p className="text-[10px] text-[#99907c] leading-relaxed">
-                          Parabéns! Sua aprovação qualifica você para obter o certificado oficial deste simulado. Você pode registrá-lo ou visualizar o arquivo digital imediatamente.
+                        <p className="text-[11px] text-[#d4e5f2] leading-relaxed">
+                          Parabéns pela sua excelente performance! Sua aprovação qualifica você para obter o certificado oficial.
                         </p>
                       </div>
                       
@@ -1236,44 +1251,13 @@ export default function QuestionnairesView({
                               onOpenCertificate(userName, finishedAttempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
                             }
                           }}
-                          className="px-5 py-2.5 rounded-lg text-[10px] font-mono font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#004d40] hover:bg-[#00796b] text-[#e0f2f1] border border-[#00796b] active:scale-95 text-center select-none"
+                          className="px-6 py-3 rounded-xl text-xs font-sans font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] hover:shadow-[0_0_12px_rgba(233,195,73,0.4)] active:scale-95 text-center select-none font-bold border-none"
                         >
-                          <Award className="w-4 h-4 text-[#e0f2f1]" /> Visualizar Certificado
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={handleRequestDiploma}
-                          disabled={isSendingToSheets || finishedAttempt.diplomaSent}
-                          className={`px-5 py-2.5 rounded-lg text-[10px] font-mono font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none ${
-                            finishedAttempt.diplomaSent 
-                              ? 'bg-[#185347]/40 text-[#66d9cc] border border-[#26a69a]/30'
-                              : 'bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-bold active:scale-95'
-                          }`}
-                        >
-                          {isSendingToSheets ? (
-                            <>Inscrito...</>
-                          ) : finishedAttempt.diplomaSent ? (
-                            <>✔ Registrado na Planilha</>
-                          ) : (
-                            <>Registrar na Planilha</>
-                          )}
+                          <Award className="w-4 h-4 fill-current" /> Obter Certificado
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-[#111921]/60 border border-[#1c2c36]/50 rounded-2xl p-5 text-left flex items-start gap-3.5 shadow-inner">
-                      <div className="w-8 h-8 rounded-full bg-[#11212b] border border-[#E9C349]/35 flex items-center justify-center text-[#E9C349] font-bold text-sm tracking-tighter shrink-0">
-                        i
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-sans font-bold text-xs text-[#E9C349] uppercase tracking-wider font-mono">Emissão de Certificado Indisponível</h4>
-                        <p className="text-[10px] text-[#99907c] leading-relaxed">
-                          A emissão de certificados está configurada para exigir o <strong>Conteúdo Completo</strong> de instruções. Como você realizou o simulado no modo <strong>{finishedAttempt.simulationMode}</strong>, foi gerado apenas o feedback das respostas em tela. Realize o <strong>Simulado Completo</strong> para se qualificar para o certificado.
-                        </p>
-                      </div>
-                    </div>
-                  )
+                  ) : null
                 )}
 
                 {/* Detailed Questions Review Accordion */}
@@ -1331,19 +1315,57 @@ export default function QuestionnairesView({
             Masonic Academy Simulator
           </span>
 
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {!showResultPanel ? (
-              <button
-                type="button"
-                onClick={handleConfirmNextStep}
-                className="bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-[11px] uppercase px-6 py-2.5 rounded-lg active:scale-95 transition-all w-full sm:w-auto tracking-wider text-center cursor-pointer font-bold"
-              >
-                {studyModeFeedback && !answeredFeedback[currentQuestionIdx]
-                  ? 'Confirmar Escolha' 
-                  : currentQuestionIdx === activeQuestions.length - 1 
-                  ? 'Finalizar Simulado' 
-                  : 'Próxima Questão'}
-              </button>
+              <>
+                {showSendEarlyConfirm ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#0d212d] border border-[#E9C349]/40 p-3 rounded-xl text-left max-w-md w-full sm:w-auto">
+                    <span className="text-[10px] text-[#d4e5f2] leading-tight font-sans">
+                      Deseja mesmo enviar? Questões não respondidas serão computadas como incorretas.
+                    </span>
+                    <div className="flex gap-2 w-full sm:w-auto shrink-0 justify-end mt-2 sm:mt-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowSendEarlyConfirm(false)}
+                        className="text-[10px] uppercase font-bold text-[#9cbfd5] hover:text-white px-3 py-2 rounded-lg bg-[#1c2c36] hover:bg-[#253945] transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setShowSendEarlyConfirm(false);
+                          await handleFinishSimulation();
+                        }}
+                        className="text-[10px] uppercase font-bold bg-[#E9C349] text-[#241a00] hover:bg-yellow-400 px-3 py-2 rounded-lg transition-all active:scale-95 cursor-pointer"
+                      >
+                        Confirmar e Enviar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {activeQuestions.length > 10 && currentQuestionIdx < activeQuestions.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSendEarlyConfirm(true)}
+                        className="bg-transparent text-[#E9C349] hover:bg-[#E9C349]/10 font-sans font-extrabold text-[11px] uppercase px-4 py-2.5 rounded-lg border border-[#E9C349]/40 hover:border-[#E9C349] transition-all w-full sm:w-auto text-center cursor-pointer"
+                      >
+                        Enviar sem responder tudo
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleConfirmNextStep}
+                      className="bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-[11px] uppercase px-6 py-2.5 rounded-lg active:scale-95 transition-all w-full sm:w-auto tracking-wider text-center cursor-pointer font-bold"
+                    >
+                      {currentQuestionIdx === activeQuestions.length - 1 
+                        ? 'Finalizar Simulado' 
+                        : 'Próxima Questão'}
+                    </button>
+                  </>
+                )}
+              </>
             ) : (
               <button
                 type="button"
@@ -1424,17 +1446,38 @@ export default function QuestionnairesView({
                 <label className="text-[10.5px] font-mono text-[#99907c] block uppercase font-bold">
                   Selecionar Questionário / Livro de Estudos
                 </label>
-                <select
-                  value={selectedQuizId}
-                  onChange={(e) => setSelectedQuizId(e.target.value)}
-                  className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] hover:border-[#66d9cc]/40 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E9C349] font-mono"
-                >
-                  {questionnaires.filter(q => q.status !== 'Inativo').map(q => (
-                    <option key={q.id} value={q.id}>
-                      {q.title} (Grau Requerido: {q.degreeRequired || 1}) — ({q.questions.length} questões)
+                {!isGlobalAdmin && isCurrentQuizTiedToCourse ? (
+                  <select
+                    disabled
+                    value={selectedQuizId}
+                    className="w-full bg-[#04141d]/50 text-xs text-[#99907c] border border-[#1c2c36]/60 py-2.5 px-3 rounded-lg font-mono cursor-not-allowed opacity-75"
+                  >
+                    <option value={selectedQuizId}>
+                      {currentQuiz?.title} (Grau Requerido: {currentQuiz?.degreeRequired || 1}) — ({currentQuiz?.questions.length} questões)
                     </option>
-                  ))}
-                </select>
+                  </select>
+                ) : (
+                  <select
+                    value={selectedQuizId}
+                    onChange={(e) => setSelectedQuizId(e.target.value)}
+                    className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] hover:border-[#66d9cc]/40 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#E9C349] font-mono"
+                  >
+                    {questionnaires
+                      .filter(q => q.status !== 'Inativo')
+                      .filter(q => {
+                        if (isGlobalAdmin) return true;
+                        // For students, hide questionnaires that are linked/tied to a course, 
+                        // unless it is the currently selected one itself.
+                        const isTied = reports ? reports.some(r => r.linkedQuestionnaireId === q.id) : false;
+                        return !isTied || q.id === selectedQuizId;
+                      })
+                      .map(q => (
+                        <option key={q.id} value={q.id}>
+                          {q.title} (Grau Requerido: {q.degreeRequired || 1}) — ({q.questions.length} questões)
+                        </option>
+                      ))}
+                  </select>
+                )}
               </div>
 
               {/* Simulation Mode button-group Selection */}
@@ -1550,7 +1593,7 @@ export default function QuestionnairesView({
                   <div id="access-blocked-warning" className="flex items-start gap-2.5 bg-rose-950/40 border border-rose-900/60 text-rose-300 p-3 rounded-lg text-[11px] leading-relaxed font-mono">
                     <Shield className="w-4 h-4 text-rose-400 shrink-0 mt-0.5 animate-pulse" />
                     <span>
-                      <strong className="text-rose-400">Acesso Bloqueado:</strong> Este questionário exige no mínimo o <strong>Nível de Acesso ({getDegreeLabel(requiredLevel)})</strong>. Seu grau atual cadastrado é <strong>{getDegreeLabel(userAccessLevel)}</strong>. Por favor, faça a instrução regulamentar para receber a outorga correspondente.
+                      <strong className="text-rose-400">Acesso Restrito ao Grau:</strong> este material ainda não é do seu Grau.
                     </span>
                   </div>
                   <button
@@ -1578,7 +1621,7 @@ export default function QuestionnairesView({
                     onClick={handleStartSimulation}
                     className="w-full bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-xs uppercase py-3.5 rounded-lg hover:bg-[#ffe088] tracking-widest active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 select-none shadow-md font-bold"
                   >
-                    <Play className="w-4 h-4 fill-current" /> {currentQuiz?.interactiveHtml ? 'Iniciar Atividade Interativa' : 'Iniciar Simulado Ativo'}
+                    <Play className="w-4 h-4 fill-current" /> {currentQuiz?.interactiveHtml ? 'Iniciar Atividade Interativa' : (simulationMode === 'Completo' ? 'Iniciar Questionário Oficial' : 'Iniciar Simulado Ativo')}
                   </button>
                 </div>
               )}
@@ -1765,7 +1808,7 @@ export default function QuestionnairesView({
                         </div>
                         <input
                           type="range"
-                          min="25"
+                          min="5"
                           max="95"
                           step="5"
                           value={adminApprovalInput}

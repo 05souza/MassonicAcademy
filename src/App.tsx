@@ -404,6 +404,10 @@ export default function App() {
 
           if (db) {
             updatedUsers.forEach(async (u) => {
+              if (!u || !u.id) {
+                console.warn('Skipping user migration: user has no valid ID', u);
+                return;
+              }
               try {
                 await setDoc(doc(db, 'accessUsers', u.id), cleanObjectForFirestore(u), { merge: true });
               } catch (e) {
@@ -639,7 +643,11 @@ export default function App() {
               }
             } else {
               usersSnapshot.forEach(docSnap => {
-                loadedUsers.push(docSnap.data() as AccessUser);
+                const data = docSnap.data();
+                loadedUsers.push({
+                  id: docSnap.id,
+                  ...data
+                } as AccessUser);
               });
               setAccessUsers(loadedUsers);
               localStorage.setItem('masonic_access_users_v1', JSON.stringify(loadedUsers));
@@ -2928,6 +2936,7 @@ export default function App() {
             currentUser={currentUser}
             isAdmin={isAdmin(currentUser.email)}
             questionnaires={questionnaires}
+            reports={lodgeReports}
             onOpenCertificate={(recipientName, title, type, date, score, grade) => {
               setActiveCertificate({
                 recipientName,

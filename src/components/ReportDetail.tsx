@@ -47,6 +47,7 @@ export default function ReportDetail({
   });
 
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
+  const [approvedQuiz, setApprovedQuiz] = useState<boolean>(false);
 
   useEffect(() => {
     const localQuizzes = localStorage.getItem('masonic_questionnaires_v1');
@@ -75,6 +76,103 @@ export default function ReportDetail({
     }
   }, []);
 
+  // Sync approved status of linked questionnaire and force completedMaterials['linked_questionnaire']
+  useEffect(() => {
+    if (!report.linkedQuestionnaireId) return;
+
+    const emailKey = currentUser?.email || 'guest';
+    const emailKeyClean = emailKey.toLowerCase().trim();
+
+    const checkApprovedStatus = (attempts: any[]) => {
+      const linkedQuiz = questionnaires.find(q => q.id === report.linkedQuestionnaireId);
+      const minScore = linkedQuiz?.approvalScore ?? 70;
+
+      const isApproved = attempts.some(a => 
+        String(a.questionnaireId) === String(report.linkedQuestionnaireId) &&
+        (String(a.userEmail || '').toLowerCase().trim() === emailKeyClean || String(a.userId || '') === String(currentUser?.id || '')) &&
+        (a.approved === true || (typeof a.scorePercentage === 'number' && a.scorePercentage >= minScore))
+      );
+
+      if (isApproved) {
+        setApprovedQuiz(true);
+        setCompletedMaterials(prev => {
+          if (!prev['linked_questionnaire']) {
+            const updated = {
+              ...prev,
+              ['linked_questionnaire']: true
+            };
+            localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(updated));
+            
+            const { db } = initializeFirebase();
+            if (db) {
+              const docId = `${emailKeyClean}___${report.id}`.replace(/\./g, '_');
+              import('firebase/firestore').then(({ doc, setDoc }) => {
+                setDoc(doc(db, 'completions', docId), cleanObjectForFirestore({
+                  userEmail: emailKeyClean,
+                  reportId: report.id,
+                  completed: updated,
+                  lastUpdated: new Date().toISOString()
+                })).catch(err => console.error(err));
+              });
+            }
+            return updated;
+          }
+          return prev;
+        });
+      } else {
+        setApprovedQuiz(false);
+        setCompletedMaterials(prev => {
+          if (prev['linked_questionnaire']) {
+            const updated = {
+              ...prev,
+              ['linked_questionnaire']: false
+            };
+            localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(updated));
+            
+            const { db } = initializeFirebase();
+            if (db) {
+              const docId = `${emailKeyClean}___${report.id}`.replace(/\./g, '_');
+              import('firebase/firestore').then(({ doc, setDoc }) => {
+                setDoc(doc(db, 'completions', docId), cleanObjectForFirestore({
+                  userEmail: emailKeyClean,
+                  reportId: report.id,
+                  completed: updated,
+                  lastUpdated: new Date().toISOString()
+                })).catch(err => console.error(err));
+              });
+            }
+            return updated;
+          }
+          return prev;
+        });
+      }
+    };
+
+    const savedAttempts = localStorage.getItem('masonic_attempts_v1');
+    if (savedAttempts) {
+      try {
+        checkApprovedStatus(JSON.parse(savedAttempts));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const { db } = initializeFirebase();
+    if (db) {
+      import('firebase/firestore').then(({ collection, getDocs }) => {
+        getDocs(collection(db, 'simulation_attempts'))
+          .then((snap) => {
+            if (!snap.empty) {
+              const cloudAttempts: any[] = [];
+              snap.forEach(d => cloudAttempts.push(d.data()));
+              checkApprovedStatus(cloudAttempts);
+            }
+          })
+          .catch(err => console.error(err));
+      });
+    }
+  }, [report.linkedQuestionnaireId, questionnaires, currentUser, report.id]);
+
   // Load Completion Status from Firestore if connected
   useEffect(() => {
     if (!currentUser?.email) return;
@@ -88,8 +186,13 @@ export default function ReportDetail({
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data && data.completed) {
-              setCompletedMaterials(data.completed);
-              localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(data.completed));
+              // Ensure we respect the forced linked_questionnaire state
+              const updatedFromCloud = { ...data.completed };
+              if (report.linkedQuestionnaireId) {
+                updatedFromCloud['linked_questionnaire'] = approvedQuiz;
+              }
+              setCompletedMaterials(updatedFromCloud);
+              localStorage.setItem(`masonic_completed_${emailKey}_${report.id}`, JSON.stringify(updatedFromCloud));
             }
           }
         })
@@ -97,9 +200,18 @@ export default function ReportDetail({
           console.error('Falha ao sincronizar progresso inicial do irmão:', err);
         });
     }
-  }, [currentUser, report.id]);
+  }, [currentUser, report.id, approvedQuiz, report.linkedQuestionnaireId]);
 
   const toggleMaterialCompletion = async (materialKey: string) => {
+    if (materialKey === 'linked_questionnaire' && report.linkedQuestionnaireId) {
+      const linkedQuiz = questionnaires.find(q => q.id === report.linkedQuestionnaireId);
+      const minScore = linkedQuiz?.approvalScore ?? 70;
+      if (!approvedQuiz) {
+        alert(`Atenção: Este curso possui um questionário vinculado obrigatório. Para conclui-lo, você deve realizar a prova do questionário e obter aprovação com a nota mínima de ${minScore}%.`);
+        return;
+      }
+    }
+
     const newVal = !completedMaterials[materialKey];
     const updated = {
       ...completedMaterials,
@@ -860,7 +972,7 @@ export default function ReportDetail({
                     <div className="flex items-start gap-2 bg-rose-950/40 border border-rose-900/60 text-rose-300 p-3 rounded-lg text-[10.5px] leading-relaxed font-mono">
                       <Shield className="w-4 h-4 text-rose-400 shrink-0 mt-0.5 animate-pulse" />
                       <span>
-                        <strong className="text-rose-400">Acesso Bloqueado:</strong> Este questionário exige no mínimo o <strong>Nível de Acesso (Grau {quizDegreeRequired})</strong>. Seu grau atual cadastrado é <strong>{userAccessLevel}</strong>. Por favor, faça a instrução regulamentar para receber a outorga correspondente.
+                        <strong className="text-rose-400">Acesso Restrito ao Grau:</strong> este material ainda não é do seu Grau.
                       </span>
                     </div>
                   ) : !materialsCompleted ? (
@@ -910,8 +1022,13 @@ export default function ReportDetail({
                       {/* Flag de Concluído do Questionário */}
                       <div className="flex items-center justify-between gap-3 bg-[#04141d]/60 border border-[#1c2c36]/90 p-3 rounded-lg">
                         <div className="text-left">
-                          <span className="block text-[10.5px] font-mono text-[#d4e5f2] font-semibold leading-tight">Marcar Como Concluído</span>
-                          <span className="text-[9px] font-mono text-[#99907c]">Concluir voluntariamente o questionário deste título</span>
+                          <span className="block text-[10.5px] font-mono text-[#d4e5f2] font-semibold leading-tight">Status do Questionário</span>
+                          <span className="text-[9px] font-mono text-[#99907c]">
+                            {approvedQuiz 
+                              ? `Aprovado com sucesso! (Nota mínima exigida: ${linkedQuiz?.approvalScore ?? 70}%)` 
+                              : `Realize a prova do questionário acima e obtenha nota mínima de ${linkedQuiz?.approvalScore ?? 70}%.`
+                            }
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -919,18 +1036,18 @@ export default function ReportDetail({
                           className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none shrink-0 ${
                             completedMaterials['linked_questionnaire']
                               ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
-                              : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                              : 'bg-rose-950/20 text-rose-300 border-rose-900/60 hover:bg-rose-950/30'
                           }`}
                         >
                           {completedMaterials['linked_questionnaire'] ? (
                             <>
                               <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
-                              <span>CONCLUÍDO</span>
+                              <span>APROVADO</span>
                             </>
                           ) : (
                             <>
-                              <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
-                              <span>CONCLUIR</span>
+                              <Lock className="w-3.5 h-3.5 text-rose-400" />
+                              <span>PENDENTE</span>
                             </>
                           )}
                         </button>
