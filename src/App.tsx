@@ -4,7 +4,7 @@ import { SENDA_VIRTUDE_COURSE } from './data/sendaVirtudeCourse';
 import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge, Trilha, Questionnaire } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
 import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
-import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import Header from './components/Header';
 import ReportCard from './components/ReportCard';
 import ReportDetail from './components/ReportDetail';
@@ -968,6 +968,45 @@ export default function App() {
       }
     }
   }, [accessUsers, currentUser]);
+
+  // Sincronizar todas as conclusões/progresos do Firestore para o LocalStorage ao carregar ou mudar o usuário ativo
+  useEffect(() => {
+    if (!currentUser?.email) return;
+    const emailKey = currentUser.email.toLowerCase().trim();
+    const { db } = initializeFirebase();
+    if (!db) return;
+
+    let active = true;
+    const syncAllCompletionsFromFirestore = async () => {
+      try {
+        const completionsRef = collection(db, 'completions');
+        const q = query(completionsRef, where('userEmail', '==', emailKey));
+        const querySnapshot = await getDocs(q);
+        
+        if (!active) return;
+        
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.reportId && data.completed) {
+            localStorage.setItem(
+              `masonic_completed_${emailKey}_${data.reportId}`,
+              JSON.stringify(data.completed)
+            );
+          }
+        });
+        
+        // Forçar renderização para atualizar todas as barras de progresso na tela inicial
+        setCompletedStateVersion((prev) => prev + 1);
+      } catch (err) {
+        console.error('Erro ao sincronizar progresso geral do Firestore:', err);
+      }
+    };
+
+    syncAllCompletionsFromFirestore();
+    return () => {
+      active = false;
+    };
+  }, [currentUser]);
 
   // Cloud sync helpers
   const syncTrilhaToCloud = async (trilha: Trilha) => {
