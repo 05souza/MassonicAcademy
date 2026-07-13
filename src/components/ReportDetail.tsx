@@ -328,7 +328,7 @@ export default function ReportDetail({
   };
 
   return (
-    <div id="report-detail-drawer" className="fixed inset-0 z-50 flex justify-end">
+    <div id="report-detail-drawer" className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Background overlay */}
       <div 
         onClick={onClose}
@@ -336,7 +336,7 @@ export default function ReportDetail({
       />
 
       {/* Main Drawer Container */}
-      <div className="relative w-full max-w-2xl bg-[#06273A] text-[#d4e5f2] h-full flex flex-col shadow-2xl border-l-2 border-[#D4AF37] z-10 overflow-hidden font-sans">
+      <div className="relative w-full max-w-2xl bg-[#06273A] text-[#d4e5f2] h-full sm:h-auto sm:max-h-[90vh] rounded-xl sm:rounded-2xl flex flex-col shadow-2xl border-l-2 sm:border-2 border-[#D4AF37] z-10 overflow-hidden font-sans">
         
         {/* Drawer Header */}
         <div className="p-4 bg-[#04141D] border-b border-[#1c2c36] flex items-center justify-between">
