@@ -495,7 +495,8 @@ export default function QuestionnairesView({
       }
     });
 
-    const scorePct = activeQuestions.length > 0 ? (correctCount / activeQuestions.length) * 100 : 0;
+    const totalQuizQuestions = currentQuiz?.questions?.length || activeQuestions.length || 1;
+    const scorePct = (correctCount / totalQuizQuestions) * 100;
     const isApproved = scorePct >= (currentQuiz?.approvalScore || 70);
 
     const respostasText = activeQuestions.map((q, idx) => {
@@ -521,7 +522,7 @@ export default function QuestionnairesView({
       questionnaireTitle: currentQuiz?.title || 'Título',
       scorePercentage: scorePct,
       correctAnswersCount: correctCount,
-      totalQuestionsCount: activeQuestions.length,
+      totalQuestionsCount: totalQuizQuestions,
       simulationMode: simulationMode,
       timeSpentSeconds: secondsElapsed,
       dateTime: new Date().toLocaleString('pt-BR'),
@@ -956,12 +957,13 @@ export default function QuestionnairesView({
             {/* Force Exit Button */}
             <button
               onClick={() => {
-                if (window.confirm('Deseja interromper o simulado ativo? Suas respostas não serão salvas.')) {
+                const isCompleto = simulationMode === 'Completo';
+                if (window.confirm(isCompleto ? 'Deseja interromper o questionário ativo? Suas respostas não serão salvas.' : 'Deseja interromper o simulado ativo? Suas respostas não serão salvas.')) {
                   setIsSimulationRunning(false);
                 }
               }}
               className="text-[#99907c] hover:text-rose-400 p-1.5 rounded transition-colors ml-auto md:ml-0 cursor-pointer"
-              title="Cancelar Simulado"
+              title={simulationMode === 'Completo' ? "Cancelar Questionário" : "Cancelar Simulado"}
             >
               <X className="w-5 h-5" />
             </button>
@@ -1179,8 +1181,8 @@ export default function QuestionnairesView({
                     </h3>
                     <p className="text-xs font-mono text-[#9cbfd5] max-w-md mx-auto mt-1 leading-relaxed">
                       {finishedAttempt.approved 
-                        ? `Você foi aprovado com sucesso nas instruções do Simulado do ${finishedAttempt.questionnaireTitle}.`
-                        : `Sua performance atingiu o limite de aprendizados para o ${finishedAttempt.questionnaireTitle}. Continue a lapidação da Pedra Bruta!`}
+                        ? `Você foi aprovado com sucesso nas instruções do ${finishedAttempt.simulationMode === 'Completo' ? 'Questionário Oficial' : 'Simulado'} do ${finishedAttempt.questionnaireTitle}.`
+                        : `Sua performance atingiu o limite de aprendizados para o ${finishedAttempt.simulationMode === 'Completo' ? 'Questionário Oficial' : 'Simulado'} do ${finishedAttempt.questionnaireTitle}. Continue a lapidação da Pedra Bruta!`}
                     </p>
                   </div>
                 </div>
@@ -1227,37 +1229,35 @@ export default function QuestionnairesView({
 
                 {/* Submitting Certificate action blocks */}
                 {finishedAttempt.approved && (
-                  !(currentQuiz?.onlyFullForCertificate && (finishedAttempt.simulationMode === 'Amostra' || finishedAttempt.simulationMode === 'Por Tema')) ? (
-                    <div className="bg-gradient-to-r from-[#E9C349]/15 via-[#0c1d27] to-[#E9C349]/5 border-2 border-[#E9C349] rounded-2xl p-6 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-[0_0_15px_rgba(233,195,73,0.15)]">
-                      <div className="space-y-1.5 md:max-w-md">
-                        <h4 className="font-sans font-extrabold text-base text-[#E9C349] flex items-center gap-2 uppercase tracking-wider">
-                          <Award className="w-6 h-6 text-[#E9C349] drop-shadow-[0_0_6px_rgba(233,195,73,0.5)]" /> Certificado Disponível!
-                        </h4>
-                        <p className="text-[11px] text-[#d4e5f2] leading-relaxed">
-                          Parabéns pela sua excelente performance! Sua aprovação qualifica você para obter o certificado oficial.
-                        </p>
-                      </div>
-                      
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                        {/* New View Certificate local button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onOpenCertificate) {
-                              const userName = finishedAttempt.userName || currentUser?.name || 'Membro';
-                              const dateStr = finishedAttempt.dateTime ? finishedAttempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
-                              const scoreVal = `${Math.round(finishedAttempt.scorePercentage)}%`;
-                              const gradeLabel = currentQuiz?.degreeRequired ? `Grau ${currentQuiz.degreeRequired}` : undefined;
-                              onOpenCertificate(userName, finishedAttempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
-                            }
-                          }}
-                          className="px-6 py-3 rounded-xl text-xs font-sans font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] hover:shadow-[0_0_12px_rgba(233,195,73,0.4)] active:scale-95 text-center select-none font-bold border-none"
-                        >
-                          <Award className="w-4 h-4 fill-current" /> Obter Certificado
-                        </button>
-                      </div>
+                  <div className="bg-gradient-to-r from-[#E9C349]/15 via-[#0c1d27] to-[#E9C349]/5 border-2 border-[#E9C349] rounded-2xl p-6 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-[0_0_15px_rgba(233,195,73,0.15)]">
+                    <div className="space-y-1.5 md:max-w-md">
+                      <h4 className="font-sans font-extrabold text-base text-[#E9C349] flex items-center gap-2 uppercase tracking-wider">
+                        <Award className="w-6 h-6 text-[#E9C349] drop-shadow-[0_0_6px_rgba(233,195,73,0.5)]" /> Certificado Disponível!
+                      </h4>
+                      <p className="text-[11px] text-[#d4e5f2] leading-relaxed">
+                        Parabéns pela sua excelente performance! Sua aprovação qualifica você para obter o certificado oficial.
+                      </p>
                     </div>
-                  ) : null
+                    
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                      {/* New View Certificate local button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenCertificate) {
+                            const userName = finishedAttempt.userName || currentUser?.name || 'Membro';
+                            const dateStr = finishedAttempt.dateTime ? finishedAttempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                            const scoreVal = `${Math.round(finishedAttempt.scorePercentage)}%`;
+                            const gradeLabel = currentQuiz?.degreeRequired ? `Grau ${currentQuiz.degreeRequired}` : undefined;
+                            onOpenCertificate(userName, finishedAttempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                          }
+                        }}
+                        className="px-6 py-3 rounded-xl text-xs font-sans font-extrabold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] hover:shadow-[0_0_12px_rgba(233,195,73,0.4)] active:scale-95 text-center select-none font-bold border-none"
+                      >
+                        <Award className="w-4 h-4 fill-current" /> Obter Certificado
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {/* Detailed Questions Review Accordion */}
@@ -1360,7 +1360,7 @@ export default function QuestionnairesView({
                       className="bg-[#E9C349] text-[#241a00] font-sans font-extrabold text-[11px] uppercase px-6 py-2.5 rounded-lg active:scale-95 transition-all w-full sm:w-auto tracking-wider text-center cursor-pointer font-bold"
                     >
                       {currentQuestionIdx === activeQuestions.length - 1 
-                        ? 'Finalizar Simulado' 
+                        ? (simulationMode === 'Completo' ? 'Finalizar Questionário' : 'Finalizar Simulado') 
                         : 'Próxima Questão'}
                     </button>
                   </>
@@ -1506,7 +1506,7 @@ export default function QuestionnairesView({
                 <div className="text-[9.5px] font-mono text-[#9cbfd5] leading-relaxed pt-1 flex items-start gap-1.5">
                   <Info className="w-3.5 h-3.5 text-[#E9C349] shrink-0 mt-0.5" />
                   <span>
-                    {simulationMode === 'Completo' && `No simulado completo você irá praticar todas as ${currentQuiz?.questions.length || 0} questões do banco de dados. Perfeito para auto-exame.`}
+                    {simulationMode === 'Completo' && `No questionário oficial você irá praticar todas as ${currentQuiz?.questions.length || 0} questões do banco de dados. Perfeito para auto-exame.`}
                     {simulationMode === 'Amostra' && `No simulado de amostra você responderá uma seleção rápida de ${studyQuestionsCount} questões de forma aleatória, ideal para treinos rápidos diários.`}
                     {simulationMode === 'Por Tema' && 'Escolha responder apenas questões filtradas abaixo por uma determinada área temática da instrução do grau.'}
                   </span>
@@ -1674,13 +1674,33 @@ export default function QuestionnairesView({
                         </div>
                       </div>
 
-                      <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
-                        log.approved 
-                          ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
-                          : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
-                      }`}>
-                        {log.approved ? 'Aprovado' : 'Estudo'}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {log.approved && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onOpenCertificate) {
+                                const userName = log.userName || currentUser?.name || 'Membro';
+                                const dateStr = log.dateTime ? log.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                const scoreVal = `${Math.round(log.scorePercentage)}%`;
+                                const gradeLabel = currentQuiz?.degreeRequired ? `Grau ${currentQuiz.degreeRequired}` : undefined;
+                                onOpenCertificate(userName, log.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                              }
+                            }}
+                            className="bg-[#E9C349]/10 text-[#E9C349] border border-[#E9C349]/30 hover:bg-[#E9C349]/20 hover:border-[#E9C349]/60 px-2.5 py-1 rounded text-[9px] font-sans font-extrabold uppercase transition-all flex items-center gap-1 cursor-pointer select-none"
+                            title="Regerar Certificado"
+                          >
+                            <Award className="w-3.5 h-3.5" /> Regerar
+                          </button>
+                        )}
+                        <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
+                          log.approved 
+                            ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                            : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                        }`}>
+                          {log.approved ? 'Aprovado' : 'Estudo'}
+                        </span>
+                      </div>
                     </div>
                   ))}
                   {currentQuizAttempts.length > 5 && (

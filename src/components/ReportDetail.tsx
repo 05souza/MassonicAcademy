@@ -46,6 +46,25 @@ export default function ReportDetail({
     }
   });
 
+  const [accessedMaterials, setAccessedMaterials] = useState<Record<string, boolean>>(() => {
+    try {
+      const emailKey = currentUser?.email || 'guest';
+      const saved = localStorage.getItem(`masonic_accessed_${emailKey}_${report.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const markAsAccessed = (materialKey: string) => {
+    setAccessedMaterials(prev => {
+      const updated = { ...prev, [materialKey]: true };
+      const emailKey = currentUser?.email || 'guest';
+      localStorage.setItem(`masonic_accessed_${emailKey}_${report.id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>([]);
   const [approvedQuiz, setApprovedQuiz] = useState<boolean>(false);
 
@@ -213,6 +232,43 @@ export default function ReportDetail({
     }
 
     const newVal = !completedMaterials[materialKey];
+
+    if (newVal) {
+      let needsAccess = false;
+      let materialLabel = "o material";
+      
+      if (materialKey === 'htmlContent' && report.htmlContent) {
+        needsAccess = !accessedMaterials['htmlContent'];
+        materialLabel = "o Curso Interativo";
+      } else if (materialKey === 'material1' && report.material1Link) {
+        needsAccess = !accessedMaterials['material1'];
+        materialLabel = "o Material 1";
+      } else if (materialKey === 'material2' && report.material2Link) {
+        needsAccess = !accessedMaterials['material2'];
+        materialLabel = "o Material 2";
+      } else if (materialKey === 'material3' && report.material3Link) {
+        needsAccess = !accessedMaterials['material3'];
+        materialLabel = "o Material 3";
+      } else if (materialKey === 'material4' && report.material4Link) {
+        needsAccess = !accessedMaterials['material4'];
+        materialLabel = "o Material 4";
+      } else if (materialKey === 'material5' && report.material5Link) {
+        needsAccess = !accessedMaterials['material5'];
+        materialLabel = "o Material 5";
+      } else if (materialKey === 'material6' && report.material6Link) {
+        needsAccess = !accessedMaterials['material6'];
+        materialLabel = "o Material 6";
+      } else if (materialKey === 'proof' && report.additionalLink) {
+        needsAccess = !accessedMaterials['proof'];
+        materialLabel = "a Prova do Conteúdo";
+      }
+
+      if (needsAccess) {
+        alert(`Atenção: Por favor, clique primeiro no botão "Acessar Conteúdo" (ou similar) para ler/visualizar ${materialLabel} antes de marcá-lo como concluído.`);
+        return;
+      }
+    }
+
     const updated = {
       ...completedMaterials,
       [materialKey]: newVal
@@ -561,6 +617,7 @@ export default function ReportDetail({
                 </button>
                 <button
                   onClick={() => {
+                    markAsAccessed('htmlContent');
                     if (onOpenSecureViewer) {
                       onOpenSecureViewer('', report.title, report.htmlContent);
                     }
@@ -646,6 +703,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material1');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material1Link || '', `${report.title} - Material 1`);
@@ -703,6 +761,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material2');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material2Link || '', `${report.title} - Material 2`);
@@ -760,6 +819,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material3');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material3Link || '', `${report.title} - Material 3`);
@@ -817,6 +877,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material4');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material4Link || '', `${report.title} - Material 4`);
@@ -874,6 +935,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material5');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material5Link || '', `${report.title} - Material 5`);
@@ -931,6 +993,7 @@ export default function ReportDetail({
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
+                    markAsAccessed('material6');
                     if (onOpenSecureViewer) {
                       e.preventDefault();
                       onOpenSecureViewer(report.material6Link || '', `${report.title} - Material 6`);
@@ -1105,6 +1168,7 @@ export default function ReportDetail({
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => {
+                      markAsAccessed('proof');
                       if (onOpenSecureViewer) {
                         e.preventDefault();
                         onOpenSecureViewer(report.additionalLink || '', `${report.title} - Prova`);

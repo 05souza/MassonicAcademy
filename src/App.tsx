@@ -2985,6 +2985,17 @@ export default function App() {
             onAddQuestionnaire={handleAddQuestionnaire}
             onUpdateQuestionnaire={handleUpdateQuestionnaire}
             onDeleteQuestionnaire={handleDeleteQuestionnaire}
+            onOpenCertificate={(recipientName, title, type, date, score, grade) => {
+              setActiveCertificate({
+                recipientName,
+                title,
+                type,
+                date,
+                score,
+                grade,
+                lodgeName: lodges.find(l => l.id === currentUser?.lodgeId)?.nome || currentUser?.loja
+              });
+            }}
           />
         )}
 
@@ -3538,6 +3549,7 @@ export default function App() {
         <CertificateModal
           certificate={activeCertificate}
           onClose={() => setActiveCertificate(null)}
+          isAdmin={isAdmin(currentUser?.email)}
         />
       )}
 

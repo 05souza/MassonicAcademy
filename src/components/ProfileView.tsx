@@ -7,7 +7,8 @@ import {
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
   X, Search, Layers, FileText, Sliders, BarChart3, ChevronRight, HelpCircle,
-  Upload, Download, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen
+  Upload, Download, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen,
+  Award
 } from 'lucide-react';
 import { compressImage } from '../utils';
 
@@ -55,6 +56,9 @@ interface ProfileViewProps {
   onAddQuestionnaire?: (newQ: Questionnaire) => void;
   onUpdateQuestionnaire?: (updatedQ: Questionnaire) => void;
   onDeleteQuestionnaire?: (qId: string) => void;
+
+  // Certificate Customization Prop
+  onOpenCertificate?: (recipientName: string, title: string, type: 'course' | 'quiz', date: string, score?: string, grade?: string) => void;
 }
 
 export default function ProfileView({ 
@@ -88,7 +92,8 @@ export default function ProfileView({
   questionnaires = [],
   onAddQuestionnaire,
   onUpdateQuestionnaire,
-  onDeleteQuestionnaire
+  onDeleteQuestionnaire,
+  onOpenCertificate
 }: ProfileViewProps) {
   const getInitials = (name: any) => {
     if (!name || typeof name !== 'string') return 'DL';
@@ -143,7 +148,7 @@ export default function ProfileView({
   }, [visibleAccessUsers, currentTimeTick, currentUser]);
 
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires' | 'certificate'>('profile');
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile') {
@@ -2016,6 +2021,16 @@ export default function ProfileView({
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-amber-400" /> CADASTRO DE SIMULADOS ({(questionnaires || []).length})
+            </button>
+            <button
+              onClick={() => setActiveSubTab('certificate')}
+              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+                activeSubTab === 'certificate'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 text-yellow-400" /> DESIGN DO CERTIFICADO
             </button>
           </>
         )}
@@ -6339,6 +6354,87 @@ export default function ProfileView({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'certificate' && (
+        <div className="max-w-3xl mx-auto bg-[#0c1d27] rounded-xl p-6 border border-[#1c2c36] space-y-6 text-left animate-fadeIn">
+          <div className="flex items-center gap-3 border-b border-[#1c2c36]/60 pb-4">
+            <Award className="w-8 h-8 text-[#E9C349]" />
+            <div>
+              <h2 className="font-sans font-bold text-lg text-[#d4e5f2]">Estúdio de Design do Certificado</h2>
+              <p className="text-xs text-[#99907c]">Ajuste e customize o visual dos diplomas emitidos aos alunos</p>
+            </div>
+          </div>
+
+          <div className="bg-[#04141d] p-5 rounded-xl border border-[#172731] space-y-4">
+            <h3 className="font-mono text-[10px] text-[#E9C349] font-black uppercase tracking-wider">Configuração Atual do Diploma</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+              <div className="space-y-1 bg-[#0c1d27]/60 p-3 rounded-lg border border-[#1c2c36]">
+                <span className="text-[10px] font-mono text-[#9cbfd5] block uppercase">Nome da Instituição</span>
+                <strong className="text-white text-sm">{localStorage.getItem('masonic_cert_academy_name') || 'MASONIC ACADEMY'}</strong>
+              </div>
+              
+              <div className="space-y-1 bg-[#0c1d27]/60 p-3 rounded-lg border border-[#1c2c36]">
+                <span className="text-[10px] font-mono text-[#9cbfd5] block uppercase">Título do Documento</span>
+                <strong className="text-white text-sm">{localStorage.getItem('masonic_cert_heading') || 'Certificado de Conclusão'}</strong>
+              </div>
+
+              <div className="space-y-1 bg-[#0c1d27]/60 p-3 rounded-lg border border-[#1c2c36]">
+                <span className="text-[10px] font-mono text-[#9cbfd5] block uppercase">Assinatura Digital</span>
+                <strong className="text-white text-sm">{localStorage.getItem('masonic_cert_director_name') || 'Daniel Luciano'}</strong>
+              </div>
+
+              <div className="space-y-1 bg-[#0c1d27]/60 p-3 rounded-lg border border-[#1c2c36]">
+                <span className="text-[10px] font-mono text-[#9cbfd5] block uppercase">Cargo do Assinante</span>
+                <strong className="text-white text-sm">{localStorage.getItem('masonic_cert_director_title') || 'Diretor Acadêmico'}</strong>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4 text-[11px] font-mono text-[#9cbfd5] pt-2">
+              <div className="flex items-center gap-1.5 bg-[#0c1d27] px-3 py-1.5 rounded border border-[#1c2c36]">
+                <span className={localStorage.getItem('masonic_cert_show_symbols') !== 'false' ? 'text-green-400' : 'text-red-400'}>●</span>
+                <span>Símbolos Maçônicos: {localStorage.getItem('masonic_cert_show_symbols') !== 'false' ? 'Ativo' : 'Inativo'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-[#0c1d27] px-3 py-1.5 rounded border border-[#1c2c36]">
+                <span className={localStorage.getItem('masonic_cert_show_seal') !== 'false' ? 'text-green-400' : 'text-red-400'}>●</span>
+                <span>Selo Oficial: {localStorage.getItem('masonic_cert_show_seal') !== 'false' ? 'Ativo' : 'Inativo'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-[#0c1d27] px-3 py-1.5 rounded border border-[#1c2c36]">
+                <span className={localStorage.getItem('masonic_cert_custom_bg') ? 'text-green-400' : 'text-yellow-500'}>●</span>
+                <span>Fundo Customizado: {localStorage.getItem('masonic_cert_custom_bg') ? 'Sim' : 'Padrão Clássico'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-[#0c1d27] px-3 py-1.5 rounded border border-[#1c2c36]">
+                <span>Escala Fonte: {Math.round(parseFloat(localStorage.getItem('masonic_cert_font_size_multiplier') || '1.0') * 100)}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs text-[#9cbfd5] leading-relaxed">
+              Clique no botão abaixo para abrir a janela interativa de personalização de diplomas. Nela você terá controle total dos elementos do certificado e poderá pré-visualizar em tempo real o resultado de impressão.
+            </p>
+
+            <button
+              onClick={() => {
+                if (onOpenCertificate) {
+                  onOpenCertificate(
+                    'Ir.’ José da Silva',
+                    'Filosofia e Simbologia do Grau 1',
+                    'course',
+                    new Date().toLocaleDateString('pt-BR'),
+                    '100%',
+                    'Aprendiz Maçom'
+                  );
+                }
+              }}
+              className="w-full md:w-auto bg-[#E9C349] text-[#241a00] hover:bg-[#ffe088] font-sans font-extrabold text-xs px-6 py-3.5 rounded-xl uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all shadow-lg hover:shadow-[#E9C349]/10 cursor-pointer"
+            >
+              <Sliders className="w-4 h-4 text-[#241a00]" />
+              <span>Abrir Estúdio Completo de Design</span>
+            </button>
           </div>
         </div>
       )}
