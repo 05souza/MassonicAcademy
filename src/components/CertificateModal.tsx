@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Printer, Award, ShieldCheck, Upload, RotateCcw, Sliders, Type, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { compressImage } from '../utils';
+import { initializeFirebase } from '../firebase';
 
 export interface CertificateData {
   recipientName: string;
@@ -62,6 +63,84 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
   });
 
   const [isCompacting, setIsCompacting] = useState(false);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Load from Firestore on mount so that other users render according to configuration
+  useEffect(() => {
+    let active = true;
+    const loadGlobalSettings = async () => {
+      try {
+        setIsLoadingSettings(true);
+        const { db } = initializeFirebase();
+        if (!db) return;
+        const { doc, getDoc } = await import('firebase/firestore');
+        const docRef = doc(db, 'settings', 'certificate_design');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && active) {
+          const data = docSnap.data();
+          if (data.customBg !== undefined) setCustomBg(data.customBg);
+          if (data.showMasonicSymbols !== undefined) setShowMasonicSymbols(data.showMasonicSymbols);
+          if (data.symbolsOpacity !== undefined) setSymbolsOpacity(data.symbolsOpacity);
+          if (data.showSeal !== undefined) setShowSeal(data.showSeal);
+          if (data.fontSizeMultiplier !== undefined) setFontSizeMultiplier(data.fontSizeMultiplier);
+          if (data.textColor !== undefined) setTextColor(data.textColor);
+          if (data.masonicAcademyName !== undefined) setMasonicAcademyName(data.masonicAcademyName);
+          if (data.certificateHeading !== undefined) setCertificateHeading(data.certificateHeading);
+          if (data.directorName !== undefined) setDirectorName(data.directorName);
+          if (data.directorTitle !== undefined) setDirectorTitle(data.directorTitle);
+          if (data.internalPadding !== undefined) setInternalPadding(data.internalPadding);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar design do certificado do Firestore:', err);
+      } finally {
+        if (active) setIsLoadingSettings(false);
+      }
+    };
+    loadGlobalSettings();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSaveGlobalSettings = async () => {
+    try {
+      setIsSavingSettings(true);
+      setSaveSuccess(false);
+      const { db } = initializeFirebase();
+      if (!db) {
+        alert('Erro: Banco de dados não disponível.');
+        return;
+      }
+      const { doc, setDoc } = await import('firebase/firestore');
+      const docRef = doc(db, 'settings', 'certificate_design');
+      
+      const payload = {
+        customBg,
+        showMasonicSymbols,
+        symbolsOpacity,
+        showSeal,
+        fontSizeMultiplier,
+        textColor,
+        masonicAcademyName,
+        certificateHeading,
+        directorName,
+        directorTitle,
+        internalPadding,
+        updatedAt: new Date().toISOString()
+      };
+      
+      await setDoc(docRef, payload);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error('Erro ao salvar design do certificado no Firestore:', err);
+      alert('Erro ao salvar design do certificado no servidor.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   // Persist configurations to localStorage
   useEffect(() => {
@@ -287,6 +366,34 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
           {isAdmin ? (
             <div className="w-full lg:w-[350px] shrink-0 p-5 bg-[#0d1c24]/50 space-y-5 overflow-y-auto">
               
+              {/* Save changes to server section */}
+              <div className="bg-gradient-to-r from-[#E9C349]/15 to-transparent border border-[#E9C349]/30 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-[#E9C349]">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Publicar no Servidor</span>
+                </div>
+                <p className="text-[10px] text-[#99907c] font-mono leading-tight">
+                  Alunos acessando de outros computadores só verão o design personalizado após você publicar as alterações no banco de dados.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSaveGlobalSettings}
+                  disabled={isSavingSettings}
+                  className="w-full bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] font-sans font-extrabold text-xs py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_2px_8px_rgba(233,195,73,0.15)] disabled:opacity-50"
+                >
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-[#241a00] border-t-transparent rounded-full animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : saveSuccess ? (
+                    <span>✓ Publicado com Sucesso!</span>
+                  ) : (
+                    <span>Publicar Design para Alunos</span>
+                  )}
+                </button>
+              </div>
+
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Sliders className="w-4 h-4 text-[#E9C349]" />
