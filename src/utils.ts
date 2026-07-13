@@ -42,9 +42,19 @@ export const compressImage = (
         return;
       }
 
-      // Draw and export as compressed jpeg
+      // Check if original format supports transparency
+      const isTransparentFormat = dataUrl.startsWith('data:image/png') || 
+                                  dataUrl.startsWith('data:image/gif') || 
+                                  dataUrl.startsWith('data:image/webp') || 
+                                  dataUrl.startsWith('data:image/svg+xml');
+
+      const exportFormat = isTransparentFormat ? 'image/png' : 'image/jpeg';
+
+      // Draw and export
       ctx.drawImage(img, 0, 0, width, height);
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      const compressedDataUrl = exportFormat === 'image/jpeg'
+        ? canvas.toDataURL(exportFormat, quality)
+        : canvas.toDataURL(exportFormat);
       
       // If compression somehow failed to reduce size, fallback to original
       if (compressedDataUrl.length >= dataUrl.length) {
