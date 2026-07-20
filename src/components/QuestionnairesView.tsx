@@ -22,7 +22,8 @@ import {
   SlidersHorizontal,
   ThumbsUp,
   FileText,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser, ExecutiveReport } from '../types';
 import { getDegreeLabel } from '../utils/degrees';
@@ -100,6 +101,12 @@ export default function QuestionnairesView({
   
   // Admin Screen states
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
+  const [adminSubTab, setAdminSubTab] = useState<'editor' | 'relatorio'>('editor');
+  const [reportSearchQuery, setReportSearchQuery] = useState<string>('');
+  const [reportQuizFilter, setReportQuizFilter] = useState<string>('Todos');
+  const [reportStatusFilter, setReportStatusFilter] = useState<string>('Todos');
+  const [selectedAttemptForDetails, setSelectedAttemptForDetails] = useState<SimulationAttempt | null>(null);
+
   const [adminSelectedQuizId, setAdminSelectedQuizId] = useState<string>('quiz-grau-1');
   const [adminNameInput, setAdminNameInput] = useState<string>('');
   const [adminApprovalInput, setAdminApprovalInput] = useState<number>(70);
@@ -376,6 +383,23 @@ export default function QuestionnairesView({
   const userAccessLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || (isGlobalAdmin ? '33' : '1')), 10) : 1;
   const requiredLevel = currentQuiz?.degreeRequired || 1;
   const isAccessBlocked = userAccessLevel < requiredLevel;
+
+  // Filter and sort the attempts for the admin report
+  const filteredAttempts = simulationAttempts.filter(attempt => {
+    const query = reportSearchQuery.toLowerCase().trim();
+    const matchSearch = !query || 
+      (attempt.userName || '').toLowerCase().includes(query) ||
+      (attempt.userEmail || '').toLowerCase().includes(query) ||
+      (attempt.questionnaireTitle || '').toLowerCase().includes(query);
+
+    const matchQuiz = reportQuizFilter === 'Todos' || attempt.questionnaireId === reportQuizFilter;
+
+    const matchStatus = reportStatusFilter === 'Todos' ||
+      (reportStatusFilter === 'Aprovados' && attempt.approved) ||
+      (reportStatusFilter === 'Reprovados' && !attempt.approved);
+
+    return matchSearch && matchQuiz && matchStatus;
+  });
 
   // --- START SIMULATION ACTIVE ---
   const handleStartSimulation = () => {
@@ -891,6 +915,24 @@ export default function QuestionnairesView({
     setAdminSelectedQuizId(updated[0].id);
     setAdminSelectedQuestionId(null);
     showToast('Dossiê de estudos removido com sucesso!', 'success');
+  };
+
+  const handleDeleteAttempt = async (attemptId: string) => {
+    if (!window.confirm('Tem certeza absoluta de que deseja excluir este registro de nota permanentemente?')) return;
+    try {
+      const updated = simulationAttempts.filter(a => a.id !== attemptId);
+      setSimulationAttempts(updated);
+      localStorage.setItem('masonic_attempts_v1', JSON.stringify(updated));
+
+      const { db } = initializeFirebase();
+      if (db) {
+        await deleteDoc(doc(db, 'simulation_attempts', attemptId));
+      }
+      showToast('Registro de nota excluído com sucesso!', 'success');
+    } catch (e) {
+      console.error('Error deleting attempt:', e);
+      showToast('Erro ao sincronizar exclusão com o servidor, mas removido localmente.', 'error');
+    }
   };
 
   useEffect(() => {
@@ -1744,7 +1786,34 @@ export default function QuestionnairesView({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Sub Tab Navigation */}
+          <div className="flex border-b border-[#1c2c36] gap-2">
+            <button
+              type="button"
+              onClick={() => setAdminSubTab('editor')}
+              className={`py-2 px-4 text-xs font-mono font-bold uppercase transition-all border-b-2 cursor-pointer ${
+                adminSubTab === 'editor'
+                  ? 'border-[#E9C349] text-[#E9C349]'
+                  : 'border-transparent text-[#99907c] hover:text-white'
+              }`}
+            >
+              📝 Editor de Cadernos e Questões
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminSubTab('relatorio')}
+              className={`py-2 px-4 text-xs font-mono font-bold uppercase transition-all border-b-2 cursor-pointer ${
+                adminSubTab === 'relatorio'
+                  ? 'border-[#E9C349] text-[#E9C349]'
+                  : 'border-transparent text-[#99907c] hover:text-white'
+              }`}
+            >
+              📊 Relatório de Notas (Questionários)
+            </button>
+          </div>
+
+          {adminSubTab === 'editor' ? (
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             {/* Left selector and list of questions */}
             <div className="md:col-span-5 bg-[#0c1d27] rounded-xl p-4 border border-[#1c2c36] space-y-4 shadow-md">
               {/* Questionnaire meta configuration input */}
@@ -2115,6 +2184,241 @@ export default function QuestionnairesView({
               )}
             </div>
           </div>
+          ) : (
+            // ==========================================
+            //  GRADES REPORT VIEW
+            // ==========================================
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4 shadow-md text-xs text-left">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1c2c36]/60 pb-3">
+                  <div>
+                    <span className="text-[9px] font-mono text-[#E9C349] uppercase tracking-widest font-black block">DADOS DE DESEMPENHO</span>
+                    <h4 className="font-sans font-black text-sm text-[#d4e5f2] mt-0.5">Relatório de Notas dos Questionários</h4>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#99907c]">
+                    Total de {filteredAttempts.length} registros encontrados
+                  </span>
+                </div>
+
+                {/* Filters Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Search bar */}
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-[#99907c]" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por irmão, email ou prova..."
+                      value={reportSearchQuery}
+                      onChange={(e) => setReportSearchQuery(e.target.value)}
+                      className="bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] rounded-lg py-2 pl-8 pr-3 w-full focus:outline-none focus:ring-1 focus:ring-[#E9C349]"
+                    />
+                  </div>
+
+                  {/* Questionnaire selection */}
+                  <div>
+                    <select
+                      value={reportQuizFilter}
+                      onChange={(e) => setReportQuizFilter(e.target.value)}
+                      className="bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] rounded-lg p-2 w-full focus:outline-none font-mono"
+                    >
+                      <option value="Todos">Todos os Simulados</option>
+                      {questionnaires.map(q => (
+                        <option key={q.id} value={q.id}>{q.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Status Selection */}
+                  <div>
+                    <select
+                      value={reportStatusFilter}
+                      onChange={(e) => setReportStatusFilter(e.target.value)}
+                      className="bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] rounded-lg p-2 w-full focus:outline-none font-mono"
+                    >
+                      <option value="Todos">Todos os Status</option>
+                      <option value="Aprovados">Aprovados</option>
+                      <option value="Reprovados">Estudo / Reprovados</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Table list */}
+                <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                        <th className="py-3 px-4">Irmão / Usuário</th>
+                        <th className="py-3 px-4">Questionário</th>
+                        <th className="py-3 px-4 text-center">Data e Hora</th>
+                        <th className="py-3 px-4 text-center">Desempenho</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                        <th className="py-3 px-4 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#1c2c36]/60">
+                      {filteredAttempts.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                            <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                            Nenhum registro de nota condizente com os filtros aplicados.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAttempts.map((attempt) => (
+                          <tr key={attempt.id} className="hover:bg-[#11212b]/30 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                                {attempt.userName || 'Membro'}
+                              </div>
+                              <div className="font-mono text-[10px] text-[#99907c] mt-0.5">
+                                {attempt.userEmail}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 font-sans text-xs text-[#9cbfd5]">
+                              {attempt.questionnaireTitle}
+                            </td>
+                            <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
+                              {attempt.dateTime}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="font-mono font-bold text-[#E9C349] text-xs">
+                                {Math.round(attempt.scorePercentage)}%
+                              </div>
+                              <div className="font-mono text-[9px] text-[#99907c] mt-0.5">
+                                {attempt.correctAnswersCount}/{attempt.totalQuestionsCount} acertos
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
+                                attempt.approved 
+                                  ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                                  : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                              }`}>
+                                {attempt.approved ? 'Aprovado' : 'Estudo'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAttemptForDetails(attempt)}
+                                  className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 p-1.5 rounded transition-all cursor-pointer"
+                                  title="Ver Respostas Detalhadas"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                {attempt.approved && onOpenCertificate && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const userName = attempt.userName || 'Membro';
+                                      const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                      const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
+                                      const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
+                                      const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
+                                      onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                                    }}
+                                    className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
+                                    title="Regerar/Imprimir Certificado"
+                                  >
+                                    <Award className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAttempt(attempt.id)}
+                                  className="bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/40 p-1.5 rounded transition-all cursor-pointer"
+                                  title="Excluir Registro de Nota"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+      {/* Detail view modal for a specific attempt */}
+      {selectedAttemptForDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl w-full max-w-2xl p-6 space-y-4 shadow-2xl relative text-left">
+            <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3">
+              <div>
+                <span className="text-[9px] font-mono text-[#E9C349] uppercase tracking-widest font-black block">REVISÃO DETALHADA</span>
+                <h3 className="font-sans font-black text-sm text-[#d4e5f2] uppercase tracking-wider">
+                  Respostas do Simulado
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAttemptForDetails(null)}
+                className="text-[#99907c] hover:text-[#d4e5f2] transition-colors cursor-pointer p-1 rounded-md hover:bg-[#11212b]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Attempt Meta Info */}
+              <div className="grid grid-cols-2 gap-4 bg-[#04141d] p-3 rounded-lg border border-[#1c2c36]/80 text-[11px] font-mono">
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Irmão</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.userName || 'Membro'}</strong> ({selectedAttemptForDetails.userEmail})
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Simulado</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.questionnaireTitle}</strong>
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Data e Hora</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.dateTime}</strong>
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Nota / Desempenho</span>
+                  <strong className="text-[#E9C349]">{Math.round(selectedAttemptForDetails.scorePercentage)}%</strong> ({selectedAttemptForDetails.correctAnswersCount}/{selectedAttemptForDetails.totalQuestionsCount} acertos)
+                </div>
+              </div>
+
+              {/* Answers Grid */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold block">
+                  Respostas Registradas:
+                </span>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {selectedAttemptForDetails.respostas ? (
+                    selectedAttemptForDetails.respostas.split(' | ').map((resp, idx) => (
+                      <div key={idx} className="bg-[#04141d] border border-[#1c2c36] p-2.5 rounded-lg font-mono text-[10.5px] leading-relaxed text-[#d4e5f2] break-words">
+                        {resp}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-[#99907c] font-mono italic">
+                      Nenhuma resposta detalhada foi gravada para este simulado.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedAttemptForDetails(null)}
+                className="bg-[#11212b] border border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] px-5 py-2 rounded text-[10px] font-mono uppercase cursor-pointer"
+              >
+                Fechar Detalhes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
           {/* GOOGLE SHEETS INTEGRATIONS SECTION */}
           <div className="bg-[#0c1d27] rounded-xl p-5 border border-[#1c2c36] space-y-4 shadow-md text-xs text-left">
