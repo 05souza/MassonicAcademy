@@ -2250,6 +2250,7 @@ export default function QuestionnairesView({
                       <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
                         <th className="py-3 px-4">Irmão / Usuário</th>
                         <th className="py-3 px-4">Questionário</th>
+                        <th className="py-3 px-4 text-center">Tipo</th>
                         <th className="py-3 px-4 text-center">Data e Hora</th>
                         <th className="py-3 px-4 text-center">Desempenho</th>
                         <th className="py-3 px-4 text-center">Status</th>
@@ -2259,7 +2260,7 @@ export default function QuestionnairesView({
                     <tbody className="divide-y divide-[#1c2c36]/60">
                       {filteredAttempts.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                          <td colSpan={7} className="py-12 text-center text-[#99907c] font-mono text-xs">
                             <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
                             Nenhum registro de nota condizente com os filtros aplicados.
                           </td>
@@ -2277,6 +2278,15 @@ export default function QuestionnairesView({
                             </td>
                             <td className="py-3.5 px-4 font-sans text-xs text-[#9cbfd5]">
                               {attempt.questionnaireTitle}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
+                                attempt.simulationMode === 'Completo'
+                                  ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
+                                  : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
+                              }`}>
+                                {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                              </span>
                             </td>
                             <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
                               {attempt.dateTime}

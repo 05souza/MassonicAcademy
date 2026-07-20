@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { ExecutiveReport, AccessUser, Questionnaire, Book, Lodge } from '../types';
-import { getFirebaseConfig, saveFirebaseConfig } from '../firebase';
+import { ExecutiveReport, AccessUser, Questionnaire, Book, Lodge, SimulationAttempt } from '../types';
+import { getFirebaseConfig, saveFirebaseConfig, initializeFirebase } from '../firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import { getDegreeLabel as getGlobalDegreeLabel } from '../utils/degrees';
 import { 
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
   X, Search, Layers, FileText, Sliders, BarChart3, ChevronRight, HelpCircle,
   Upload, Download, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen,
-  Award
+  Award, Eye
 } from 'lucide-react';
 import { compressImage } from '../utils';
 
@@ -148,15 +149,146 @@ export default function ProfileView({
   }, [visibleAccessUsers, currentTimeTick, currentUser]);
 
   // Main settings tabs
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires' | 'certificate'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'personal_attempts' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires' | 'certificate'>('profile');
 
   useEffect(() => {
-    if (isStandardUser && activeSubTab !== 'profile') {
+    if (isStandardUser && activeSubTab !== 'profile' && activeSubTab !== 'personal_attempts') {
       setActiveSubTab('profile');
     } else if (!isMaster && (activeSubTab === 'database' || activeSubTab === 'accessStats')) {
-      setActiveSubTab('profile');
+      if (activeSubTab !== 'personal_attempts') {
+        setActiveSubTab('profile');
+      }
     }
   }, [isStandardUser, isMaster, activeSubTab]);
+
+  const [simulationAttempts, setSimulationAttempts] = useState<SimulationAttempt[]>([]);
+
+  useEffect(() => {
+    const local = localStorage.getItem('masonic_attempts_v1');
+    if (local) {
+      try {
+        setSimulationAttempts(JSON.parse(local));
+      } catch (e) {
+        console.error('Error parsing local attempts in ProfileView:', e);
+      }
+    }
+
+    try {
+      const { db } = initializeFirebase();
+      if (db && currentUser) {
+        const userLodgeId = currentUser.lodgeId || 'lodge-cavaleiros';
+        getDocs(collection(db, 'simulation_attempts'))
+          .then((attemptSnap) => {
+            if (!attemptSnap.empty) {
+              const cloudAttempts: SimulationAttempt[] = [];
+              attemptSnap.forEach((docSnap) => {
+                const a = docSnap.data() as SimulationAttempt;
+                if (a.lodgeId === userLodgeId || (!a.lodgeId && userLodgeId === 'lodge-cavaleiros')) {
+                  cloudAttempts.push(a);
+                }
+              });
+              setSimulationAttempts(cloudAttempts);
+              localStorage.setItem('masonic_attempts_v1', JSON.stringify(cloudAttempts));
+            }
+          })
+          .catch((err) => {
+            console.warn('Error fetching simulation attempts from firestore:', err);
+          });
+      }
+    } catch (e) {
+      console.warn('Silent error on Firebase initialize in ProfileView:', e);
+    }
+  }, [currentUser]);
+  
+  // Personal Attempts States
+  const [personalSearchQuery, setPersonalSearchQuery] = useState('');
+  const [personalStatusFilter, setPersonalStatusFilter] = useState<'Todos' | 'Aprovados' | 'Reprovados'>('Todos');
+  const [selectedAttemptForDetails, setSelectedAttemptForDetails] = useState<SimulationAttempt | null>(null);
+  const [personalSubSection, setPersonalSubSection] = useState<'quizzes' | 'courses'>('quizzes');
+
+  const userAttempts = useMemo(() => {
+    if (!currentUser) return [];
+    return simulationAttempts.filter(a => {
+      const emailMatch = (a.userEmail || '').toLowerCase().trim() === (currentUser.email || '').toLowerCase().trim();
+      
+      const query = personalSearchQuery.toLowerCase().trim();
+      const matchSearch = !query || (a.questionnaireTitle || '').toLowerCase().includes(query);
+      
+      const matchStatus = personalStatusFilter === 'Todos' ||
+        (personalStatusFilter === 'Aprovados' && a.approved) ||
+        (personalStatusFilter === 'Reprovados' && !a.approved);
+      
+      return emailMatch && matchSearch && matchStatus;
+    });
+  }, [simulationAttempts, currentUser, personalSearchQuery, personalStatusFilter]);
+
+  const completedCourses = useMemo(() => {
+    if (!currentUser || !reports) return [];
+    const emailKey = currentUser.email || 'guest';
+    
+    return reports.filter(report => {
+      const saved = localStorage.getItem(`masonic_completed_${emailKey}_${report.id}`);
+      if (!saved) return false;
+      try {
+        const completedMaterials = JSON.parse(saved);
+        
+        let totalCount = 0;
+        let completedCount = 0;
+        
+        if (report.htmlContent) {
+          totalCount++;
+          if (completedMaterials['htmlContent']) completedCount++;
+        }
+        if (report.material1Link) {
+          totalCount++;
+          if (completedMaterials['material1']) completedCount++;
+        }
+        if (report.material2Link) {
+          totalCount++;
+          if (completedMaterials['material2']) completedCount++;
+        }
+        if (report.material3Link) {
+          totalCount++;
+          if (completedMaterials['material3']) completedCount++;
+        }
+        if (report.material4Link) {
+          totalCount++;
+          if (completedMaterials['material4']) completedCount++;
+        }
+        if (report.material5Link) {
+          totalCount++;
+          if (completedMaterials['material5']) completedCount++;
+        }
+        if (report.material6Link) {
+          totalCount++;
+          if (completedMaterials['material6']) completedCount++;
+        }
+        if (report.linkedQuestionnaireId) {
+          totalCount++;
+          if (completedMaterials['linked_questionnaire']) completedCount++;
+        }
+        if (report.additionalLink && !report.conteudoSemProva) {
+          // Check for either proof or general additional link completed indicator
+          totalCount++;
+          if (completedMaterials['proof'] || completedMaterials['additional_link']) completedCount++;
+        }
+        
+        return totalCount > 0 && completedCount === totalCount;
+      } catch (e) {
+        return false;
+      }
+    });
+  }, [reports, currentUser]);
+
+  const filteredCompletedCourses = useMemo(() => {
+    const query = personalSearchQuery.toLowerCase().trim();
+    if (!query) return completedCourses;
+    return completedCourses.filter(c => 
+      (c.title || '').toLowerCase().includes(query) || 
+      (c.category || '').toLowerCase().includes(query) ||
+      (c.department || '').toLowerCase().includes(query)
+    );
+  }, [completedCourses, personalSearchQuery]);
   
   // Access CRUD interface state
   const [accessSearchQuery, setAccessSearchQuery] = useState('');
@@ -1943,6 +2075,16 @@ export default function ProfileView({
         >
           <User className="w-3.5 h-3.5" /> MEU PERFIL & SEGURANÇA
         </button>
+        <button
+          onClick={() => setActiveSubTab('personal_attempts')}
+          className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
+            activeSubTab === 'personal_attempts'
+              ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
+              : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5 text-amber-400" /> AVALIAÇÕES PESSOAIS
+        </button>
         {!isStandardUser && (
           <>
             <button
@@ -2035,6 +2177,323 @@ export default function ProfileView({
           </>
         )}
       </div>
+
+      {activeSubTab === 'personal_attempts' && (
+        <div className="space-y-6 animate-fade-in text-left">
+          {/* Header Card */}
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-5 md:p-6 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-sans font-black text-base text-white uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-amber-400" /> Meu Histórico & Progresso
+                </h3>
+                <p className="text-[11px] text-[#9cbfd5] leading-relaxed mt-1">
+                  Confira abaixo o seu progresso pessoal de estudos: tentativas de simulados e seus cursos concluídos na plataforma.
+                </p>
+              </div>
+            </div>
+
+            {/* Sub-tab selection group */}
+            <div className="flex border-b border-[#1c2c36] mt-6 font-mono text-[10px] uppercase font-bold tracking-wider">
+              <button
+                type="button"
+                onClick={() => setPersonalSubSection('quizzes')}
+                className={`flex items-center gap-1.5 py-2.5 px-4 font-bold border-b-2 cursor-pointer transition-all ${
+                  personalSubSection === 'quizzes'
+                    ? 'border-[#E9C349] text-[#E9C349] bg-[#04141d]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" /> Simulados & Avaliações
+              </button>
+              <button
+                type="button"
+                onClick={() => setPersonalSubSection('courses')}
+                className={`flex items-center gap-1.5 py-2.5 px-4 font-bold border-b-2 cursor-pointer transition-all ${
+                  personalSubSection === 'courses'
+                    ? 'border-[#E9C349] text-[#E9C349] bg-[#04141d]/40'
+                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Cursos Concluídos
+              </button>
+            </div>
+
+            {/* Filter controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+              <div className={personalSubSection === 'quizzes' ? 'relative col-span-2' : 'relative col-span-3'}>
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#99907c]" />
+                <input
+                  type="text"
+                  placeholder={
+                    personalSubSection === 'quizzes'
+                      ? 'Buscar pelo título do simulado...'
+                      : 'Buscar pelo título do curso ou categoria...'
+                  }
+                  value={personalSearchQuery}
+                  onChange={(e) => setPersonalSearchQuery(e.target.value)}
+                  className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] pl-9 pr-3 py-2.5 rounded-lg focus:outline-none focus:border-[#E9C349] font-mono placeholder-[#99907c]/60"
+                />
+              </div>
+
+              {personalSubSection === 'quizzes' && (
+                <div>
+                  <select
+                    value={personalStatusFilter}
+                    onChange={(e) => setPersonalStatusFilter(e.target.value as any)}
+                    className="w-full bg-[#04141d] text-xs text-[#d4e5f2] border border-[#1c2c36] py-2.5 px-3 rounded-lg focus:outline-none focus:border-[#E9C349] font-mono"
+                  >
+                    <option value="Todos">Todos os Status</option>
+                    <option value="Aprovados">Aprovados</option>
+                    <option value="Reprovados">Estudo / Reprovados</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Table Container - Quizzes Section */}
+          {personalSubSection === 'quizzes' && (
+            <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                    <th className="py-3 px-4">Questionário</th>
+                    <th className="py-3 px-4 text-center">Tipo</th>
+                    <th className="py-3 px-4 text-center">Data e Hora</th>
+                    <th className="py-3 px-4 text-center">Desempenho</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1c2c36]/60">
+                  {userAttempts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                        <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                        Nenhum registro de simulado encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    userAttempts.map((attempt) => (
+                      <tr key={attempt.id} className="hover:bg-[#11212b]/30 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                            {attempt.questionnaireTitle}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
+                            attempt.simulationMode === 'Completo'
+                              ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
+                              : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
+                          }`}>
+                            {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
+                          {attempt.dateTime}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="font-mono font-bold text-[#E9C349] text-xs">
+                            {Math.round(attempt.scorePercentage)}%
+                          </div>
+                          <div className="font-mono text-[9px] text-[#99907c] mt-0.5">
+                            {attempt.correctAnswersCount}/{attempt.totalQuestionsCount} acertos
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
+                            attempt.approved 
+                              ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                              : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                          }`}>
+                            {attempt.approved ? 'Aprovado' : 'Estudo'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAttemptForDetails(attempt)}
+                              className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 p-1.5 rounded transition-all cursor-pointer"
+                              title="Ver Respostas Detalhadas"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            {attempt.approved && onOpenCertificate && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const userName = attempt.userName || currentUser?.name || 'Membro';
+                                  const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                  const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
+                                  const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
+                                  const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
+                                  onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                                }}
+                                className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
+                                title="Imprimir Certificado"
+                              >
+                                <Award className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Table Container - Completed Courses Section */}
+          {personalSubSection === 'courses' && (
+            <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40 animate-fade-in">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                    <th className="py-3 px-4">Curso / Título</th>
+                    <th className="py-3 px-4 text-center">Categoria / Trilha</th>
+                    <th className="py-3 px-4 text-center">Grau Requerido</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#1c2c36]/60">
+                  {filteredCompletedCourses.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                        <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                        Nenhum curso concluído encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCompletedCourses.map((course) => (
+                      <tr key={course.id} className="hover:bg-[#11212b]/30 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                            {course.title}
+                          </div>
+                          <div className="font-sans text-[10px] text-[#99907c] mt-0.5 line-clamp-1">
+                            {course.summary}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider bg-sky-950/40 text-sky-400 border border-sky-900/40">
+                            {course.category || 'Geral'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
+                          {course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : 'Geral'}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase bg-emerald-950/20 text-emerald-400 border border-emerald-900/40">
+                            Concluído
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {onOpenCertificate && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const userName = currentUser?.name || 'Membro';
+                                  const dateStr = new Date().toLocaleDateString('pt-BR');
+                                  const gradeLabel = course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : undefined;
+                                  onOpenCertificate(userName, course.title, 'course', dateStr, undefined, gradeLabel);
+                                }}
+                                className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
+                                title="Imprimir Certificado de Conclusão"
+                              >
+                                <Award className="w-3.5 h-3.5 text-[#E9C349]" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Review details modal */}
+      {selectedAttemptForDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl w-full max-w-2xl p-6 space-y-4 shadow-2xl relative text-left">
+            <div className="flex items-center justify-between border-b border-[#1c2c36] pb-3">
+              <div>
+                <span className="text-[9px] font-mono text-[#E9C349] uppercase tracking-widest font-black block">REVISÃO DETALHADA</span>
+                <h3 className="font-sans font-black text-sm text-[#d4e5f2] uppercase tracking-wider">
+                  Minhas Respostas
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAttemptForDetails(null)}
+                className="text-[#99907c] hover:text-[#d4e5f2] transition-colors cursor-pointer p-1 rounded-md hover:bg-[#11212b]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4 bg-[#04141d] p-3 rounded-lg border border-[#1c2c36]/80 text-[11px] font-mono">
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Simulado</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.questionnaireTitle}</strong>
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Data e Hora</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.dateTime}</strong>
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Tipo de Avaliação</span>
+                  <strong className="text-[#d4e5f2]">{selectedAttemptForDetails.simulationMode === 'Completo' ? 'Questionário Padrão' : 'Simulado'}</strong>
+                </div>
+                <div>
+                  <span className="text-[#99907c] block uppercase text-[9px]">Nota / Desempenho</span>
+                  <strong className="text-[#E9C349]">{Math.round(selectedAttemptForDetails.scorePercentage)}%</strong> ({selectedAttemptForDetails.correctAnswersCount}/{selectedAttemptForDetails.totalQuestionsCount} acertos)
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold block">
+                  Respostas Registradas:
+                </span>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                  {selectedAttemptForDetails.respostas ? (
+                    selectedAttemptForDetails.respostas.split(' | ').map((resp, idx) => (
+                      <div key={idx} className="bg-[#04141d] border border-[#1c2c36] p-2.5 rounded-lg font-mono text-[10.5px] leading-relaxed text-[#d4e5f2] break-words">
+                        {resp}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 text-[#99907c] font-mono italic">
+                      Nenhuma resposta detalhada foi gravada para esta avaliação.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedAttemptForDetails(null)}
+                className="bg-[#11212b] border border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] px-5 py-2 rounded text-[10px] font-mono uppercase cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeSubTab === 'profile' && (
         // Standard profile display view
