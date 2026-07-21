@@ -1841,25 +1841,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Left Column (Boaz) */}
                   {showColEsq && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'col_esq'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'col_esq'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${colunaEsqPos.x}%`,
                         top: `${colunaEsqPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${colunaEsqPos.scale})`,
-                        cursor: draggedElementId === 'col_esq' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'col_esq' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${colunaEsqPos.width}px`,
                         height: `${colunaEsqPos.width * (410 / 60)}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('col_esq');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('col_esq');
@@ -1873,6 +1877,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'col_esq' || draggedElementId !== 'col_esq') return;
                         e.stopPropagation();
@@ -1886,12 +1891,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setColunaEsqPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -1915,25 +1922,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Right Column (Jachin) */}
                   {showColDir && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'col_dir'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'col_dir'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${colunaDirPos.x}%`,
                         top: `${colunaDirPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${colunaDirPos.scale})`,
-                        cursor: draggedElementId === 'col_dir' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'col_dir' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${colunaDirPos.width}px`,
                         height: `${colunaDirPos.width * (410 / 60)}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('col_dir');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('col_dir');
@@ -1947,6 +1958,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'col_dir' || draggedElementId !== 'col_dir') return;
                         e.stopPropagation();
@@ -1960,12 +1972,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setColunaDirPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -1989,25 +2003,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Eye of Providence (Olho que tudo vê) */}
                   {showOlho && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'olho'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'olho'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${olhoPos.x}%`,
                         top: `${olhoPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${olhoPos.scale})`,
-                        cursor: draggedElementId === 'olho' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'olho' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${olhoPos.width}px`,
                         height: `${olhoPos.width}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('olho');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('olho');
@@ -2021,6 +2039,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'olho' || draggedElementId !== 'olho') return;
                         e.stopPropagation();
@@ -2034,12 +2053,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setOlhoPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -2066,25 +2087,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Square and Compass with Acacia inside and Letter G */}
                   {showEsquadro && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'esquadro'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'esquadro'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${esquadroPos.x}%`,
                         top: `${esquadroPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${esquadroPos.scale})`,
-                        cursor: draggedElementId === 'esquadro' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'esquadro' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${esquadroPos.width}px`,
                         height: `${esquadroPos.width * (200 / 180)}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('esquadro');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('esquadro');
@@ -2098,6 +2123,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'esquadro' || draggedElementId !== 'esquadro') return;
                         e.stopPropagation();
@@ -2111,12 +2137,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setEsquadroPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -2149,25 +2177,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Mallet and Chisel (Malho e Cinzel) */}
                   {showMalho && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'malho'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'malho'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${malhoPos.x}%`,
                         top: `${malhoPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${malhoPos.scale})`,
-                        cursor: draggedElementId === 'malho' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'malho' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${malhoPos.width}px`,
                         height: `${malhoPos.width * (70 / 60)}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('malho');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('malho');
@@ -2181,6 +2213,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'malho' || draggedElementId !== 'malho') return;
                         e.stopPropagation();
@@ -2194,12 +2227,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setMalhoPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -2224,25 +2259,29 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                   {/* Acacia Branches (Acácia) */}
                   {showAcacia && (
                     <div
-                      className={`absolute select-none pointer-events-auto transition-shadow ${
-                        selectedElementId === 'acacia'
-                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                      className={`absolute select-none transition-shadow ${
+                        isAdmin
+                          ? selectedElementId === 'acacia'
+                            ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                            : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                          : 'z-20 pointer-events-none'
                       }`}
                       style={{
                         left: `${acaciaPos.x}%`,
                         top: `${acaciaPos.y}%`,
                         transform: `translate(-50%, -50%) scale(${acaciaPos.scale}) rotate(20deg)`,
-                        cursor: draggedElementId === 'acacia' ? 'grabbing' : 'grab',
+                        cursor: isAdmin ? (draggedElementId === 'acacia' ? 'grabbing' : 'grab') : 'default',
                         touchAction: 'none',
                         width: `${acaciaPos.width}px`,
                         height: `${acaciaPos.width}px`,
                       }}
                       onClick={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         setSelectedElementId('acacia');
                       }}
                       onPointerDown={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.setPointerCapture(e.pointerId);
                         setDraggedElementId('acacia');
@@ -2256,6 +2295,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         };
                       }}
                       onPointerMove={(e) => {
+                        if (!isAdmin) return;
                         const dragInfo = dragInfoRef.current;
                         if (!dragInfo || dragInfo.id !== 'acacia' || draggedElementId !== 'acacia') return;
                         e.stopPropagation();
@@ -2269,12 +2309,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                         setAcaciaPos(prev => ({ ...prev, x: newX, y: newY }));
                       }}
                       onPointerUp={(e) => {
+                        if (!isAdmin) return;
                         e.stopPropagation();
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
                       }}
                       onPointerCancel={(e) => {
+                        if (!isAdmin) return;
                         e.currentTarget.releasePointerCapture(e.pointerId);
                         setDraggedElementId(null);
                         dragInfoRef.current = null;
@@ -2308,23 +2350,27 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                 return (
                   <div
                     key={el.id}
-                    className={`absolute select-none pointer-events-auto transition-shadow ${
-                      isSelected 
-                        ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30' 
-                        : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                    className={`absolute select-none transition-shadow ${
+                      isAdmin
+                        ? isSelected 
+                          ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto' 
+                          : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                        : 'z-20 pointer-events-none'
                     }`}
                     style={{
                       left: `${el.x}%`,
                       top: `${el.y}%`,
                       transform: `translate(-50%, -50%) scale(${el.scale})`,
-                      cursor: isDragging ? 'grabbing' : 'grab',
+                      cursor: isAdmin ? (isDragging ? 'grabbing' : 'grab') : 'default',
                       touchAction: 'none',
                     }}
                     onClick={(e) => {
+                      if (!isAdmin) return;
                       e.stopPropagation();
                       setSelectedElementId(el.id);
                     }}
                     onPointerDown={(e) => {
+                      if (!isAdmin) return;
                       e.stopPropagation();
                       e.currentTarget.setPointerCapture(e.pointerId);
                       setDraggedElementId(el.id);
@@ -2338,6 +2384,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                       };
                     }}
                     onPointerMove={(e) => {
+                      if (!isAdmin) return;
                       const dragInfo = dragInfoRef.current;
                       if (!dragInfo || dragInfo.id !== el.id || draggedElementId !== el.id) return;
                       e.stopPropagation();
@@ -2365,12 +2412,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                       );
                     }}
                     onPointerUp={(e) => {
+                      if (!isAdmin) return;
                       e.stopPropagation();
                       e.currentTarget.releasePointerCapture(e.pointerId);
                       setDraggedElementId(null);
                       dragInfoRef.current = null;
                     }}
                     onPointerCancel={(e) => {
+                      if (!isAdmin) return;
                       e.currentTarget.releasePointerCapture(e.pointerId);
                       setDraggedElementId(null);
                       dragInfoRef.current = null;
@@ -2384,13 +2433,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     />
                     
                     {/* Tiny action floating buttons for selected elements */}
-                    {isSelected && (
+                    {isAdmin && isSelected && (
                       <div className="absolute -top-3 -right-3 flex gap-1 bg-[#04141D] border border-[#d4af37] rounded-md p-0.5 shadow-md pointer-events-auto z-40">
                         {/* Delete/Remove button */}
                         <button
                           type="button"
                           title="Remover"
                           onClick={(e) => {
+                            if (!isAdmin) return;
                             e.stopPropagation();
                             setCustomElements(prev => prev.filter(item => item.id !== el.id));
                             setSelectedElementId(null);
@@ -2470,23 +2520,27 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
               {/* Default Seal Element */}
               {showSeal && (
                 <div
-                  className={`absolute select-none pointer-events-auto transition-shadow ${
-                    selectedElementId === 'default_seal'
-                      ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                      : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                  className={`absolute select-none transition-shadow ${
+                    isAdmin
+                      ? selectedElementId === 'default_seal'
+                        ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                        : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                      : 'z-20 pointer-events-none'
                   }`}
                   style={{
                     left: `${sealPos.x}%`,
                     top: `${sealPos.y}%`,
                     transform: `translate(-50%, -50%) scale(${sealPos.scale})`,
-                    cursor: draggedElementId === 'default_seal' ? 'grabbing' : 'grab',
+                    cursor: isAdmin ? (draggedElementId === 'default_seal' ? 'grabbing' : 'grab') : 'default',
                     touchAction: 'none',
                   }}
                   onClick={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     setSelectedElementId('default_seal');
                   }}
                   onPointerDown={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.setPointerCapture(e.pointerId);
                     setDraggedElementId('default_seal');
@@ -2500,6 +2554,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     };
                   }}
                   onPointerMove={(e) => {
+                    if (!isAdmin) return;
                     const dragInfo = dragInfoRef.current;
                     if (!dragInfo || dragInfo.id !== 'default_seal' || draggedElementId !== 'default_seal') return;
                     e.stopPropagation();
@@ -2520,12 +2575,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     setSealPos(prev => ({ ...prev, x: newX, y: newY }));
                   }}
                   onPointerUp={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
                   }}
                   onPointerCancel={(e) => {
+                    if (!isAdmin) return;
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
@@ -2552,23 +2609,27 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
               {/* Default Signature Element */}
               {showSig && (
                 <div
-                  className={`absolute select-none pointer-events-auto transition-shadow ${
-                    selectedElementId === 'default_sig'
-                      ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                      : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                  className={`absolute select-none transition-shadow ${
+                    isAdmin
+                      ? selectedElementId === 'default_sig'
+                        ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                        : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                      : 'z-20 pointer-events-none'
                   }`}
                   style={{
                     left: `${sigPos.x}%`,
                     top: `${sigPos.y}%`,
                     transform: `translate(-50%, -50%) scale(${sigPos.scale})`,
-                    cursor: draggedElementId === 'default_sig' ? 'grabbing' : 'grab',
+                    cursor: isAdmin ? (draggedElementId === 'default_sig' ? 'grabbing' : 'grab') : 'default',
                     touchAction: 'none',
                   }}
                   onClick={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     setSelectedElementId('default_sig');
                   }}
                   onPointerDown={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.setPointerCapture(e.pointerId);
                     setDraggedElementId('default_sig');
@@ -2582,6 +2643,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     };
                   }}
                   onPointerMove={(e) => {
+                    if (!isAdmin) return;
                     const dragInfo = dragInfoRef.current;
                     if (!dragInfo || dragInfo.id !== 'default_sig' || draggedElementId !== 'default_sig') return;
                     e.stopPropagation();
@@ -2602,12 +2664,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     setSigPos(prev => ({ ...prev, x: newX, y: newY }));
                   }}
                   onPointerUp={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
                   }}
                   onPointerCancel={(e) => {
+                    if (!isAdmin) return;
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
@@ -2632,23 +2696,27 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
               {/* Default Authenticity Info Element */}
               {showInfo && (
                 <div
-                  className={`absolute select-none pointer-events-auto transition-shadow ${
-                    selectedElementId === 'default_info'
-                      ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30'
-                      : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20'
+                  className={`absolute select-none transition-shadow ${
+                    isAdmin
+                      ? selectedElementId === 'default_info'
+                        ? 'ring-2 ring-dashed ring-[#E9C349] ring-offset-2 ring-offset-[#06273A] shadow-xl z-30 pointer-events-auto'
+                        : 'hover:ring-1 hover:ring-dashed hover:ring-[#E9C349]/50 z-20 pointer-events-auto'
+                      : 'z-20 pointer-events-none'
                   }`}
                   style={{
                     left: `${infoPos.x}%`,
                     top: `${infoPos.y}%`,
                     transform: `translate(-50%, -50%) scale(${infoPos.scale})`,
-                    cursor: draggedElementId === 'default_info' ? 'grabbing' : 'grab',
+                    cursor: isAdmin ? (draggedElementId === 'default_info' ? 'grabbing' : 'grab') : 'default',
                     touchAction: 'none',
                   }}
                   onClick={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     setSelectedElementId('default_info');
                   }}
                   onPointerDown={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.setPointerCapture(e.pointerId);
                     setDraggedElementId('default_info');
@@ -2662,6 +2730,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     };
                   }}
                   onPointerMove={(e) => {
+                    if (!isAdmin) return;
                     const dragInfo = dragInfoRef.current;
                     if (!dragInfo || dragInfo.id !== 'default_info' || draggedElementId !== 'default_info') return;
                     e.stopPropagation();
@@ -2682,12 +2751,14 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
                     setInfoPos(prev => ({ ...prev, x: newX, y: newY }));
                   }}
                   onPointerUp={(e) => {
+                    if (!isAdmin) return;
                     e.stopPropagation();
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
                   }}
                   onPointerCancel={(e) => {
+                    if (!isAdmin) return;
                     e.currentTarget.releasePointerCapture(e.pointerId);
                     setDraggedElementId(null);
                     dragInfoRef.current = null;
