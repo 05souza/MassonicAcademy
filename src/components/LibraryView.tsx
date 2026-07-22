@@ -108,12 +108,12 @@ export default function LibraryView({
     }
 
     // Search query matching
-    const searchLower = searchQuery.toLowerCase().trim();
+    const searchLower = (searchQuery || '').toLowerCase().trim();
     if (searchLower) {
-      const matchesTitle = book.title.toLowerCase().includes(searchLower);
-      const matchesAuthor = book.author.toLowerCase().includes(searchLower);
-      const matchesTags = book.tags.some(t => t.toLowerCase().includes(searchLower));
-      const matchesCategory = bookCats.some(cat => cat.toLowerCase().includes(searchLower));
+      const matchesTitle = (book.title || '').toLowerCase().includes(searchLower);
+      const matchesAuthor = (book.author || '').toLowerCase().includes(searchLower);
+      const matchesTags = (book.tags || []).some(t => (t || '').toLowerCase().includes(searchLower));
+      const matchesCategory = bookCats.some(cat => (cat || '').toLowerCase().includes(searchLower));
       if (!matchesTitle && !matchesAuthor && !matchesTags && !matchesCategory) {
         return false;
       }
@@ -126,9 +126,9 @@ export default function LibraryView({
   const sortedBooks = [...filteredBooks].sort((a, b) => {
     switch (sortBy) {
       case 'name-az':
-        return a.title.localeCompare(b.title);
+        return (a.title || '').localeCompare(b.title || '');
       case 'name-za':
-        return b.title.localeCompare(a.title);
+        return (b.title || '').localeCompare(a.title || '');
       case 'grau-asc':
         return a.nivelAcesso - b.nivelAcesso;
       case 'grau-desc':

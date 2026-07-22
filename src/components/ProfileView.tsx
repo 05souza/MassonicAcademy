@@ -1382,11 +1382,11 @@ export default function ProfileView({
         return false;
       }
     }
-    const query = bookSearchQuery.toLowerCase();
-    return b.title.toLowerCase().includes(query) || 
-           b.author.toLowerCase().includes(query) || 
-           b.id.toLowerCase().includes(query) ||
-           bookCats.some(cat => cat.toLowerCase().includes(query));
+    const query = (bookSearchQuery || '').toLowerCase();
+    return (b.title || '').toLowerCase().includes(query) || 
+           (b.author || '').toLowerCase().includes(query) || 
+           (b.id || '').toLowerCase().includes(query) ||
+           bookCats.some(cat => (cat || '').toLowerCase().includes(query));
   });
 
   const allFilteredChecked = filteredBooks.length > 0 && filteredBooks.every(b => selectedBookIds.includes(b.id));
@@ -1832,7 +1832,7 @@ export default function ProfileView({
 
     // Verify unique ID if creating new
     if (isCreatingNew) {
-      const exists = reports.some(r => r.id.toLowerCase() === finalId.toLowerCase());
+      const exists = reports.some(r => (r.id || '').toLowerCase() === finalId.toLowerCase());
       if (exists) {
         setCrudError(`Já existe um curso permanente com o código ID de conformidade: "${finalId}". Utilize outro.`);
         return;
@@ -2005,7 +2005,7 @@ export default function ProfileView({
         setUserCrudError(`O administrador ${emailToUse} já possui credenciais de privilégio supremo.`);
         return;
       }
-      const exists = accessUsers.some(u => u.email.toLowerCase() === emailToUse);
+      const exists = accessUsers.some(u => (u.email || '').toLowerCase() === emailToUse);
       if (exists) {
         setUserCrudError(`O e-mail "${userFormEmail}" já está cadastrado no banco de dados de acessos.`);
         return;
@@ -2060,9 +2060,10 @@ export default function ProfileView({
 
   // Filter local display on left column
   const filteredList = reports.filter(r => {
-    const matchesSearch = r.title.toLowerCase().includes(reportsSearchQuery.toLowerCase()) ||
-      r.id.toLowerCase().includes(reportsSearchQuery.toLowerCase()) ||
-      r.category.toLowerCase().includes(reportsSearchQuery.toLowerCase());
+    const q = (reportsSearchQuery || '').toLowerCase();
+    const matchesSearch = (r.title || '').toLowerCase().includes(q) ||
+      (r.id || '').toLowerCase().includes(q) ||
+      (r.category || '').toLowerCase().includes(q);
     
     if (!matchesSearch) return false;
     if (reportsStatusFilter === 'todos') return true;
