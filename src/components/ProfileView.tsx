@@ -1333,6 +1333,7 @@ export default function ProfileView({
   };
   const [bookFormTitle, setBookFormTitle] = useState('');
   const [bookFormAuthor, setBookFormAuthor] = useState('');
+  const [bookFormAnoPublicacao, setBookFormAnoPublicacao] = useState('');
   const [bookFormCategory, setBookFormCategory] = useState('');
   const [bookFormCategories, setBookFormCategories] = useState<string[]>([]);
   const [bookFormNivelAcesso, setBookFormNivelAcesso] = useState<number>(1);
@@ -1405,6 +1406,7 @@ export default function ProfileView({
     setBookFormId(book.id);
     setBookFormTitle(book.title);
     setBookFormAuthor(book.author);
+    setBookFormAnoPublicacao(book.publicationYear !== undefined && book.publicationYear !== null ? String(book.publicationYear) : '');
     setBookFormCategory(book.category);
     setBookFormCategories(book.categories && book.categories.length > 0 ? book.categories : [book.category]);
     setBookFormNivelAcesso(book.nivelAcesso);
@@ -1425,6 +1427,7 @@ export default function ProfileView({
     setBookFormId(generatedId);
     setBookFormTitle('');
     setBookFormAuthor('');
+    setBookFormAnoPublicacao('');
     setBookFormCategory('Filosofia');
     setBookFormCategories(['Filosofia']);
     setBookFormNivelAcesso(1);
@@ -1467,6 +1470,8 @@ export default function ProfileView({
       .map(t => t.trim())
       .filter(t => t.length > 0);
 
+    const pubYearNum = bookFormAnoPublicacao.trim() ? parseInt(bookFormAnoPublicacao.trim(), 10) : undefined;
+
     const savedBook: Book = {
       id: bookFormId.trim(),
       title: bookFormTitle.trim(),
@@ -1478,6 +1483,7 @@ export default function ProfileView({
       tags: processedTags,
       thumbnailUrl: bookFormThumbnailUrl.trim(),
       link: bookFormLink.trim(),
+      publicationYear: pubYearNum && !isNaN(pubYearNum) ? pubYearNum : undefined,
       lodgeId: isCreatingNewBook ? (currentUser?.lodgeId || 'lodge-cavaleiros') : (books.find(b => b.id === bookFormId.trim())?.lodgeId || currentUser?.lodgeId || 'lodge-cavaleiros')
     };
 
@@ -1519,6 +1525,7 @@ export default function ProfileView({
         id: "livro-exemplo-1",
         titulo: "A SIMBOLOGIA DO GRAU DE APRENDIZ",
         autor: "José Castellani",
+        anoPublicacao: 2020,
         categorias: "Simbologia, Maçonaria",
         grau: 1,
         status: "Ativo",
@@ -1530,6 +1537,7 @@ export default function ProfileView({
         id: "livro-exemplo-2",
         titulo: "REGRAS DE ADMINISTRAÇÃO EM LOJA",
         autor: "Autor Desconhecido",
+        anoPublicacao: 2018,
         categorias: "Filosofia, Rituais",
         grau: 4,
         status: "Inativo",
@@ -1586,6 +1594,7 @@ export default function ProfileView({
           const rawId = row.id || row.Identificador || row.ID;
           const rawTitle = row.titulo || row.title || row.Título || row.Titulo;
           const rawAuthor = row.autor || row.author || row.Autor;
+          const rawAnoPublicacao = row.anoPublicacao || row.ano || row.publicationYear || row.AnoPublicacao || row.Ano;
           const rawCategorias = row.categorias || row.categories || row.Categorias || row.category || row.Category || row.categoria || row.Categoria;
           const rawGrau = row.grau || row.nivelAcesso || row.Grau || row.nivel || row.Nível || row.Nivel;
           const rawStatus = row.status || row.Status;
@@ -1639,10 +1648,19 @@ export default function ProfileView({
             tags = String(rawTags).split(',').map(t => t.trim()).filter(Boolean);
           }
 
+          let publicationYear: number | undefined = undefined;
+          if (rawAnoPublicacao !== undefined && rawAnoPublicacao !== null) {
+            const parsedAno = parseInt(String(rawAnoPublicacao).trim(), 10);
+            if (!isNaN(parsedAno)) {
+              publicationYear = parsedAno;
+            }
+          }
+
           importedBooks.push({
             id,
             title: String(rawTitle).trim(),
             author: String(rawAuthor).trim(),
+            publicationYear,
             category: categories[0],
             categories,
             nivelAcesso: degree,
@@ -4801,6 +4819,20 @@ export default function ProfileView({
                     value={bookFormAuthor}
                     onChange={(e) => setBookFormAuthor(e.target.value)}
                     className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-sans"
+                  />
+                </div>
+
+                {/* Publication Year Field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Ano de Publicação</label>
+                  <input
+                    type="number"
+                    placeholder="ex: 2024"
+                    min="1000"
+                    max="2100"
+                    value={bookFormAnoPublicacao}
+                    onChange={(e) => setBookFormAnoPublicacao(e.target.value)}
+                    className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
                   />
                 </div>
 

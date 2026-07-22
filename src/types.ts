@@ -128,6 +128,7 @@ export interface Book {
   tags: string[];
   thumbnailUrl: string;
   link: string;
+  publicationYear?: number;
   lodgeId?: string;
 }
 

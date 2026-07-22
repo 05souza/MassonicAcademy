@@ -24,7 +24,7 @@ export default function LibraryView({
 }: LibraryViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('Todos os materiais');
   const [localSearchQuery, setLocalSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc'>('name-az');
+  const [sortBy, setSortBy] = useState<'name-az' | 'name-za' | 'grau-asc' | 'grau-desc' | 'ano-desc' | 'ano-asc'>('name-az');
   const [checkedCategories, setCheckedCategories] = useState<Record<string, boolean>>({});
   const [checkedDegrees, setCheckedDegrees] = useState<Record<number, boolean>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -133,6 +133,10 @@ export default function LibraryView({
         return a.nivelAcesso - b.nivelAcesso;
       case 'grau-desc':
         return b.nivelAcesso - a.nivelAcesso;
+      case 'ano-desc':
+        return (b.publicationYear || 0) - (a.publicationYear || 0);
+      case 'ano-asc':
+        return (a.publicationYear || 0) - (b.publicationYear || 0);
       default:
         return 0;
     }
@@ -299,6 +303,8 @@ export default function LibraryView({
               <option value="name-za">Nome Z-A</option>
               <option value="grau-asc">Grau (Crescente)</option>
               <option value="grau-desc">Grau (Decrescente)</option>
+              <option value="ano-desc">Ano de Publicação (Mais Recente)</option>
+              <option value="ano-asc">Ano de Publicação (Mais Antigo)</option>
             </select>
           </div>
         </div>
@@ -400,9 +406,10 @@ export default function LibraryView({
                         {book.title}
                       </h4>
 
-                      {/* Author */}
+                      {/* Author & Publication Year */}
                       <p className="font-mono text-[10px] text-[#99907c] truncate">
                         Por: <span className="text-slate-300 font-sans font-medium">{book.author}</span>
+                        {book.publicationYear ? <span className="text-[#66d9cc] ml-1.5 font-bold">({book.publicationYear})</span> : null}
                       </p>
                     </div>
 
@@ -490,9 +497,10 @@ export default function LibraryView({
                         {book.title}
                       </h4>
 
-                      {/* Author */}
+                      {/* Author & Publication Year */}
                       <p className="font-mono text-[10px] text-[#99907c]">
                         Por: <span className="text-slate-300 font-sans font-medium">{book.author}</span>
+                        {book.publicationYear ? <span className="text-[#66d9cc] ml-1.5 font-bold">({book.publicationYear})</span> : null}
                       </p>
                     </div>
 
