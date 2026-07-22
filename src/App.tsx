@@ -26,13 +26,15 @@ import { CertificateModal, CertificateData } from './components/CertificateModal
 export const isAdmin = (email: string | undefined): boolean => {
   if (!email) return false;
   const lower = email.toLowerCase().trim();
-  if (lower === 'dani.nanda.lucas@gmail.com') return true;
+  if (lower === 'dani.nanda.lucas@gmail.com' || lower === 'daniel') return true;
   
   try {
     const saved = localStorage.getItem('masonic_current_user_v1');
     if (saved) {
       const parsed = JSON.parse(saved) as AccessUser;
-      if (parsed && (parsed.email || '').toLowerCase().trim() === lower && parsed.tipoUsuario === 'admin') {
+      const uEmail = (parsed.email || '').toLowerCase().trim();
+      const uAcesso = (parsed.userAcesso || '').toLowerCase().trim();
+      if (parsed && (uEmail === lower || uAcesso === lower || (lower === 'daniel' && uEmail === 'dani.nanda.lucas@gmail.com')) && (parsed.tipoUsuario === 'admin' || uEmail === 'dani.nanda.lucas@gmail.com' || uAcesso === 'daniel')) {
         return true;
       }
     }
@@ -42,8 +44,12 @@ export const isAdmin = (email: string | undefined): boolean => {
     const savedUsers = localStorage.getItem('masonic_access_users_v1');
     if (savedUsers) {
       const usersList = JSON.parse(savedUsers) as AccessUser[];
-      const found = usersList.find(u => (u.email || '').toLowerCase().trim() === lower);
-      if (found && found.tipoUsuario === 'admin') {
+      const found = usersList.find(u => {
+        const uEmail = (u.email || '').toLowerCase().trim();
+        const uAcesso = (u.userAcesso || '').toLowerCase().trim();
+        return uEmail === lower || uAcesso === lower || (lower === 'daniel' && uEmail === 'dani.nanda.lucas@gmail.com');
+      });
+      if (found && (found.tipoUsuario === 'admin' || (found.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com' || (found.userAcesso || '').toLowerCase().trim() === 'daniel')) {
         return true;
       }
     }
@@ -174,7 +180,14 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((u: AccessUser) => {
+            if ((u.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com' || u.id === 'usr-nanda') {
+              return { ...u, userAcesso: u.userAcesso || 'daniel', tipoUsuario: u.tipoUsuario || 'admin' };
+            }
+            return u;
+          });
+        }
       } catch (e) {
         console.error('Error parsing cached access users', e);
       }
@@ -185,9 +198,11 @@ export default function App() {
         id: 'usr-nanda',
         name: 'Daniel Luciano',
         email: 'dani.nanda.lucas@gmail.com',
+        userAcesso: 'daniel',
         allowedReportIds: '*, todos_do_grau',
         status: 'Ativo',
-        nivelAcesso: '33'
+        nivelAcesso: '33',
+        tipoUsuario: 'admin'
       },
       {
         id: 'usr-gisela',
@@ -447,6 +462,10 @@ export default function App() {
     const savedCurrentUser = localStorage.getItem('masonic_current_user_v1');
     if (savedCurrentUser) {
       const parsedUser = JSON.parse(savedCurrentUser);
+      if ((parsedUser.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com' || (parsedUser.userAcesso || '').toLowerCase().trim() === 'daniel') {
+        parsedUser.userAcesso = parsedUser.userAcesso || 'daniel';
+        parsedUser.tipoUsuario = parsedUser.tipoUsuario || 'admin';
+      }
       setCurrentUser(parsedUser);
       // Only log login once per browser tab session to avoid duplicate logs during page refreshes/HMR
       const loggedThisSession = sessionStorage.getItem('masonic_logged_this_session');
@@ -605,9 +624,11 @@ export default function App() {
                 id: 'usr-nanda',
                 name: 'Daniel Luciano',
                 email: 'dani.nanda.lucas@gmail.com',
+                userAcesso: 'daniel',
                 allowedReportIds: '*, todos_do_grau',
                 status: 'Ativo',
-                nivelAcesso: '33'
+                nivelAcesso: '33',
+                tipoUsuario: 'admin'
               },
               {
                 id: 'usr-gisela',
@@ -876,9 +897,11 @@ export default function App() {
             id: 'usr-nanda',
             name: 'Daniel Luciano',
             email: 'dani.nanda.lucas@gmail.com',
+            userAcesso: 'daniel',
             allowedReportIds: '*, todos_do_grau',
             status: 'Ativo',
-            nivelAcesso: '33'
+            nivelAcesso: '33',
+            tipoUsuario: 'admin'
           },
           {
             id: 'usr-gisela',
@@ -1209,8 +1232,11 @@ export default function App() {
         id: 'usr-nanda-master',
         name: 'Daniel Luciano',
         email: 'dani.nanda.lucas@gmail.com',
+        userAcesso: 'daniel',
         allowedReportIds: '*',
-        status: 'Ativo'
+        status: 'Ativo',
+        tipoUsuario: 'admin',
+        nivelAcesso: '33'
       };
       setCurrentUser(admin);
       localStorage.setItem('masonic_current_user_v1', JSON.stringify(admin));
@@ -1960,7 +1986,7 @@ export default function App() {
   };
 
   const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
-  const isMasterAdmin = (currentUser?.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com';
+  const isMasterAdmin = (currentUser?.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com' || (currentUser?.userAcesso || '').toLowerCase().trim() === 'daniel';
 
   const lodgeReports = reports.filter(r => {
     if (isMasterAdmin) return true;

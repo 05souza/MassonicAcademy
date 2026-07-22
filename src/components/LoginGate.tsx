@@ -31,8 +31,11 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
       id: 'usr-nanda-master',
       name: 'Daniel Luciano',
       email: 'dani.nanda.lucas@gmail.com',
+      userAcesso: 'daniel',
       allowedReportIds: '*',
-      status: 'Ativo'
+      status: 'Ativo',
+      tipoUsuario: 'admin',
+      nivelAcesso: '33'
     }
   ];
 
@@ -48,18 +51,24 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
 
     // 1. Check master admins first (check by email or userAcesso if configured)
     const adminFound = masterAdmins.find(admin => 
-      admin.email.toLowerCase() === emailClean || 
-      (admin.userAcesso && admin.userAcesso.toLowerCase() === emailClean)
+      (admin.email || '').toLowerCase() === emailClean || 
+      (admin.userAcesso || '').toLowerCase() === emailClean ||
+      (emailClean === 'daniel' && (admin.email || '').toLowerCase() === 'dani.nanda.lucas@gmail.com')
     );
     if (adminFound) {
+      if (adminFound.password && adminFound.password !== loginPassword) {
+        setErrorMsg('Senha incorreta. Por favor, tente novamente.');
+        return;
+      }
       triggerSuccess(adminFound);
       return;
     }
 
     // 2. Check access users lists (check by email or userAcesso)
     const userFound = accessUsers.find(user => 
-      user.email.toLowerCase() === emailClean || 
-      (user.userAcesso && user.userAcesso.toLowerCase() === emailClean)
+      (user.email || '').toLowerCase() === emailClean || 
+      (user.userAcesso || '').toLowerCase() === emailClean ||
+      (emailClean === 'daniel' && (user.email || '').toLowerCase() === 'dani.nanda.lucas@gmail.com')
     );
     if (userFound) {
       // Validate password if user has a password registered

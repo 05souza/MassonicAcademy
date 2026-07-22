@@ -694,8 +694,9 @@ export default function QuestionnairesView({
 
   // Filter administration list based on search and category
   const adminFilteredQuestions = adminQuiz ? adminQuiz.questions.filter(q => {
-    const matchSearch = q.questionText.toLowerCase().includes(searchQuestionQuery.toLowerCase()) ||
-                        q.explanation?.toLowerCase().includes(searchQuestionQuery.toLowerCase());
+    const qSearch = (searchQuestionQuery || '').toLowerCase();
+    const matchSearch = (q.questionText || '').toLowerCase().includes(qSearch) ||
+                        (q.explanation || '').toLowerCase().includes(qSearch);
     const matchCategory = selectedCategoryFilter === 'Todas as Categorias' || q.category === selectedCategoryFilter;
     return matchSearch && matchCategory;
   }) : [];

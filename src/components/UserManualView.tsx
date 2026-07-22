@@ -59,8 +59,8 @@ export default function UserManualView({ isAdmin = false }: UserManualViewProps)
   ];
 
   const filteredFaqs = faqItems.filter(item => {
-    const text = (item.question + ' ' + item.answer).toLowerCase();
-    const query = faqSearchQuery.toLowerCase();
+    const text = ((item.question || '') + ' ' + (item.answer || '')).toLowerCase();
+    const query = (faqSearchQuery || '').toLowerCase();
     const matchesSearch = text.includes(query);
     
     if (activeManualSection === 'faq') return matchesSearch;

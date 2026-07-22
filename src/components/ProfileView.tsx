@@ -115,7 +115,8 @@ export default function ProfileView({
   const initials = getInitials(nameToDisplay) || 'AD';
   const emailToDisplay = currentUser?.email || 'dani.nanda.lucas@gmail.com';
   const lowerEmail = emailToDisplay.toLowerCase().trim();
-  const isMaster = lowerEmail === 'dani.nanda.lucas@gmail.com';
+  const lowerUserAcesso = (currentUser?.userAcesso || '').toLowerCase().trim();
+  const isMaster = lowerEmail === 'dani.nanda.lucas@gmail.com' || lowerUserAcesso === 'daniel';
   
   const displaySegment = isMaster ? 'Masonic Academy Ops' : 'Acadêmico';
   const displayAccess = isMaster ? 'Grau Diretor (Mestre)' : `Acesso: Nível ${currentUser?.nivelAcesso || 1}`;
@@ -133,7 +134,7 @@ export default function ProfileView({
 
   const visibleAccessUsers = (accessUsers || []).filter(u => {
     if (isMaster) return true;
-    if ((u.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com') return false;
+    if ((u.email || '').toLowerCase().trim() === 'dani.nanda.lucas@gmail.com' || (u.userAcesso || '').toLowerCase().trim() === 'daniel') return false;
     const uLodge = u.lodgeId || 'lodge-cavaleiros';
     const userLodgeId = currentUser?.lodgeId || 'lodge-cavaleiros';
     return uLodge === userLodgeId;
@@ -4089,7 +4090,7 @@ export default function ProfileView({
                         <option value="">-- Selecione uma Loja (ou preencha manualmente abaixo) --</option>
                         {(lodges || []).map(l => (
                           <option key={l.id} value={l.id}>
-                            {l.nome} {l.numero ? `Nº ${l.numero}` : ''} ({l.potencia} - {l.cidade}{l.estado ? `/${l.estado}` : ''}) - Tema: {l.tema.toUpperCase()}
+                            {l.nome} {l.numero ? `Nº ${l.numero}` : ''} ({l.potencia} - {l.cidade}{l.estado ? `/${l.estado}` : ''}) - Tema: {(l.tema || 'padrao').toUpperCase()}
                           </option>
                         ))}
                       </select>
@@ -4217,13 +4218,13 @@ export default function ProfileView({
                         <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-[#E9C349]">
                           <input
                             type="checkbox"
-                            checked={userFormAllowedReports.split(',').map(s => s.trim().toLowerCase()).includes('todos_do_grau')}
+                            checked={(userFormAllowedReports || '').split(',').map(s => s.trim().toLowerCase()).includes('todos_do_grau')}
                             onChange={(e) => {
-                              let list = userFormAllowedReports
+                              let list = (userFormAllowedReports || '')
                                 .split(',')
                                 .map(s => s.trim())
                                 .filter(Boolean);
-                              const idx = list.findIndex(s => s.toLowerCase() === 'todos_do_grau');
+                              const idx = list.findIndex(s => (s || '').toLowerCase() === 'todos_do_grau');
                               if (e.target.checked) {
                                 if (idx === -1) {
                                   list.push('todos_do_grau');
@@ -4243,18 +4244,18 @@ export default function ProfileView({
 
                       <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                         {reports.map((r) => {
-                          const currentList = userFormAllowedReports.split(',').map(s => s.trim().toLowerCase());
+                          const currentList = (userFormAllowedReports || '').split(',').map(s => s.trim().toLowerCase());
                           const isSelected = currentList.includes((r.id || '').toLowerCase());
                           return (
                             <button
                               type="button"
                               key={r.id}
                               onClick={() => {
-                                const list = userFormAllowedReports
+                                const list = (userFormAllowedReports || '')
                                   .split(',')
                                   .map(s => s.trim())
                                   .filter(Boolean);
-                                const index = list.findIndex(s => s.toLowerCase() === (r.id || '').toLowerCase());
+                                const index = list.findIndex(s => (s || '').toLowerCase() === (r.id || '').toLowerCase());
                                 if (index > -1) {
                                   list.splice(index, 1);
                                 } else {
