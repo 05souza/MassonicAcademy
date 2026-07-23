@@ -1271,7 +1271,7 @@ export default function QuestionnairesView({
                 </div>
 
                 {/* Submitting Certificate action blocks */}
-                {finishedAttempt.approved && (
+                {finishedAttempt.approved && (isGlobalAdmin || finishedAttempt.simulationMode === 'Completo') && (
                   <div className="bg-gradient-to-r from-[#E9C349]/15 via-[#0c1d27] to-[#E9C349]/5 border-2 border-[#E9C349] rounded-2xl p-6 text-left md:flex md:items-center justify-between gap-6 space-y-4 md:space-y-0 shadow-[0_0_15px_rgba(233,195,73,0.15)]">
                     <div className="space-y-1.5 md:max-w-md">
                       <h4 className="font-sans font-extrabold text-base text-[#E9C349] flex items-center gap-2 uppercase tracking-wider">
@@ -2244,8 +2244,8 @@ export default function QuestionnairesView({
                   </div>
                 </div>
 
-                {/* Table list */}
-                <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40">
+                {/* Desktop View Table */}
+                <div className="hidden sm:block overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
@@ -2319,7 +2319,7 @@ export default function QuestionnairesView({
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                 </button>
-                                {attempt.approved && onOpenCertificate && (
+                                {attempt.approved && onOpenCertificate && (isGlobalAdmin || attempt.simulationMode === 'Completo') && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2351,6 +2351,101 @@ export default function QuestionnairesView({
                       )}
                     </tbody>
                   </table>
+                </div>
+
+                {/* Mobile View - Cards List */}
+                <div className="sm:hidden space-y-3">
+                  {filteredAttempts.length === 0 ? (
+                    <div className="bg-[#04141d]/40 border border-[#1c2c36] rounded-xl p-8 text-center text-[#99907c] font-mono text-xs">
+                      <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                      Nenhum registro de nota condizente com os filtros aplicados.
+                    </div>
+                  ) : (
+                    filteredAttempts.map((attempt) => (
+                      <div key={attempt.id} className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 space-y-3 text-left shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                              {attempt.userName || 'Membro'}
+                            </div>
+                            <div className="font-mono text-[10px] text-[#99907c] mt-0.5">
+                              {attempt.userEmail}
+                            </div>
+                          </div>
+                          <span className={`shrink-0 inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
+                            attempt.simulationMode === 'Completo'
+                              ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
+                              : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
+                          }`}>
+                            {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                          </span>
+                        </div>
+
+                        <div className="text-xs font-semibold text-[#9cbfd5] bg-[#04141d] p-2.5 rounded-lg border border-[#1c2c36]/60">
+                          {attempt.questionnaireTitle}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] font-mono bg-[#04141d]/50 p-2 rounded-lg">
+                          <div>
+                            <span className="text-[#99907c] text-[9px] uppercase block">Data e Hora</span>
+                            <span className="text-[#9cbfd5] font-semibold">{attempt.dateTime}</span>
+                          </div>
+                          <div>
+                            <span className="text-[#99907c] text-[9px] uppercase block">Desempenho</span>
+                            <span className="font-bold text-[#E9C349]">
+                              {Math.round(attempt.scorePercentage)}% ({attempt.correctAnswersCount}/{attempt.totalQuestionsCount})
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <span className={`inline-block text-[9px] font-mono py-0.5 px-2.5 rounded font-bold uppercase ${
+                            attempt.approved 
+                              ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                              : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                          }`}>
+                            {attempt.approved ? 'Aprovado' : 'Estudo'}
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAttemptForDetails(attempt)}
+                              className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 p-2 rounded transition-all cursor-pointer"
+                              title="Ver Respostas Detalhadas"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            {attempt.approved && onOpenCertificate && (isGlobalAdmin || attempt.simulationMode === 'Completo') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const userName = attempt.userName || 'Membro';
+                                  const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                  const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
+                                  const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
+                                  const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
+                                  onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                                }}
+                                className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-2 rounded transition-all cursor-pointer"
+                                title="Regerar/Imprimir Certificado"
+                              >
+                                <Award className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAttempt(attempt.id)}
+                              className="bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/40 p-2 rounded transition-all cursor-pointer"
+                              title="Excluir Registro de Nota"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Printer, Award, ShieldCheck, Upload, RotateCcw, Sliders, Type, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
+import { X, Printer, Award, ShieldCheck, Upload, RotateCcw, Sliders, Type, Image as ImageIcon, Eye, EyeOff, Palette, Maximize2, ZoomIn } from 'lucide-react';
 import { compressImage } from '../utils';
 import { initializeFirebase } from '../firebase';
 
@@ -20,10 +20,46 @@ interface CertificateModalProps {
 }
 
 export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate, onClose, isAdmin = false }) => {
-  const certificateRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const elementInputRef = useRef<HTMLInputElement>(null);
+
+  const [previewScale, setPreviewScale] = useState<number>(1);
+  const [zoomLevel, setZoomLevel] = useState<'fit' | '100' | '125'>('fit');
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('preview');
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (previewContainerRef.current) {
+        const containerW = previewContainerRef.current.clientWidth - 24;
+        if (zoomLevel === 'fit') {
+          if (containerW < 900 && containerW > 0) {
+            setPreviewScale(Math.max(0.28, containerW / 900));
+          } else {
+            setPreviewScale(1);
+          }
+        } else if (zoomLevel === '100') {
+          setPreviewScale(1);
+        } else if (zoomLevel === '125') {
+          setPreviewScale(1.25);
+        }
+      }
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    let observer: ResizeObserver | null = null;
+    if (previewContainerRef.current && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateScale);
+      observer.observe(previewContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      if (observer) observer.disconnect();
+    };
+  }, [zoomLevel, mobileTab]);
 
   const dragInfoRef = useRef<{
     id: string;
@@ -633,90 +669,168 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
   };
 
   const handlePrint = () => {
-    const printContent = certificateRef.current?.innerHTML;
-    if (!printContent) return;
+    if (!previewRef.current) return;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.bottom = '0';
-    iframe.style.right = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.visibility = 'hidden';
-    document.body.appendChild(iframe);
+    // Clone the exact preview node that the user sees on screen
+    const clonedNode = previewRef.current.cloneNode(true) as HTMLElement;
 
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (doc) {
-      doc.open();
-      doc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Certificado - ${certificate.recipientName}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap');
-              
-              body {
-                margin: 0;
-                padding: 0;
-                background: white;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-                font-family: 'Playfair Display', serif;
-              }
-              @page {
-                size: landscape;
-                margin: 0;
-              }
-              .print-container {
-                width: 100vw;
-                height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                padding: 20px;
-                background: #fdfbf7;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="print-container">
-              ${printContent}
-            </div>
-            <script>
-              window.onload = function() {
-                setTimeout(function() {
-                  window.focus();
-                  window.print();
-                }, 300);
-              };
-            </script>
-          </body>
-        </html>
-      `);
-      doc.close();
+    // Reset transform scale to 1 (full native size 900x636) and center alignment
+    clonedNode.style.transform = 'none';
+    clonedNode.style.margin = '0 auto';
+    clonedNode.style.boxShadow = 'none';
 
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 10000);
+    // Remove editor-specific selection and hover classes from all children
+    const elementsWithRing = clonedNode.querySelectorAll('*');
+    elementsWithRing.forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.classList.remove(
+        'ring-2', 'ring-dashed', 'ring-[#E9C349]', 'ring-offset-2', 'ring-offset-[#06273A]',
+        'shadow-xl', 'hover:ring-1', 'hover:ring-dashed', 'hover:ring-[#E9C349]/50',
+        'cursor-grab', 'cursor-grabbing', 'pointer-events-auto'
+      );
+    });
+
+    const printHtml = clonedNode.outerHTML;
+
+    const fullDoc = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <title>Certificado - ${certificate ? certificate.recipientName : 'Oficial'}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background-color: #0b141a;
+              color: #1e293b;
+              font-family: 'Playfair Display', Georgia, serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              min-height: 100vh;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .no-print-bar {
+              width: 100%;
+              background-color: #0d1c24;
+              border-bottom: 1px solid #1c2c36;
+              padding: 16px 20px;
+              text-align: center;
+              margin-bottom: 28px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+              position: relative;
+              z-index: 100;
+            }
+            .print-btn {
+              background-color: #E9C349;
+              color: #241a00;
+              font-weight: bold;
+              border: none;
+              padding: 12px 32px;
+              border-radius: 8px;
+              font-size: 15px;
+              cursor: pointer;
+              font-family: monospace;
+              box-shadow: 0 4px 12px rgba(233,195,73,0.3);
+              transition: transform 0.15s ease, background-color 0.15s ease;
+            }
+            .print-btn:hover {
+              background-color: #ffe088;
+              transform: translateY(-1px);
+            }
+            .certificate-stage {
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              width: 100%;
+              padding: 0 16px 32px 16px;
+            }
+            @page {
+              size: A4 landscape;
+              margin: 0;
+            }
+            @media print {
+              html, body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+              }
+              .no-print-bar {
+                display: none !important;
+              }
+              .certificate-stage {
+                padding: 0 !important;
+                margin: 0 auto !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print-bar">
+            <button class="print-btn" onclick="window.print()">
+              🖨️ Clique para Imprimir / Salvar em PDF
+            </button>
+            <p style="margin:0; font-size: 11px; color: #99907c; font-family: monospace;">
+              Dica: Na janela de impressão, escolha "Salvar como PDF" e defina a orientação para "Paisagem" (Landscape).
+            </p>
+          </div>
+          <div class="certificate-stage">
+            ${printHtml}
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.focus();
+                window.print();
+              }, 700);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(fullDoc);
+      printWin.document.close();
+    } else {
+      window.print();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div className="bg-[#0b141a] border border-[#1c2c36] rounded-2xl w-full max-w-7xl shadow-2xl overflow-hidden font-sans my-4 flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div className="bg-[#0b141a] border border-[#1c2c36] rounded-2xl w-full max-w-7xl shadow-2xl overflow-hidden font-sans my-auto flex flex-col max-h-[96vh]">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 bg-[#0d1c24] border-b border-[#1c2c36] flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#0d1c24] border-b border-[#1c2c36] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <Award className="w-5 h-5 text-[#E9C349]" />
             <div>
-              <h3 className="font-sans font-bold text-sm text-[#d4e5f2] uppercase tracking-wider">
+              <h3 className="font-sans font-bold text-xs sm:text-sm text-[#d4e5f2] uppercase tracking-wider">
                 {isAdmin ? 'Masonic Academy - Layout Studio & Diploma' : 'Masonic Academy - Certificado Oficial'}
               </h3>
               <p className="text-[10px] text-[#99907c] font-mono">
@@ -733,12 +847,42 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
           </button>
         </div>
 
+        {/* Mobile Sub-Navigation for Admin Mode (< lg screen) */}
+        {isAdmin && (
+          <div className="lg:hidden flex border-b border-[#1c2c36] bg-[#0d1c24] shrink-0">
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className={`flex-1 py-2.5 px-3 text-center text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
+                mobileTab === 'preview'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#E9C349]/10'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              <span>Visualizar Certificado</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('editor')}
+              className={`flex-1 py-2.5 px-3 text-center text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-2 border-b-2 transition-all cursor-pointer ${
+                mobileTab === 'editor'
+                  ? 'border-[#E9C349] text-[#E9C349] bg-[#E9C349]/10'
+                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+              }`}
+            >
+              <Palette className="w-4 h-4" />
+              <span>Estúdio de Designer</span>
+            </button>
+          </div>
+        )}
+
         {/* Content Section: Customizer Grid */}
-        <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[#1c2c36] bg-[#040c11] overflow-y-auto max-h-[calc(100vh-180px)]">
+        <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[#1c2c36] bg-[#040c11] overflow-y-auto flex-1">
           
           {/* LEFT: Customizer Panel (Admin Only) */}
           {isAdmin ? (
-            <div className="w-full lg:w-[350px] shrink-0 p-5 bg-[#0d1c24]/50 space-y-5 overflow-y-auto">
+            <div className={`w-full lg:w-[350px] shrink-0 p-4 sm:p-5 bg-[#0d1c24]/50 space-y-5 overflow-y-auto ${mobileTab === 'editor' ? 'block' : 'hidden lg:block'}`}>
               
               {/* Save changes to server section */}
               <div className="bg-gradient-to-r from-[#E9C349]/15 to-transparent border border-[#E9C349]/30 rounded-xl p-3.5 space-y-2">
@@ -1815,22 +1959,89 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
           ) : null}
 
           {/* RIGHT/CENTER: Live Interactive Preview */}
-          <div className="flex-1 p-6 bg-[#040c11] flex items-center justify-center overflow-x-auto min-h-[450px] md:min-h-[600px]">
+          <div 
+            ref={previewContainerRef}
+            className={`flex-1 p-2 sm:p-6 bg-[#040c11] flex flex-col items-center justify-start overflow-auto min-h-[300px] sm:min-h-[450px] md:min-h-[600px] w-full ${
+              mobileTab === 'preview' || !isAdmin ? 'flex' : 'hidden lg:flex'
+            }`}
+          >
+            {/* Display & Zoom Controls Bar */}
+            <div className="w-full max-w-[900px] flex flex-wrap items-center justify-between gap-2 mb-3 bg-[#0d1c24]/90 p-2 sm:p-2.5 rounded-xl border border-[#1c2c36] text-xs shrink-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold mr-1">Visualização:</span>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel('fit')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    zoomLevel === 'fit'
+                      ? 'bg-[#E9C349] text-[#241a00] shadow-[0_0_10px_rgba(233,195,73,0.3)]'
+                      : 'bg-[#11212b] text-[#99907c] hover:text-[#d4e5f2] border border-[#1c2c36]'
+                  }`}
+                >
+                  Ajustar à Tela
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel('100')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    zoomLevel === '100'
+                      ? 'bg-[#E9C349] text-[#241a00] shadow-[0_0_10px_rgba(233,195,73,0.3)]'
+                      : 'bg-[#11212b] text-[#99907c] hover:text-[#d4e5f2] border border-[#1c2c36]'
+                  }`}
+                >
+                  100% (Real)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel('125')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                    zoomLevel === '125'
+                      ? 'bg-[#E9C349] text-[#241a00] shadow-[0_0_10px_rgba(233,195,73,0.3)]'
+                      : 'bg-[#11212b] text-[#99907c] hover:text-[#d4e5f2] border border-[#1c2c36]'
+                  }`}
+                >
+                  125%
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-[#E9C349] font-bold bg-[#E9C349]/10 border border-[#E9C349]/30 px-2.5 py-0.5 rounded">
+                  Zoom: {Math.round(previewScale * 100)}%
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile hint badge */}
+            <p className="text-[10px] text-[#99907c] font-mono mb-2 text-center sm:hidden shrink-0">
+              💡 Toque em <span className="text-[#E9C349] font-bold">100% (Real)</span> e deslize para ler todos os detalhes com nitidez.
+            </p>
+
             <div 
-              ref={previewRef}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  setSelectedElementId(null);
-                }
-              }}
-              className="shrink-0 w-[900px] h-[636px] bg-[#fdfbf7] border-[16px] double border-[#d4af37] text-slate-800 flex flex-col justify-between relative shadow-2xl select-none rounded text-center transition-all"
               style={{
-                backgroundImage: customBg ? `url(${customBg})` : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                padding: getPaddingStyleVal(internalPadding)
+                width: `${900 * previewScale}px`,
+                height: `${636 * previewScale}px`,
+                position: 'relative',
+                margin: 'auto'
               }}
+              className="shrink-0 flex items-center justify-center overflow-hidden transition-all my-auto"
             >
+              <div 
+                ref={previewRef}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setSelectedElementId(null);
+                  }
+                }}
+                className="shrink-0 w-[900px] h-[636px] bg-[#fdfbf7] border-[16px] double border-[#d4af37] text-slate-800 flex flex-col justify-between relative shadow-2xl select-none rounded text-center transition-all origin-top-left"
+                style={{
+                  transform: `scale(${previewScale})`,
+                  transformOrigin: 'top left',
+                  backgroundImage: customBg ? `url(${customBg})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  padding: getPaddingStyleVal(internalPadding)
+                }}
+              >
               
               {/* Elegant Background Border Filigrees */}
               <div className="absolute inset-2 border border-[#d4af37]/30 pointer-events-none" />
@@ -2784,352 +2995,7 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
             </div>
           </div>
         </div>
-
-        {/* Printable/Hidden node representation purely for ref-based print capture with active customization applied */}
-        <div ref={certificateRef} className="hidden">
-          <div 
-            className="w-[1020px] h-[720px] bg-[#fdfbf7] border-[16px] double border-[#d4af37] text-slate-800 flex flex-col justify-between relative text-center" 
-            style={{ 
-              pageBreakInside: 'avoid',
-              backgroundImage: customBg ? `url(${customBg})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              padding: getPaddingStyleVal(internalPadding)
-            }}
-          >
-            <div className="absolute inset-2 border border-[#d4af37]/30" />
-            
-            {/* Standard Masonic Vector Art Overlays as Draggable Elements for Printing */}
-            {showMasonicSymbols && (
-              <>
-                {/* Left Column (Boaz) */}
-                {showColEsq && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${colunaEsqPos.x}%`,
-                      top: `${colunaEsqPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${colunaEsqPos.scale})`,
-                      width: `${colunaEsqPos.width}px`,
-                      height: `${colunaEsqPos.width * (410 / 60)}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="40 90 60 410" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity}>
-                        <path d="M 50 110 L 90 110 M 45 116 L 95 116 M 55 122 L 85 122" />
-                        <rect x="58" y="122" width="24" height="8" rx="1" fill="none" />
-                        <circle cx="70" cy="100" r="10" fill="none" />
-                        <line x1="62" y1="130" x2="62" y2="480" />
-                        <line x1="70" y1="130" x2="70" y2="480" />
-                        <line x1="78" y1="130" x2="78" y2="480" />
-                        <rect x="55" y="480" width="30" height="12" rx="1" fill="none" />
-                        <path d="M 45 492 L 95 492 M 40 498 L 100 498" />
-                      </g>
-                    </svg>
-                  </div>
-                )}
-
-                {/* Right Column (Jachin) */}
-                {showColDir && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${colunaDirPos.x}%`,
-                      top: `${colunaDirPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${colunaDirPos.scale})`,
-                      width: `${colunaDirPos.width}px`,
-                      height: `${colunaDirPos.width * (410 / 60)}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="800 90 60 410" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity}>
-                        <path d="M 810 110 L 850 110 M 805 116 L 855 116 M 815 122 L 845 122" />
-                        <rect x="818" y="122" width="24" height="8" rx="1" fill="none" />
-                        <circle cx="830" cy="100" r="10" fill="none" />
-                        <line x1="822" y1="130" x2="822" y2="480" />
-                        <line x1="830" y1="130" x2="830" y2="480" />
-                        <line x1="838" y1="130" x2="838" y2="480" />
-                        <rect x="815" y="480" width="30" height="12" rx="1" fill="none" />
-                        <path d="M 805 492 L 855 492 M 800 498 L 860 498" />
-                      </g>
-                    </svg>
-                  </div>
-                )}
-
-                {/* Eye of Providence (Olho que tudo vê) */}
-                {showOlho && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${olhoPos.x}%`,
-                      top: `${olhoPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${olhoPos.scale})`,
-                      width: `${olhoPos.width}px`,
-                      height: `${olhoPos.width}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="-35 -35 70 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity + 0.03}>
-                        <polygon points="0,-25 -30,22 30,22" fill="none" />
-                        <path d="M -12,6 Q 0,-6 12,6 Q 0,16 -12,6 Z" fill="none" />
-                        <circle cx="0" cy="6" r="4.5" fill="none" />
-                        <circle cx="0" cy="6" r="1.5" fill="#d4af37" />
-                        <line x1="0" y1="-32" x2="0" y2="-28" />
-                        <line x1="-22" y1="-22" x2="-18" y2="-18" />
-                        <line x1="22" y1="-22" x2="18" y2="-18" />
-                        <line x1="-32" y1="5" x2="-26" y2="5" />
-                        <line x1="32" y1="5" x2="26" y2="5" />
-                        <line x1="-20" y1="30" x2="-16" y2="24" />
-                        <line x1="20" y1="30" x2="16" y2="24" />
-                      </g>
-                    </svg>
-                  </div>
-                )}
-
-                {/* Square and Compass (Esquadro e Compasso) with Acacia (Acácia) inside and Letter G */}
-                {showEsquadro && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${esquadroPos.x}%`,
-                      top: `${esquadroPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${esquadroPos.scale})`,
-                      width: `${esquadroPos.width}px`,
-                      height: `${esquadroPos.width * (200 / 180)}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="-90 -125 180 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity * 0.7}>
-                        <path d="M 0,-110 L -65,55" />
-                        <path d="M 0,-110 L 65,55" />
-                        <circle cx="0" cy="-110" r="12" fill="none" />
-                        <circle cx="0" cy="-110" r="4" fill="#d4af37" />
-                        <path d="M -50,40 A 110,110 0 0,0 50,40" fill="none" />
-                        <path d="M -85,-15 L 0,70 L 85,-15 L 60,-40 L 0,20 L -60,-40 Z" fill="none" />
-                        
-                        <g transform="translate(0, -15) scale(0.75)">
-                          <path d="M 0,35 Q -10,10 0,-25" fill="none" />
-                          <path d="M -2,22 Q -12,18 -10,10 Q -2,15 -2,22" fill="none" />
-                          <path d="M -1,5 Q -12,3 -11,-5 Q -1,-1 -1,5" fill="none" />
-                          <path d="M 0,-12 Q -10,-15 -8,-22 Q 0,-16 0,-12" fill="none" />
-                          <path d="M 2,22 Q 12,18 10,10 Q 2,15 2,22" fill="none" />
-                          <path d="M 1,5 Q 12,3 11,-5 Q 1,1 1,5" fill="none" />
-                          <path d="M 0,-12 Q 10,-15 8,-22 Q 0,-16 0,-12" fill="none" />
-                        </g>
-                        <text x="-9" y="11" fontFamily="'Cinzel', serif" fontWeight="bold" fontSize="36" fill="#d4af37" stroke="none" opacity={0.8}>G</text>
-                      </g>
-                    </svg>
-                  </div>
-                )}
-
-                {/* Mallet and Chisel (Malho e Cinzel) */}
-                {showMalho && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${malhoPos.x}%`,
-                      top: `${malhoPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${malhoPos.scale})`,
-                      width: `${malhoPos.width}px`,
-                      height: `${malhoPos.width * (70 / 60)}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="-30 -45 60 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity * 0.8}>
-                        <g transform="rotate(-30)">
-                          <rect x="-8" y="-35" width="16" height="24" rx="2" fill="none" />
-                          <line x1="0" y1="-11" x2="0" y2="25" />
-                        </g>
-                        <g transform="rotate(30)">
-                          <rect x="-3" y="-35" width="6" height="50" rx="1" fill="none" />
-                          <path d="M -5,-35 L 5,-35" />
-                          <path d="M -3,15 L 0,25 L 3,15 Z" fill="none" />
-                        </g>
-                      </g>
-                    </svg>
-                  </div>
-                )}
-
-                {/* Acacia Branches (Acácia) */}
-                {showAcacia && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${acaciaPos.x}%`,
-                      top: `${acaciaPos.y}%`,
-                      transform: `translate(-50%, -50%) scale(${acaciaPos.scale}) rotate(20deg)`,
-                      width: `${acaciaPos.width}px`,
-                      height: `${acaciaPos.width}px`,
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg style={{ width: '100%', height: '100%' }} viewBox="-25 -45 60 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g stroke="#d4af37" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" opacity={symbolsOpacity * 0.9}>
-                        <path d="M -20,20 Q 10,-10 30,-40" fill="none" />
-                        <path d="M -12,14 Q -22,8 -16,0 Q -8,6 -12,14" fill="none" />
-                        <path d="M 0,2 Q -10,-4 -4,-12 Q 4,-6 0,2" fill="none" />
-                        <path d="M 12,-10 Q 2,-16 8,-24 Q 16,-18 12,-10" fill="none" />
-                        <path d="M -3,11 Q 12,5 6,-3" fill="none" />
-                        <path d="M 9,-1 Q 24,-7 18,-15" fill="none" />
-                      </g>
-                    </svg>
-                  </div>
-                )}
-              </>
-            )}
-            
-            <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-[#d4af37]" />
-            <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-[#d4af37]" />
-            <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-[#d4af37]" />
-            <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-[#d4af37]" />
-            
-            {/* Custom Elements (Extra Images) */}
-            {customElements.map((el) => (
-              <div
-                key={el.id}
-                style={{
-                  position: 'absolute',
-                  left: `${el.x}%`,
-                  top: `${el.y}%`,
-                  transform: `translate(-50%, -50%) scale(${el.scale})`,
-                  zIndex: 20,
-                }}
-              >
-                <img
-                  src={el.src}
-                  style={{ width: `${el.width}px` }}
-                  alt=""
-                />
-              </div>
-            ))}
-
-            <div className="flex flex-col items-center mt-4" style={{ transform: `translateY(${headerOffset}px)` }}>
-              <div className="flex items-center gap-2 mb-1.5" style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ fontSize: `${10 * fontSizeMultiplier}px`, fontWeight: 'bold', letterSpacing: '0.25em', color: '#d4af37' }}>
-                  {masonicAcademyName}
-                </span>
-              </div>
-              <h1 style={{ fontSize: `${30 * fontSizeMultiplier}px`, fontWeight: 'bold', color: textColor, fontFamily: "'Playfair Display', serif", margin: '5px 0' }}>
-                {certificateHeading}
-              </h1>
-              <div style={{ width: '150px', height: '2px', backgroundColor: '#d4af37', margin: '8px auto' }} />
-            </div>
-
-            <div style={{ padding: '0 40px', margin: '20px 0', transform: `translateY(${bodyOffset}px)` }}>
-              <p style={{ fontSize: `${13 * fontSizeMultiplier}px`, fontStyle: 'italic', color: '#64748b', fontFamily: "'Playfair Display', serif" }}>Concedido a</p>
-              <h2 style={{ fontSize: `${28 * fontSizeMultiplier}px`, fontWeight: 'bold', color: '#0f172a', borderBottom: `2px solid ${textColor === '#000000' ? '#64748b' : '#cbd5e1'}`, paddingBottom: '6px', display: 'inline-block', margin: '10px 0' }}>
-                {certificate.recipientName}
-              </h2>
-              <p style={{ fontSize: `${14 * fontSizeMultiplier}px`, lineHeight: '1.6', color: '#334155', fontFamily: "'Playfair Display', serif", margin: '20px auto 0', maxWidth: '650px' }}>
-                {certificate.type === 'course' ? (
-                  `Por haver concluído com aproveitamento integral o conteúdo didático do curso “${certificate.title}” ${certificate.grade ? `, correspondente ao grau de ${certificate.grade}` : ''}, cumprindo todas as etapas de estudo teórico e instrução interna de forma regular.`
-                ) : (
-                  `Por haver obtido aproveitamento de proficiência e aprovação no Questionário Oficial da Instrução “${certificate.title}”, alcançando a nota expressiva de ${certificate.score || '100%'} de acertos, qualificando-se segundo as diretrizes acadêmicas regimentais.`
-                )}
-              </p>
-            </div>
-
-            {/* Default Seal Element in Print */}
-            {showSeal && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `${sealPos.x}%`,
-                  top: `${sealPos.y}%`,
-                  transform: `translate(-50%, -50%) scale(${sealPos.scale})`,
-                  zIndex: 10,
-                }}
-              >
-                <div 
-                  style={{ 
-                    width: `${sealPos.width}px`, 
-                    height: `${sealPos.width}px`, 
-                    borderRadius: '50%', 
-                    border: '4px solid #d4af37', 
-                    backgroundColor: '#fdfbf7', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justify: 'center', 
-                    alignContent: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    position: 'relative'
-                  }}
-                >
-                  <div 
-                    style={{ 
-                      width: `${sealPos.width - 12}px`, 
-                      height: `${sealPos.width - 12}px`, 
-                      borderRadius: '50%', 
-                      border: '1px dashed #d4af37', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      justifyContent: 'center' 
-                    }}
-                  >
-                    <span style={{ fontSize: `${Math.round(sealPos.width * 0.09)}px`, fontWeight: 'bold', color: '#d4af37' }}>OFICIAL</span>
-                  </div>
-                </div>
-                {/* Ribbon tails */}
-                <div style={{ position: 'absolute', top: '60%', left: '30%', width: '12px', height: '40px', backgroundColor: 'rgba(212, 175, 55, 0.8)', transform: 'rotate(-12deg)', transformOrigin: 'top', zIndex: 0 }} />
-                <div style={{ position: 'absolute', top: '60%', right: '30%', width: '12px', height: '40px', backgroundColor: 'rgba(212, 175, 55, 0.8)', transform: 'rotate(12deg)', transformOrigin: 'top', zIndex: 0 }} />
-              </div>
-            )}
-
-            {/* Default Signature Element in Print */}
-            {showSig && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `${sigPos.x}%`,
-                  top: `${sigPos.y}%`,
-                  transform: `translate(-50%, -50%) scale(${sigPos.scale})`,
-                  zIndex: 10,
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: `${sigPos.width}px` }}>
-                  <div style={{ width: '100%', borderBottom: `1px solid ${textColor === '#000000' ? '#64748b' : '#cbd5e1'}`, paddingBottom: '3px', textAlign: 'center' }}>
-                    <span style={{ fontSize: '12px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#1e293b' }}>
-                      {directorName}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '8px', fontFamily: 'monospace', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '6px' }}>
-                    {directorTitle}
-                  </span>
-                  <span style={{ fontSize: '7px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                    MASONIC ACADEMY
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Default Authenticity Info Element in Print */}
-            {showInfo && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: `${infoPos.x}%`,
-                  top: `${infoPos.y}%`,
-                  transform: `translate(-50%, -50%) scale(${infoPos.scale})`,
-                  zIndex: 10,
-                }}
-              >
-                <div style={{ textAlign: 'left', width: `${infoPos.width}px` }}>
-                  <span style={{ fontSize: '8px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block' }}>Autenticidade</span>
-                  <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 'bold', color: '#334155', display: 'block' }}>CÓD: {verificationCode}</div>
-                  <div style={{ fontSize: '8px', color: '#94a3b8', display: 'block' }}>Emitido em: {certificate.date}</div>
-                </div>
-              </div>
-            )}
-
-          </div>
-        </div>
+      </div>
 
         {/* Modal Actions */}
         <div className="px-6 py-4 bg-[#0d1c24] border-t border-[#1c2c36] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">

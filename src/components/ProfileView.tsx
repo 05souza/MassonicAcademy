@@ -2272,172 +2272,318 @@ export default function ProfileView({
             </div>
           </div>
 
-          {/* Table Container - Quizzes Section */}
+          {/* Container - Quizzes Section */}
           {personalSubSection === 'quizzes' && (
-            <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
-                    <th className="py-3 px-4">Questionário</th>
-                    <th className="py-3 px-4 text-center">Tipo</th>
-                    <th className="py-3 px-4 text-center">Data e Hora</th>
-                    <th className="py-3 px-4 text-center">Desempenho</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1c2c36]/60">
-                  {userAttempts.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-[#99907c] font-mono text-xs">
-                        <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
-                        Nenhum registro de simulado encontrado.
-                      </td>
+            <>
+              {/* Desktop View Table */}
+              <div className="hidden sm:block overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40 animate-fade-in">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                      <th className="py-3 px-4">Questionário</th>
+                      <th className="py-3 px-4 text-center">Tipo</th>
+                      <th className="py-3 px-4 text-center">Data e Hora</th>
+                      <th className="py-3 px-4 text-center">Desempenho</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
-                  ) : (
-                    userAttempts.map((attempt) => (
-                      <tr key={attempt.id} className="hover:bg-[#11212b]/30 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="font-sans font-bold text-[#d4e5f2] text-xs">
-                            {attempt.questionnaireTitle}
-                          </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#1c2c36]/60">
+                    {userAttempts.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                          <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                          Nenhum registro de simulado encontrado.
                         </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
-                            attempt.simulationMode === 'Completo'
-                              ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
-                              : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
-                          }`}>
-                            {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                      </tr>
+                    ) : (
+                      userAttempts.map((attempt) => (
+                        <tr key={attempt.id} className="hover:bg-[#11212b]/30 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                              {attempt.questionnaireTitle}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
+                              attempt.simulationMode === 'Completo'
+                                ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
+                                : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
+                            }`}>
+                              {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
+                            {attempt.dateTime}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="font-mono font-bold text-[#E9C349] text-xs">
+                              {Math.round(attempt.scorePercentage)}%
+                            </div>
+                            <div className="font-mono text-[9px] text-[#99907c] mt-0.5">
+                              {attempt.correctAnswersCount}/{attempt.totalQuestionsCount} acertos
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
+                              attempt.approved 
+                                ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                                : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                            }`}>
+                              {attempt.approved ? 'Aprovado' : 'Estudo'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAttemptForDetails(attempt)}
+                                className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 p-1.5 rounded transition-all cursor-pointer"
+                                title="Ver Respostas Detalhadas"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              {attempt.approved && onOpenCertificate && (isAdmin || attempt.simulationMode === 'Completo') && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const userName = attempt.userName || currentUser?.name || 'Membro';
+                                    const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                    const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
+                                    const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
+                                    const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
+                                    onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                                  }}
+                                  className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
+                                  title="Imprimir Certificado"
+                                >
+                                  <Award className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View - Cards List */}
+              <div className="sm:hidden space-y-3 animate-fade-in">
+                {userAttempts.length === 0 ? (
+                  <div className="bg-[#04141d]/40 border border-[#1c2c36] rounded-xl p-8 text-center text-[#99907c] font-mono text-xs">
+                    <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                    Nenhum registro de simulado encontrado.
+                  </div>
+                ) : (
+                  userAttempts.map((attempt) => (
+                    <div key={attempt.id} className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 space-y-3 text-left shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-sans font-bold text-[#d4e5f2] text-xs leading-snug">
+                          {attempt.questionnaireTitle}
+                        </h4>
+                        <span className={`shrink-0 inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider ${
+                          attempt.simulationMode === 'Completo'
+                            ? 'bg-sky-950/40 text-sky-400 border border-sky-900/40' 
+                            : 'bg-amber-950/20 text-[#E9C349] border border-amber-900/40'
+                        }`}>
+                          {attempt.simulationMode === 'Completo' ? 'Padrão' : 'Simulado'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 bg-[#04141d] p-2.5 rounded-lg border border-[#1c2c36]/60 text-[11px]">
+                        <div>
+                          <span className="text-[#99907c] text-[9px] font-mono uppercase block">Data e Hora</span>
+                          <span className="font-mono text-[#9cbfd5] font-semibold">{attempt.dateTime}</span>
+                        </div>
+                        <div>
+                          <span className="text-[#99907c] text-[9px] font-mono uppercase block">Desempenho</span>
+                          <span className="font-mono font-bold text-[#E9C349]">
+                            {Math.round(attempt.scorePercentage)}% ({attempt.correctAnswersCount}/{attempt.totalQuestionsCount})
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
-                          {attempt.dateTime}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="font-mono font-bold text-[#E9C349] text-xs">
-                            {Math.round(attempt.scorePercentage)}%
-                          </div>
-                          <div className="font-mono text-[9px] text-[#99907c] mt-0.5">
-                            {attempt.correctAnswersCount}/{attempt.totalQuestionsCount} acertos
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase ${
-                            attempt.approved 
-                              ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
-                              : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
-                          }`}>
-                            {attempt.approved ? 'Aprovado' : 'Estudo'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className={`inline-block text-[9px] font-mono py-0.5 px-2.5 rounded font-bold uppercase ${
+                          attempt.approved 
+                            ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/40' 
+                            : 'bg-rose-950/20 text-rose-400 border border-rose-900/40'
+                        }`}>
+                          {attempt.approved ? 'Aprovado' : 'Estudo'}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAttemptForDetails(attempt)}
+                            className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 px-2.5 py-1.5 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Detalhes</span>
+                          </button>
+                          {attempt.approved && onOpenCertificate && (isAdmin || attempt.simulationMode === 'Completo') && (
                             <button
                               type="button"
-                              onClick={() => setSelectedAttemptForDetails(attempt)}
-                              className="bg-[#11212b] hover:bg-[#1c2c36] text-[#66d9cc] border border-[#26a69a]/30 p-1.5 rounded transition-all cursor-pointer"
-                              title="Ver Respostas Detalhadas"
+                              onClick={() => {
+                                const userName = attempt.userName || currentUser?.name || 'Membro';
+                                const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
+                                const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
+                                const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
+                                const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
+                                onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
+                              }}
+                              className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 px-2.5 py-1.5 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              <Award className="w-3.5 h-3.5" />
+                              <span>Certificado</span>
                             </button>
-                            {attempt.approved && onOpenCertificate && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const userName = attempt.userName || currentUser?.name || 'Membro';
-                                  const dateStr = attempt.dateTime ? attempt.dateTime.split(',')[0] : new Date().toLocaleDateString('pt-BR');
-                                  const scoreVal = `${Math.round(attempt.scorePercentage)}%`;
-                                  const quiz = questionnaires.find(q => q.id === attempt.questionnaireId);
-                                  const gradeLabel = quiz?.degreeRequired ? `Grau ${quiz.degreeRequired}` : undefined;
-                                  onOpenCertificate(userName, attempt.questionnaireTitle, 'quiz', dateStr, scoreVal, gradeLabel);
-                                }}
-                                className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
-                                title="Imprimir Certificado"
-                              >
-                                <Award className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
 
-          {/* Table Container - Completed Courses Section */}
+          {/* Container - Completed Courses Section */}
           {personalSubSection === 'courses' && (
-            <div className="overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40 animate-fade-in">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
-                    <th className="py-3 px-4">Curso / Título</th>
-                    <th className="py-3 px-4 text-center">Categoria / Trilha</th>
-                    <th className="py-3 px-4 text-center">Grau Requerido</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#1c2c36]/60">
-                  {filteredCompletedCourses.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-[#99907c] font-mono text-xs">
-                        <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
-                        Nenhum curso concluído encontrado.
-                      </td>
+            <>
+              {/* Desktop View Table */}
+              <div className="hidden sm:block overflow-x-auto border border-[#1c2c36] rounded-xl bg-[#04141d]/40 animate-fade-in">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#1c2c36] bg-[#04141d] text-slate-400 font-mono text-[10px] uppercase font-bold tracking-wider">
+                      <th className="py-3 px-4">Curso / Título</th>
+                      <th className="py-3 px-4 text-center">Categoria / Trilha</th>
+                      <th className="py-3 px-4 text-center">Grau Requerido</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
                     </tr>
-                  ) : (
-                    filteredCompletedCourses.map((course) => (
-                      <tr key={course.id} className="hover:bg-[#11212b]/30 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="font-sans font-bold text-[#d4e5f2] text-xs">
-                            {course.title}
-                          </div>
-                          <div className="font-sans text-[10px] text-[#99907c] mt-0.5 line-clamp-1">
-                            {course.summary}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider bg-sky-950/40 text-sky-400 border border-sky-900/40">
-                            {course.category || 'Geral'}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
-                          {course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : 'Geral'}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase bg-emerald-950/20 text-emerald-400 border border-emerald-900/40">
-                            Concluído
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {onOpenCertificate && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const userName = currentUser?.name || 'Membro';
-                                  const dateStr = new Date().toLocaleDateString('pt-BR');
-                                  const gradeLabel = course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : undefined;
-                                  onOpenCertificate(userName, course.title, 'course', dateStr, undefined, gradeLabel);
-                                }}
-                                className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
-                                title="Imprimir Certificado de Conclusão"
-                              >
-                                <Award className="w-3.5 h-3.5 text-[#E9C349]" />
-                              </button>
-                            )}
-                          </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#1c2c36]/60">
+                    {filteredCompletedCourses.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-[#99907c] font-mono text-xs">
+                          <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                          Nenhum curso concluído encontrado.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      filteredCompletedCourses.map((course) => (
+                        <tr key={course.id} className="hover:bg-[#11212b]/30 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="font-sans font-bold text-[#d4e5f2] text-xs">
+                              {course.title}
+                            </div>
+                            <div className="font-sans text-[10px] text-[#99907c] mt-0.5 line-clamp-1">
+                              {course.summary}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider bg-sky-950/40 text-sky-400 border border-sky-900/40">
+                              {course.category || 'Geral'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono text-[11px] text-[#9cbfd5]">
+                            {course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : 'Geral'}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase bg-emerald-950/20 text-emerald-400 border border-emerald-900/40">
+                              Concluído
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {onOpenCertificate && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const userName = currentUser?.name || 'Membro';
+                                    const dateStr = new Date().toLocaleDateString('pt-BR');
+                                    const gradeLabel = course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : undefined;
+                                    onOpenCertificate(userName, course.title, 'course', dateStr, undefined, gradeLabel);
+                                  }}
+                                  className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 p-1.5 rounded transition-all cursor-pointer"
+                                  title="Imprimir Certificado de Conclusão"
+                                >
+                                  <Award className="w-3.5 h-3.5 text-[#E9C349]" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View - Cards List */}
+              <div className="sm:hidden space-y-3 animate-fade-in">
+                {filteredCompletedCourses.length === 0 ? (
+                  <div className="bg-[#04141d]/40 border border-[#1c2c36] rounded-xl p-8 text-center text-[#99907c] font-mono text-xs">
+                    <HelpCircle className="w-8 h-8 mx-auto opacity-30 mb-2" />
+                    Nenhum curso concluído encontrado.
+                  </div>
+                ) : (
+                  filteredCompletedCourses.map((course) => (
+                    <div key={course.id} className="bg-[#0c1d27] border border-[#1c2c36] rounded-xl p-4 space-y-3 text-left shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-sans font-bold text-[#d4e5f2] text-xs leading-snug">
+                            {course.title}
+                          </h4>
+                          {course.summary && (
+                            <p className="font-sans text-[10px] text-[#99907c] mt-0.5 line-clamp-2">
+                              {course.summary}
+                            </p>
+                          )}
+                        </div>
+                        <span className="shrink-0 inline-block text-[8px] font-mono py-0.5 px-2 rounded font-bold uppercase tracking-wider bg-sky-950/40 text-sky-400 border border-sky-900/40">
+                          {course.category || 'Geral'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-[#04141d] p-2.5 rounded-lg border border-[#1c2c36]/60 text-[11px]">
+                        <div>
+                          <span className="text-[#99907c] text-[9px] font-mono uppercase block">Grau Requerido</span>
+                          <span className="font-mono text-[#9cbfd5] font-semibold">
+                            {course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : 'Geral'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="inline-block text-[9px] font-mono py-0.5 px-2 rounded font-bold uppercase bg-emerald-950/20 text-emerald-400 border border-emerald-900/40">
+                            Concluído
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end pt-1">
+                        {onOpenCertificate && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const userName = currentUser?.name || 'Membro';
+                              const dateStr = new Date().toLocaleDateString('pt-BR');
+                              const gradeLabel = course.nivelCurso ? getGlobalDegreeLabel(course.nivelCurso) : undefined;
+                              onOpenCertificate(userName, course.title, 'course', dateStr, undefined, gradeLabel);
+                            }}
+                            className="bg-[#E9C349]/10 hover:bg-[#E9C349]/20 text-[#E9C349] border border-[#E9C349]/30 px-3 py-1.5 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
+                          >
+                            <Award className="w-3.5 h-3.5 text-[#E9C349]" />
+                            <span>Gerar Certificado</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
