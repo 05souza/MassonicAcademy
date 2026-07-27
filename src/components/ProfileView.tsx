@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { ExecutiveReport, AccessUser, Questionnaire, Book, Lodge, SimulationAttempt } from '../types';
 import { getFirebaseConfig, saveFirebaseConfig, initializeFirebase } from '../firebase';
@@ -7,7 +7,7 @@ import { getDegreeLabel as getGlobalDegreeLabel } from '../utils/degrees';
 import { 
   User, Mail, Building, Shield, Image as ImageIcon, Plus, 
   Trash2, Link, Check, ExternalLink, Calendar, Edit, 
-  X, Search, Layers, FileText, Sliders, BarChart3, ChevronRight, HelpCircle,
+  X, Search, Layers, FileText, Sliders, BarChart3, ChevronLeft, ChevronRight, HelpCircle,
   Upload, Download, Database, Phone, Home, Compass, MapPin, Sun, Moon, BookOpen,
   Award, Eye
 } from 'lucide-react';
@@ -151,6 +151,7 @@ export default function ProfileView({
 
   // Main settings tabs
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'personal_attempts' | 'reports' | 'accesses' | 'database' | 'books' | 'accessStats' | 'lodges' | 'questionnaires' | 'certificate'>('profile');
+  const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isStandardUser && activeSubTab !== 'profile' && activeSubTab !== 'personal_attempts') {
@@ -2084,118 +2085,192 @@ export default function ProfileView({
     <div id="settings-view-window" className="max-w-6xl mx-auto text-left animate-fade-in mb-16 space-y-4">
       
       {/* Settings Sub-Tab Navigation Bar */}
-      <div className="flex border-b border-[#1c2c36]/80 gap-1 overflow-x-auto select-none">
+      <div className="relative flex items-center bg-[#061822] p-1.5 rounded-2xl border border-[#1c2c36] shadow-lg mb-4 select-none">
+        {/* Scroll Left Button */}
         <button
-          onClick={() => setActiveSubTab('profile')}
-          className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'profile'
-              ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-              : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-          }`}
+          type="button"
+          onClick={() => {
+            if (navRef.current) navRef.current.scrollBy({ left: -220, behavior: 'smooth' });
+          }}
+          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-[#0d1f2b] text-[#99907c] hover:text-[#E9C349] hover:bg-[#152a3a] transition-all shrink-0 cursor-pointer border border-[#1c2c36]/80 mr-1"
+          title="Rolar para esquerda"
         >
-          <User className="w-3.5 h-3.5" /> MEU PERFIL & SEGURANÇA
+          <ChevronLeft className="w-4 h-4" />
         </button>
-        <button
-          onClick={() => setActiveSubTab('personal_attempts')}
-          className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-            activeSubTab === 'personal_attempts'
-              ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-              : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-          }`}
+
+        {/* Scrollable Sub-Tabs */}
+        <div 
+          ref={navRef} 
+          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth w-full py-0.5 px-0.5"
         >
-          <FileText className="w-3.5 h-3.5 text-amber-400" /> AVALIAÇÕES PESSOAIS
-        </button>
-        {!isStandardUser && (
-          <>
-            <button
-              onClick={() => setActiveSubTab('reports')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'reports'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <Sliders className="w-3.5 h-3.5 text-[#66d9cc]" /> CADASTRO DE CURSOS ({reports.length})
-            </button>
-            <button
-              onClick={() => setActiveSubTab('accesses')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'accesses'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 text-orange-400" /> CADASTRO DE ACESSOS ({visibleAccessUsers.length})
-            </button>
-            {isMaster && (
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('profile')}
+            className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+              activeSubTab === 'profile'
+                ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+            }`}
+          >
+            <User className="w-3.5 h-3.5 shrink-0" />
+            <span>Perfil & Segurança</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('personal_attempts')}
+            className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+              activeSubTab === 'personal_attempts'
+                ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>Avaliações</span>
+          </button>
+
+          {!isStandardUser && (
+            <>
               <button
-                onClick={() => setActiveSubTab('database')}
-                className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                  activeSubTab === 'database'
-                    ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                type="button"
+                onClick={() => setActiveSubTab('reports')}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'reports'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
                 }`}
               >
-                <Database className="w-3.5 h-3.5 text-[#E9C349]" /> BANCO DE DADOS CLOUD (FIREBASE)
+                <Sliders className="w-3.5 h-3.5 text-[#66d9cc] shrink-0" />
+                <span>Cursos</span>
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#122836] text-[#66d9cc] border border-[#66d9cc]/30">
+                  {reports.length}
+                </span>
               </button>
-            )}
-            <button
-              onClick={() => {
-                setActiveSubTab('books');
-                handleStartCreateNewBook();
-              }}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'books'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5 text-[#E9C349]" /> CADASTRO DE MATERIAIS ({books.length})
-            </button>
-            {isMaster && (
+
               <button
-                onClick={() => setActiveSubTab('accessStats')}
-                className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                  activeSubTab === 'accessStats'
-                    ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                    : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
+                type="button"
+                onClick={() => setActiveSubTab('accesses')}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'accesses'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
                 }`}
               >
-                <BarChart3 className="w-3.5 h-3.5 text-[#66d9cc]" /> RELATÓRIOS DE ACESSO
+                <Shield className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                <span>Acessos</span>
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#122836] text-orange-400 border border-orange-400/30">
+                  {visibleAccessUsers.length}
+                </span>
               </button>
-            )}
-            <button
-              onClick={() => setActiveSubTab('lodges')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'lodges'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <Home className="w-3.5 h-3.5 text-amber-500" /> CADASTRO DA LOJA ({(lodges || []).filter(l => isMaster || l.id === (currentUser?.lodgeId || 'lodge-cavaleiros')).length})
-            </button>
-            <button
-              onClick={() => setActiveSubTab('questionnaires')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'questionnaires'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 text-amber-400" /> CADASTRO DE SIMULADOS ({(questionnaires || []).length})
-            </button>
-            <button
-              onClick={() => setActiveSubTab('certificate')}
-              className={`flex items-center gap-1.5 py-3 px-4 text-xs font-mono font-bold tracking-wide transition-all border-b-2 cursor-pointer ${
-                activeSubTab === 'certificate'
-                  ? 'border-[#E9C349] text-[#E9C349] bg-[#0c1d27]/40'
-                  : 'border-transparent text-[#99907c] hover:text-[#d4e5f2]'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5 text-yellow-400" /> DESIGN DO CERTIFICADO
-            </button>
-          </>
-        )}
+
+              {isMaster && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('database')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                    activeSubTab === 'database'
+                      ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                      : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                  }`}
+                >
+                  <Database className="w-3.5 h-3.5 text-[#E9C349] shrink-0" />
+                  <span>Banco Cloud</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveSubTab('books');
+                  handleStartCreateNewBook();
+                }}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'books'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#E9C349] shrink-0" />
+                <span>Materiais</span>
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#122836] text-[#E9C349] border border-[#E9C349]/30">
+                  {books.length}
+                </span>
+              </button>
+
+              {isMaster && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('accessStats')}
+                  className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                    activeSubTab === 'accessStats'
+                      ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                      : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-[#66d9cc] shrink-0" />
+                  <span>Relatórios</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('lodges')}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'lodges'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                }`}
+              >
+                <Home className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Lojas</span>
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#122836] text-amber-400 border border-amber-400/30">
+                  {(lodges || []).filter(l => isMaster || l.id === (currentUser?.lodgeId || 'lodge-cavaleiros')).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('questionnaires')}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'questionnaires'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Simulados</span>
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono font-bold rounded-full bg-[#122836] text-amber-400 border border-amber-400/30">
+                  {(questionnaires || []).length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('certificate')}
+                className={`flex items-center gap-1.5 py-1.5 px-3 text-xs font-mono font-bold tracking-wide transition-all rounded-xl shrink-0 cursor-pointer whitespace-nowrap ${
+                  activeSubTab === 'certificate'
+                    ? 'bg-[#E9C349]/15 text-[#E9C349] border border-[#E9C349]/40 shadow-sm'
+                    : 'text-[#99907c] hover:text-[#d4e5f2] hover:bg-[#0d1f2b] border border-transparent'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                <span>Certificados</span>
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Scroll Right Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (navRef.current) navRef.current.scrollBy({ left: 220, behavior: 'smooth' });
+          }}
+          className="hidden md:flex items-center justify-center w-7 h-7 rounded-lg bg-[#0d1f2b] text-[#99907c] hover:text-[#E9C349] hover:bg-[#152a3a] transition-all shrink-0 cursor-pointer border border-[#1c2c36]/80 ml-1"
+          title="Rolar para direita"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
       </div>
 
       {activeSubTab === 'personal_attempts' && (
