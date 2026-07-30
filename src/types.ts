@@ -14,11 +14,17 @@ export interface ExecutiveReport {
   additionalLink?: string;
   customAccessUrl?: string;
   material1Link?: string;
+  material1Name?: string;
   material2Link?: string;
+  material2Name?: string;
   material3Link?: string;
+  material3Name?: string;
   material4Link?: string;
+  material4Name?: string;
   material5Link?: string;
+  material5Name?: string;
   material6Link?: string;
+  material6Name?: string;
   nivelCurso?: number;
   conteudoSemProva?: boolean;
   hasCertificate?: boolean;
@@ -27,6 +33,7 @@ export interface ExecutiveReport {
   linkedQuestionnaireId?: string;
   prerequisiteId?: string;
   lodgeId?: string;
+  itemType?: 'curso' | 'trilha';
 }
 
 export interface SystemAlert {

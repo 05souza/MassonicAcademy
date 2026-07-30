@@ -686,6 +686,7 @@ export default function ProfileView({
   // CRUD Interface State
   const [reportsSearchQuery, setReportsSearchQuery] = useState('');
   const [reportsStatusFilter, setReportsStatusFilter] = useState<'todos' | 'Ativo' | 'Inativo'>('todos');
+  const [reportsItemTypeFilter, setReportsItemTypeFilter] = useState<'todos' | 'curso' | 'trilha'>('todos');
   const [accessStatusFilter, setAccessStatusFilter] = useState<'todos' | 'Ativo' | 'Inativo'>('todos');
   const [showForm, setShowForm] = useState(false);
   const [showImportPanel, setShowImportPanel] = useState(false);
@@ -741,11 +742,17 @@ export default function ProfileView({
           let summary = '';
           let tags: string[] = [];
           let material1Link = '';
+          let material1Name = '';
           let material2Link = '';
+          let material2Name = '';
           let material3Link = '';
+          let material3Name = '';
           let material4Link = '';
+          let material4Name = '';
           let material5Link = '';
+          let material5Name = '';
           let material6Link = '';
+          let material6Name = '';
 
           Object.keys(row).forEach(key => {
             const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -768,22 +775,40 @@ export default function ProfileView({
               } else {
                 status = 'Ativo';
               }
+            } else if (k === 'tipo' || k === 'itemtype' || k === 'tipoformacao' || k === 'formacao' || k === 'trilha') {
+              if (strVal.toLowerCase().includes('trilha')) {
+                itemType = 'trilha';
+              } else {
+                itemType = 'curso';
+              }
             } else if (k === 'resumo' || k === 'summary' || k === 'descricao' || k === 'description') {
               summary = strVal;
             } else if (k === 'tags' || k === 'tag' || k === 'palavras-chave' || k === 'palavras chave') {
               tags = strVal ? strVal.split(',').map(t => t.trim()).filter(Boolean) : [];
             } else if (k === 'link material 1' || k === 'linkmaterial1' || k === 'material1link' || k === 'material 1') {
               material1Link = strVal;
+            } else if (k === 'nome material 1' || k === 'material1name' || k === 'descricao material 1' || k === 'material1desc') {
+              material1Name = strVal;
             } else if (k === 'link material 2' || k === 'linkmaterial2' || k === 'material2link' || k === 'material 2') {
               material2Link = strVal;
+            } else if (k === 'nome material 2' || k === 'material2name' || k === 'descricao material 2' || k === 'material2desc') {
+              material2Name = strVal;
             } else if (k === 'link material 3' || k === 'linkmaterial3' || k === 'material3link' || k === 'material 3') {
               material3Link = strVal;
+            } else if (k === 'nome material 3' || k === 'material3name' || k === 'descricao material 3' || k === 'material3desc') {
+              material3Name = strVal;
             } else if (k === 'link material 4' || k === 'linkmaterial4' || k === 'material4link' || k === 'material 4') {
               material4Link = strVal;
+            } else if (k === 'nome material 4' || k === 'material4name' || k === 'descricao material 4' || k === 'material4desc') {
+              material4Name = strVal;
             } else if (k === 'link material 5' || k === 'linkmaterial5' || k === 'material5link' || k === 'material 5') {
               material5Link = strVal;
+            } else if (k === 'nome material 5' || k === 'material5name' || k === 'descricao material 5' || k === 'material5desc') {
+              material5Name = strVal;
             } else if (k === 'link material 6' || k === 'linkmaterial6' || k === 'material6link' || k === 'material 6') {
               material6Link = strVal;
+            } else if (k === 'nome material 6' || k === 'material6name' || k === 'descricao material 6' || k === 'material6desc') {
+              material6Name = strVal;
             }
           });
 
@@ -815,12 +840,19 @@ export default function ProfileView({
             nivelCurso: nivelCurso,
             conteudoSemProva: false,
             status: status,
+            itemType: itemType,
             material1Link: material1Link || undefined,
+            material1Name: material1Name || undefined,
             material2Link: material2Link || undefined,
+            material2Name: material2Name || undefined,
             material3Link: material3Link || undefined,
+            material3Name: material3Name || undefined,
             material4Link: material4Link || undefined,
+            material4Name: material4Name || undefined,
             material5Link: material5Link || undefined,
+            material5Name: material5Name || undefined,
             material6Link: material6Link || undefined,
+            material6Name: material6Name || undefined,
           };
 
           parsedReports.push(newRep);
@@ -863,6 +895,7 @@ export default function ProfileView({
     const modelData = [
       {
         "titulo": "Simbologia do Templo de Salomão",
+        "tipo": "Curso",
         "status": "Ativo",
         "instrutor": "Daniel Luciano",
         "grau": 1,
@@ -1134,6 +1167,7 @@ export default function ProfileView({
   // Form Field States
   const [formId, setFormId] = useState('');
   const [formTitle, setFormTitle] = useState('');
+  const [formItemType, setFormItemType] = useState<'curso' | 'trilha'>('curso');
   const [formCategory, setFormCategory] = useState<string>('ESTRATÉGIA');
   const [formTags, setFormTags] = useState('');
   const [formDepartment, setFormDepartment] = useState('');
@@ -1149,11 +1183,17 @@ export default function ProfileView({
   const [formCustomAccessUrl, setFormCustomAccessUrl] = useState('');
   const [formHtmlContent, setFormHtmlContent] = useState('');
   const [formMaterial1Link, setFormMaterial1Link] = useState('');
+  const [formMaterial1Name, setFormMaterial1Name] = useState('');
   const [formMaterial2Link, setFormMaterial2Link] = useState('');
+  const [formMaterial2Name, setFormMaterial2Name] = useState('');
   const [formMaterial3Link, setFormMaterial3Link] = useState('');
+  const [formMaterial3Name, setFormMaterial3Name] = useState('');
   const [formMaterial4Link, setFormMaterial4Link] = useState('');
+  const [formMaterial4Name, setFormMaterial4Name] = useState('');
   const [formMaterial5Link, setFormMaterial5Link] = useState('');
+  const [formMaterial5Name, setFormMaterial5Name] = useState('');
   const [formMaterial6Link, setFormMaterial6Link] = useState('');
+  const [formMaterial6Name, setFormMaterial6Name] = useState('');
   const [formNivelCurso, setFormNivelCurso] = useState<number>(1);
   const [formConteudoSemProva, setFormConteudoSemProva] = useState(false);
   const [formHasCertificate, setFormHasCertificate] = useState(false);
@@ -1724,6 +1764,7 @@ export default function ProfileView({
     
     setFormId(rep.id);
     setFormTitle(rep.title);
+    setFormItemType(rep.itemType || 'curso');
     setFormCategory(rep.category);
     // filter out image metadata links from displayed client tags
     const displayTags = rep.tags.filter(t => !t.startsWith('img:')).join(', ');
@@ -1741,11 +1782,17 @@ export default function ProfileView({
     setFormCustomAccessUrl(rep.customAccessUrl || '');
     setFormHtmlContent(rep.htmlContent || '');
     setFormMaterial1Link(rep.material1Link || '');
+    setFormMaterial1Name(rep.material1Name || '');
     setFormMaterial2Link(rep.material2Link || '');
+    setFormMaterial2Name(rep.material2Name || '');
     setFormMaterial3Link(rep.material3Link || '');
+    setFormMaterial3Name(rep.material3Name || '');
     setFormMaterial4Link(rep.material4Link || '');
+    setFormMaterial4Name(rep.material4Name || '');
     setFormMaterial5Link(rep.material5Link || '');
+    setFormMaterial5Name(rep.material5Name || '');
     setFormMaterial6Link(rep.material6Link || '');
+    setFormMaterial6Name(rep.material6Name || '');
     setFormNivelCurso(rep.nivelCurso || 1);
     setFormConteudoSemProva(!!rep.conteudoSemProva);
     setFormHasCertificate(!!rep.hasCertificate);
@@ -1770,6 +1817,7 @@ export default function ProfileView({
     const newId = `rep-${Math.floor(100 + Math.random() * 900)}`;
     setFormId(newId);
     setFormTitle('');
+    setFormItemType('curso');
     setFormCategory('ESTRATÉGIA');
     setFormTags('');
     setFormDepartment('');
@@ -1783,11 +1831,17 @@ export default function ProfileView({
     setFormCustomAccessUrl('');
     setFormHtmlContent('');
     setFormMaterial1Link('');
+    setFormMaterial1Name('');
     setFormMaterial2Link('');
+    setFormMaterial2Name('');
     setFormMaterial3Link('');
+    setFormMaterial3Name('');
     setFormMaterial4Link('');
+    setFormMaterial4Name('');
     setFormMaterial5Link('');
+    setFormMaterial5Name('');
     setFormMaterial6Link('');
+    setFormMaterial6Name('');
     setFormNivelCurso(1);
     setFormConteudoSemProva(false);
     setFormHasCertificate(false);
@@ -1860,6 +1914,7 @@ export default function ProfileView({
     const finalReportData: ExecutiveReport = {
       id: finalId,
       title: formTitle.trim(),
+      itemType: formItemType,
       category: formCategory,
       tags: finalTags,
       department: formDepartment.trim() || 'Geral',
@@ -1874,11 +1929,17 @@ export default function ProfileView({
       customAccessUrl: formCustomAccessUrl.trim() || undefined,
       htmlContent: formHtmlContent.trim() || undefined,
       material1Link: formMaterial1Link.trim() || undefined,
+      material1Name: formMaterial1Name.trim() || undefined,
       material2Link: formMaterial2Link.trim() || undefined,
+      material2Name: formMaterial2Name.trim() || undefined,
       material3Link: formMaterial3Link.trim() || undefined,
+      material3Name: formMaterial3Name.trim() || undefined,
       material4Link: formMaterial4Link.trim() || undefined,
+      material4Name: formMaterial4Name.trim() || undefined,
       material5Link: formMaterial5Link.trim() || undefined,
+      material5Name: formMaterial5Name.trim() || undefined,
       material6Link: formMaterial6Link.trim() || undefined,
+      material6Name: formMaterial6Name.trim() || undefined,
       nivelCurso: formNivelCurso,
       conteudoSemProva: formConteudoSemProva,
       hasCertificate: formHasCertificate,
@@ -2068,6 +2129,12 @@ export default function ProfileView({
       (r.category || '').toLowerCase().includes(q);
     
     if (!matchesSearch) return false;
+
+    if (reportsItemTypeFilter !== 'todos') {
+      const itemType = r.itemType || 'curso';
+      if (itemType !== reportsItemTypeFilter) return false;
+    }
+
     if (reportsStatusFilter === 'todos') return true;
     
     const repStatus = r.status || 'Ativo';
@@ -3164,30 +3231,60 @@ export default function ProfileView({
               />
             </div>
 
-            {/* Status Filter */}
-            <div className="flex items-center justify-between border-t border-[#1c2c36]/40 pt-2 font-mono text-[10px]">
-              <span className="text-[#99907c] uppercase select-none font-bold">Status:</span>
-              <div className="flex gap-1">
-                {[
-                  { id: 'todos', label: 'Todos' },
-                  { id: 'Ativo', label: 'Ativos' },
-                  { id: 'Inativo', label: 'Inativos' }
-                ].map((st) => {
-                  const active = reportsStatusFilter === st.id;
-                  return (
-                    <button
-                      key={st.id}
-                      onClick={() => setReportsStatusFilter(st.id as any)}
-                      className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer border transition-colors ${
-                        active
-                          ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/40'
-                          : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2]'
-                      }`}
-                    >
-                      {st.label}
-                    </button>
-                  );
-                })}
+            {/* Tipo and Status Filters */}
+            <div className="space-y-2 border-t border-[#1c2c36]/40 pt-2 font-mono text-[10px]">
+              {/* Tipo Filter */}
+              <div className="flex items-center justify-between">
+                <span className="text-[#99907c] uppercase select-none font-bold">Tipo:</span>
+                <div className="flex gap-1">
+                  {[
+                    { id: 'todos', label: 'Todos' },
+                    { id: 'curso', label: 'Cursos' },
+                    { id: 'trilha', label: 'Trilhas' }
+                  ].map((tp) => {
+                    const active = reportsItemTypeFilter === tp.id;
+                    return (
+                      <button
+                        key={tp.id}
+                        onClick={() => setReportsItemTypeFilter(tp.id as any)}
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer border transition-colors ${
+                          active
+                            ? 'bg-[#66d9cc]/20 text-[#66d9cc] border-[#66d9cc]/40'
+                            : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2]'
+                        }`}
+                      >
+                        {tp.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center justify-between">
+                <span className="text-[#99907c] uppercase select-none font-bold">Status:</span>
+                <div className="flex gap-1">
+                  {[
+                    { id: 'todos', label: 'Todos' },
+                    { id: 'Ativo', label: 'Ativos' },
+                    { id: 'Inativo', label: 'Inativos' }
+                  ].map((st) => {
+                    const active = reportsStatusFilter === st.id;
+                    return (
+                      <button
+                        key={st.id}
+                        onClick={() => setReportsStatusFilter(st.id as any)}
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer border transition-colors ${
+                          active
+                            ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/40'
+                            : 'bg-[#081721]/60 text-[#99907c] border-[#1c2c36]/50 hover:text-[#d4e5f2]'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -3218,6 +3315,13 @@ export default function ProfileView({
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-mono text-[9px] text-[#E9C349] bg-[#1a2d39] px-1 py-0.5 rounded border border-[#1c2c36] font-bold">
                           {rep.id}
+                        </span>
+                        <span className={`text-[8px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                          (rep.itemType || 'curso') === 'trilha'
+                            ? 'bg-[#66d9cc]/15 border-[#66d9cc]/40 text-[#66d9cc]'
+                            : 'bg-[#E9C349]/15 border-[#E9C349]/40 text-[#E9C349]'
+                        }`}>
+                          {(rep.itemType || 'curso') === 'trilha' ? 'Trilha' : 'Curso'}
                         </span>
                         <span className={`text-[8px] font-mono font-bold px-1.5 py-0.2 rounded border ${
                           rep.status !== 'Inativo'
@@ -3336,6 +3440,37 @@ export default function ProfileView({
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Classificação do Cadastro: Curso ou Trilha */}
+                      <div className="sm:col-span-2 bg-[#04141d] p-3.5 rounded-lg border border-[#1c2c36]">
+                        <label className="block text-[10px] font-mono text-[#E9C349] mb-2 uppercase tracking-wider font-bold">
+                          Classificação do Cadastro (Curso ou Trilha)
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setFormItemType('curso')}
+                            className={`flex-1 py-2 px-3 rounded text-xs font-mono font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                              formItemType === 'curso'
+                                ? 'bg-[#E9C349] text-[#241a00] border-[#E9C349] shadow-md font-extrabold'
+                                : 'bg-[#081721] text-[#99907c] border-[#1c2c36] hover:text-[#d4e5f2]'
+                            }`}
+                          >
+                            📘 Curso Individual
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormItemType('trilha')}
+                            className={`flex-1 py-2 px-3 rounded text-xs font-mono font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                              formItemType === 'trilha'
+                                ? 'bg-[#66D9CC] text-[#02332e] border-[#66D9CC] shadow-md font-extrabold'
+                                : 'bg-[#081721] text-[#99907c] border-[#1c2c36] hover:text-[#d4e5f2]'
+                            }`}
+                          >
+                            🛣️ Trilha de Aprendizagem
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Código ID (Sistema Único comercial)</label>
                         <input
@@ -3637,73 +3772,173 @@ export default function ProfileView({
                           </div>
                         </div>
 
-                        {/* Novos Campos de Materiais Complementares */}
-                        <div className="sm:col-span-2 border-t border-[#1c2c36]/20 pt-4 mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 1 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-1-link"
-                              placeholder="https://exemplo.com/material1"
-                              value={formMaterial1Link}
-                              onChange={(e) => setFormMaterial1Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 2 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-2-link"
-                              placeholder="https://exemplo.com/material2"
-                              value={formMaterial2Link}
-                              onChange={(e) => setFormMaterial2Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 3 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-3-link"
-                              placeholder="https://exemplo.com/material3"
-                              value={formMaterial3Link}
-                              onChange={(e) => setFormMaterial3Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 4 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-4-link"
-                              placeholder="https://exemplo.com/material4"
-                              value={formMaterial4Link}
-                              onChange={(e) => setFormMaterial4Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 5 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-5-link"
-                              placeholder="https://exemplo.com/material5"
-                              value={formMaterial5Link}
-                              onChange={(e) => setFormMaterial5Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 6 / Referência Direta (URL)</label>
-                            <input
-                              type="url"
-                              id="input-material-6-link"
-                              placeholder="https://exemplo.com/material6"
-                              value={formMaterial6Link}
-                              onChange={(e) => setFormMaterial6Link(e.target.value)}
-                              className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
-                            />
+                        {/* Novos Campos de Materiais Complementares com Descrição e Link */}
+                        <div className="sm:col-span-2 border-t border-[#1c2c36]/20 pt-4 mt-2 space-y-3">
+                          <span className="block text-xs font-mono text-[#E8C349] font-bold uppercase tracking-wider">
+                            Materiais de Estudo do Curso (Links & Descrições Personalizadas)
+                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#030e14]/50 p-3 rounded-lg border border-[#1c2c36]/40">
+                            {/* Material 1 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 1</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 1 (ex: "Apostila de estudos...")</label>
+                                <input
+                                  type="text"
+                                  id="input-material-1-name"
+                                  placeholder="Ex: Apostila de estudos principal"
+                                  value={formMaterial1Name}
+                                  onChange={(e) => setFormMaterial1Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 1 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-1-link"
+                                  placeholder="https://exemplo.com/material1"
+                                  value={formMaterial1Link}
+                                  onChange={(e) => setFormMaterial1Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material 2 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 2</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 2 (ex: "Guia prático...")</label>
+                                <input
+                                  type="text"
+                                  id="input-material-2-name"
+                                  placeholder="Ex: Guia de leitura complementar"
+                                  value={formMaterial2Name}
+                                  onChange={(e) => setFormMaterial2Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 2 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-2-link"
+                                  placeholder="https://exemplo.com/material2"
+                                  value={formMaterial2Link}
+                                  onChange={(e) => setFormMaterial2Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material 3 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 3</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 3</label>
+                                <input
+                                  type="text"
+                                  id="input-material-3-name"
+                                  placeholder="Ex: Regulamento e Rituais"
+                                  value={formMaterial3Name}
+                                  onChange={(e) => setFormMaterial3Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 3 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-3-link"
+                                  placeholder="https://exemplo.com/material3"
+                                  value={formMaterial3Link}
+                                  onChange={(e) => setFormMaterial3Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material 4 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 4</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 4</label>
+                                <input
+                                  type="text"
+                                  id="input-material-4-name"
+                                  placeholder="Ex: Anexo técnico e gráficos"
+                                  value={formMaterial4Name}
+                                  onChange={(e) => setFormMaterial4Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 4 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-4-link"
+                                  placeholder="https://exemplo.com/material4"
+                                  value={formMaterial4Link}
+                                  onChange={(e) => setFormMaterial4Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material 5 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 5</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 5</label>
+                                <input
+                                  type="text"
+                                  id="input-material-5-name"
+                                  placeholder="Ex: Artigos adicionais"
+                                  value={formMaterial5Name}
+                                  onChange={(e) => setFormMaterial5Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 5 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-5-link"
+                                  placeholder="https://exemplo.com/material5"
+                                  value={formMaterial5Link}
+                                  onChange={(e) => setFormMaterial5Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Material 6 */}
+                            <div className="space-y-2 bg-[#04141d] p-3 rounded border border-[#1c2c36]/60">
+                              <span className="block text-[11px] font-mono text-[#E8C349] font-semibold">Material 6</span>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Descrição / Nome do Material 6</label>
+                                <input
+                                  type="text"
+                                  id="input-material-6-name"
+                                  placeholder="Ex: Livro de referência complementar"
+                                  value={formMaterial6Name}
+                                  onChange={(e) => setFormMaterial6Name(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[9px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">Link do Material 6 / Referência Direta (URL)</label>
+                                <input
+                                  type="url"
+                                  id="input-material-6-link"
+                                  placeholder="https://exemplo.com/material6"
+                                  value={formMaterial6Link}
+                                  onChange={(e) => setFormMaterial6Link(e.target.value)}
+                                  className="w-full bg-[#030e14] border border-[#1c2c36] text-xs px-3 py-1.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349]"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
 

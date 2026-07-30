@@ -148,6 +148,13 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           <div className="flex items-start justify-between md:justify-start gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className={`font-mono text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider select-none border ${
+                  (report.itemType || 'curso') === 'trilha'
+                    ? 'bg-[#66D9CC]/10 text-[#66D9CC] border-[#66D9CC]/30'
+                    : 'bg-[#E9C349]/10 text-[#E9C349] border-[#E9C349]/30'
+                }`}>
+                  {(report.itemType || 'curso') === 'trilha' ? '🛣️ Trilha' : '📘 Curso'}
+                </span>
                 <span className="font-mono text-[9px] text-slate-500 dark:text-[#E9C349] uppercase tracking-widest font-black block">
                   <InlineEditable
                     value={report.department || "Curso"}
@@ -405,14 +412,21 @@ export const ReportCard: React.FC<ReportCardProps> = ({
           </h3>
 
           {/* Degree Badge below Title */}
-          {report.nivelCurso && (
-            <div className="flex items-center justify-center gap-1 select-none text-center pt-0.5">
+          <div className="flex items-center justify-center gap-1.5 flex-wrap select-none text-center pt-0.5">
+            <span className={`font-mono text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
+              (report.itemType || 'curso') === 'trilha'
+                ? 'bg-[#66D9CC]/10 text-[#66D9CC] border-[#66D9CC]/30'
+                : 'bg-[#E9C349]/10 text-[#E9C349] border-[#E9C349]/30'
+            }`}>
+              {(report.itemType || 'curso') === 'trilha' ? '🛣️ Trilha' : '📘 Curso'}
+            </span>
+            {report.nivelCurso && (
               <span className="font-mono text-[8px] font-extrabold text-[#E9C349] dark:text-[#ffe088] bg-[#E9C349]/10 border border-[#E9C349]/20 px-1.5 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
                 <Shield className="w-2.5 h-2.5 text-[#26a69a]" />
                 {getDegreeLabel(report.nivelCurso)}
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Prerequisite label if applicable */}
           {prereqCourse && !hideTrilhaStep && (

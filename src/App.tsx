@@ -244,6 +244,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('TODOS');
   const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados' | 'meu-grau'>('todos');
+  const [itemTypeFilter, setItemTypeFilter] = useState<'todos' | 'curso' | 'trilha'>('todos');
   const [selectedReport, setSelectedReport] = useState<ExecutiveReport | null>(null);
 
   // Catalog layout switcher (Cursos / Trilhas)
@@ -2188,6 +2189,11 @@ export default function App() {
 
     return allowedList.includes((report.id || '').toLowerCase());
   }).filter((report) => {
+    if (itemTypeFilter !== 'todos') {
+      const type = report.itemType || 'curso';
+      if (type !== itemTypeFilter) return false;
+    }
+
     if (progressFilter === 'meu-grau') {
       const userLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || '1'), 10) : 1;
       const reportLevel = parseInt(String(report.nivelCurso || '1'), 10);
@@ -2472,8 +2478,33 @@ export default function App() {
 
                     {/* Discrete status filter & sort options */}
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pb-4 mt-1 font-mono text-[11px] border-b border-[#1c2c36]/20 mb-3.5 w-full">
-                      <div id="course-status-filter" className="flex flex-wrap items-center gap-1.5 animate-fadeIn">
-                        <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px]">Filtrar por:</span>
+                      <div id="course-status-filter" className="flex flex-wrap items-center gap-2 animate-fadeIn">
+                        <div className="flex items-center gap-1 bg-[#081721] p-1 rounded-lg border border-[#1c2c36]">
+                          <span className="text-[#99907c] px-1 uppercase select-none font-bold text-[9px]">Tipo:</span>
+                          {[
+                            { id: 'todos', label: 'Todos' },
+                            { id: 'curso', label: 'Cursos' },
+                            { id: 'trilha', label: 'Trilhas' }
+                          ].map((item) => {
+                            const active = itemTypeFilter === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                id={`type-filter-${item.id}`}
+                                onClick={() => setItemTypeFilter(item.id as any)}
+                                className={`px-2.5 py-0.5 rounded text-[10px] font-bold tracking-tight cursor-pointer transition-all ${
+                                  active
+                                    ? 'bg-[#66d9cc]/20 text-[#66d9cc] border border-[#66d9cc]/40 shadow-xs'
+                                    : 'text-[#99907c] hover:text-[#d4e5f2]'
+                                }`}
+                              >
+                                {item.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px] ml-1">Status:</span>
                         {[
                           { id: 'todos', label: 'Todos os Títulos' },
                           { id: 'meu-grau', label: 'Do meu grau' },
@@ -2892,9 +2923,12 @@ export default function App() {
                                             <div className="space-y-2">
                                               {[
                                                 { key: 'htmlContent', label: 'Curso Interativo HTML', link: course.htmlContent },
-                                                { key: 'material1', label: 'Material de Leitura Principal', link: course.material1Link },
-                                                { key: 'material2', label: 'Material de Apoio e Diretrizes', link: course.material2Link },
-                                                { key: 'material3', label: 'Leituras Complementares', link: course.material3Link },
+                                                { key: 'material1', label: course.material1Name || 'Material 1', link: course.material1Link },
+                                                { key: 'material2', label: course.material2Name || 'Material 2', link: course.material2Link },
+                                                { key: 'material3', label: course.material3Name || 'Material 3', link: course.material3Link },
+                                                { key: 'material4', label: course.material4Name || 'Material 4', link: course.material4Link },
+                                                { key: 'material5', label: course.material5Name || 'Material 5', link: course.material5Link },
+                                                { key: 'material6', label: course.material6Name || 'Material 6', link: course.material6Link },
                                                 { key: 'linked_questionnaire', label: 'Questionário de Avaliação', link: course.linkedQuestionnaireId ? 'quiz' : undefined },
                                               ].filter(item => item.link).map((item, idx) => {
                                                 const isItemCompleted = (() => {
