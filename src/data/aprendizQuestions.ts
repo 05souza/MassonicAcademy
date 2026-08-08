@@ -48,7 +48,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Que a Força reside no Mestre.',
       'Que a Sabedoria está em Deus; e que a Sabedoria é um dos atributos da Divindade.',
       'A Beleza da Criação Universal.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Palavra Sagrada significa que a Sabedoria está em Deus; e que a Sabedoria é um dos atributos da Divindade.'
@@ -74,7 +74,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Em qualquer reunião de amigos.',
       'Somente no Templo ou em Loja aberta.',
       'Em eventos públicos da Maçonaria.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 1,
     explanation: 'É permitido ficar à ordem somente no Templo ou em Loja aberta.'
@@ -100,7 +100,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Apenas o malhete e a Bíblia.',
       'Malhete, Espada Flamejante, Esquadro, candelabro, rituais, leis, estatutos e incenso.',
       'Compasso, Esquadro e a Constituição.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 1,
     explanation: 'Sobre a mesa do Venerável Mestre deve existir o Malhete, Espada Flamejante, Esquadro, candelabro, rituais, leis, estatutos e incenso.'
@@ -139,7 +139,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Apenas o sigilo e a obediência cega.',
       'Deveres para com Deus, para com o próximo e para consigo mesmo.',
       'Frequentar as sessões e pagar as mensalidades.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 1,
     explanation: 'Os principais deveres de um Maçom são deveres para com Deus, para com o próximo e para consigo mesmo.'
@@ -152,7 +152,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Uma vestimenta de gala para os mestres.',
       'O serviço e a nobreza do Trabalho, indicando uma vida ativa.',
       'A proteção contra as energias negativas externas.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 1,
     explanation: 'O avental simboliza o serviço e a nobreza do Trabalho, indicando uma vida ativa.'
@@ -165,7 +165,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Sapatos/meias pretos, terno preto, camisa/luvas/gravata brancas e o avental.',
       'Qualquer traje escuro com gravata preta.',
       'Balandrau preto com luvas pretas.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 0,
     explanation: 'O vestuário completo constitui-se de sapatos/meias pretos, terno preto, camisa/luvas/gravata brancas e o avental.'
@@ -178,7 +178,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O exame do candidato na porta do Templo.',
       'O ato de remover as arestas, espalhando e nivelando a massa (uso da trolha).',
       'A identificação ritualística por meio de sinais e toques.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 1,
     explanation: 'Trolhamento é o ato de remover as arestas, espalhando e nivelando a massa (uso da trolha).'
@@ -191,7 +191,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Para nos certificarmos de que se trata de um Irmão "bom, legítimo e fiel".',
       'Para testar a memória do Aprendiz.',
       'Para proteger o Templo de intempéries físicas.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 0,
     explanation: 'O telhamento é feito para nos certificarmos de que se trata de um Irmão "bom, legítimo e fiel".'
@@ -204,7 +204,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Sim, pois ninguém sabe de sua existência.',
       'Não, é uma instituição discreta, privativa ou reservada aos seus membros.',
       'Sim, seus rituais são proibidos por lei.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Maçonaria não é secreta, mas sim uma instituição discreta, privativa ou reservada aos seus membros.'
@@ -256,7 +256,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Por ser o lugar mais honroso da Loja.',
       'Por ser o local menos iluminado, pois o Aprendiz recebeu fraca luz.',
       'Para ficarem distantes do Venerável Mestre.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 1,
     explanation: 'Sentam-se no Norte por ser o local menos iluminado, simbolizando a fraca luz recebida no início da jornada.'
@@ -295,7 +295,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Um tapete para o Venerável Mestre.',
       'Símbolo do equilíbrio e da coesão Universal; integração dos opostos.',
       'Uma homenagem mística a Moisés.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 1,
     explanation: 'Simboliza a união e harmonia de todos os homens sobre a Terra, a despeito de suas raças, opiniões e diversidades.'
@@ -308,7 +308,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Moldura azul celeste que contorna o Pavimento Mosaico; símbolo da união.',
       'Uma corda com 81 nós que protege o Templo.',
       'A base das colunas J e B.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'A Orla Dentada é a moldura azul celeste que contorna o Pavimento Mosaico, servindo como símbolo da união.'
@@ -347,7 +347,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Justiça e Juízo.',
       'Jaquim; significa que "a Sabedoria está em Deus".',
       'Jerusalém, a cidade santa.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 1,
     explanation: 'Significa "Jaquim", representando a verdade moral de que "a Sabedoria está em Deus" (ou Ele estabelecerá).'
@@ -373,7 +373,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Bens das estações; representam as Lojas e a fraternidade humana.',
       'A doçura da vida maçônica.',
       'O segredo que deve ser guardado individualmente.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'As romãs unidas e cheias de sementes representam as Lojas formadas pela Fraternidade Universal dos seres humanos.'
@@ -412,7 +412,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O limite físico da construção.',
       'A Abóbada Celeste, representando o Universo.',
       'O segredo guardado entre quatro paredes.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 1,
     explanation: 'O teto da Loja simboliza a Abóbada Celeste, indicando a universalidade e amplitude ilimitada do Templo espiritual.'
@@ -425,7 +425,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'No Ocidente, à porta.',
       'No Oriente, à direita do Retábulo (atrás do Trono).',
       'No Sul, sobre o 1º Vigilante.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 1,
     explanation: 'O Sol está pintado no Oriente, à direita do painel do Retábulo (atrás do Trono do Venerável Mestre).'
@@ -438,7 +438,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'No Norte, iluminando os aprendizes.',
       'No Oriente, à esquerda do Retábulo.',
       'No centro do Pavimento Mosaico.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Lua está pintada no Oriente, à esquerda do painel do Retábulo.'
@@ -451,7 +451,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O cumprimento rigoroso das leis penais profanas.',
       'O sistema para o ensino do amor ao próximo e formação do caráter.',
       'Um conjunto de dogmas religiosos.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Moral Maçônica é um sistema que visa o ensino do amor ao próximo e o aprimoramento interno do caráter individual.'
@@ -464,7 +464,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Como superiores hierárquicos.',
       'Como nossos iguais.',
       'Com indiferença, exceto se forem maçons.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 1,
     explanation: 'Consideramos todos os seres humanos como nossos iguais em dignidade primordial e filiação universal.'
@@ -477,7 +477,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Três andares simbólicos.',
       'Da Terra ao Céu.',
       'Sete côvados.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 1,
     explanation: 'Simbolicamente, diz-se que a altura da Loja Maçônica estende-se da Terra ao Céu.'
@@ -490,7 +490,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Do Norte ao Sul.',
       'Do Oriente ao Ocidente.',
       'Sete léguas de fraternidade.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 1,
     explanation: 'Simbolicamente, o comprimento da Loja estende-se do Oriente ao Ocidente.'
@@ -503,7 +503,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Do Norte ao Sul.',
       'Do Oriente ao Ocidente.',
       'Da Terra ao Céu.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Simbolicamente, a largura da Loja estende-se do Norte ao Sul.'
@@ -516,7 +516,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Apenas a base do soalho.',
       'Da superfície ao centro da Terra.',
       'Três palmos de fundação.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 1,
     explanation: 'Simbolicamente, a profundidade da Loja estende-se da superfície ao centro da Terra.'
@@ -529,7 +529,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Por conveniência arquitetônica.',
       'Para manter a tradição do Templo de Salomão e o "Caminho do Sol".',
       'Para facilitar a saída dos irmãos.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 1,
     explanation: 'A disposição serve para manter a tradição bíblica do Templo de Salomão e mimetizar a trajetória física que o Sol faz.'
@@ -542,7 +542,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'No Pavimento Mosaico.',
       'Em três colunas: Sabedoria, Força e Beleza.',
       'No Livro da Lei.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Loja se apoia sobre três colunas emblemáticas representativas da Sabedoria, Força e Beleza.'
@@ -555,7 +555,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Porque representa a diretoria.',
       'Porque são o complemento de tudo; sem elas nada é perfeito e durável.',
       'Devido aos três vigilantes da porta.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 1,
     explanation: 'No catecismo, responde-se que essas colunas sustentam pois são o complemento de tudo: sem elas nada é perfeito e durável.'
@@ -568,7 +568,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Para aumentar o número de intelectuais.',
       'Porque a ignorância é a mãe de todos os vícios.',
       'Por ser uma exigência do Ministério da Educação.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 1,
     explanation: 'Mormente combate-se a ignorância pois ela é apontada como a mãe de todos os vícios de comportamento moral.'
@@ -581,7 +581,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Porque o fanático doa pouco dinheiro.',
       'Porque a exaltação religiosa perverte a razão.',
       'Porque a Maçonaria é contra as igrejas.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 1,
     explanation: 'O fanatismo cega e cinde a fraternidade humana, pervertendo a sã razão e instigando ódios.'
@@ -594,7 +594,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Em aceitar os homens com suas crenças e ensinar a dar e não a pedir.',
       'Em uma rede de favores profissionais.',
       'No auxílio financeiro incondicional a qualquer pessoa.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 0,
     explanation: 'A fraternidade maçônica consiste em aceitar os seres humanos com suas crenças particulares, orientando-os para a benemerência.'
@@ -646,7 +646,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Uma Loja Adonhiramita fundada em 1815, fundamental para o GOB.',
       'Uma associação comercial de pedreiros.',
       'Uma loja que vendia objetos ritualísticos.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 0,
     explanation: 'A Loja Comércio e Artes foi uma Loja do Rito Adonhiramita fundada em 1815 e fundamental para a criação do GOB.'
@@ -724,7 +724,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'José Bonifácio de Andrada e Silva.',
       'Visconde de Rio Branco.',
       'D. Pedro I.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Patriarca da Independência, José Bonifácio, foi sagrado o primeiro Grão-Mestre.'
@@ -737,7 +737,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'D. Pedro I (sob o nome Guatimozim).',
       'José Bonifácio.',
       'Visconde de Rio Branco.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'D. Pedro I foi entronizado na liderança da instituição nacional adotando o cognome de Guatimozim.'
@@ -763,7 +763,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A subdivisão da Loja Comércio e Artes em três para formar a Potência.',
       'Um tratado internacional com a Inglaterra.',
       'Uma revolta contra o imperador.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 0,
     explanation: 'Para atingir a condição de Potência (mínimo de três oficinas), a Loja Comércio e Artes dividiu-se originalmente.'
@@ -776,7 +776,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O desejo de ter uma Potência nacional para tratar os interesses brasileiros.',
       'A necessidade de unificar todos os ritos do mundo.',
       'Uma exigência da Igreja Católica.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Havia o ardente anseio patriótico de estabelecer uma autoridade genuinamente nacional em face de Portugal.'
@@ -789,7 +789,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Ao lado do Orador, no Sul.',
       'No Oriente, ao Sul (Misericórdia/Chesed).',
       'No Ocidente, à porta.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 1,
     explanation: 'O Tesoureiro assenta-se no quadrante do Oriente, correspondente à região ao Sul.'
@@ -802,7 +802,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Arrecadar metais, pagar despesas visadas pelo Ven∴ e prestar contas.',
       'Traçar o balaústre e ler as correspondências.',
       'Cuidar apenas da beneficência externa.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 0,
     explanation: 'Compete-lhe administrar as finanças, efetivar pagamentos chancelados pelo Venerável e apresentar o balancete.'
@@ -815,7 +815,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Guardar selo/timbre, registrar presenças e anunciar aniversários.',
       'Cobrar mensalidades em atraso.',
       'Preparar o Templo antes das sessões.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Chanceler detém a custódia do timbre-mágico, cuida dos livros de presenças e anota escrutínios.'
@@ -828,7 +828,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Executar o ritual, organizar procissões e conduzir os irmãos.',
       'Fiscalizar apenas a parte financeira.',
       'Abrir o Livro da Lei.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 0,
     explanation: 'Responsável direto pela etiqueta ritualística, movimentação de pautas lógicas e condução espacial.'
@@ -841,7 +841,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Avisar sessões, visitar doentes e conduzir o Tronco de Beneficência (Solidariedade).',
       'Guardar os paramentos após as sessões.',
       'Fiscalizar a entrada de profanos.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 0,
     explanation: 'Encarregado da filantropia, conforto ao necessitado, e circulação do Tronco de Solidariedade.'
@@ -854,7 +854,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Manter o Templo coberto, telhar visitantes e participar do acendimento do fogo.',
       'Ler as leis e decretos da Potência.',
       'Organizar os banquetes.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 0,
     explanation: 'Encarregado da segurança litúrgica interna, exames prévios de telhamentos e ritos iniciáticos.'
@@ -867,7 +867,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Preparar a Loja, guardar paramentos e cuidar do inventário.',
       'Cobrir o Templo no Ocidente.',
       'Substituir o Venerável Mestre.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Arquiteto responsabiliza-se pela integridade física do mobiliário, enfeites e guarda patrimonial.'
@@ -880,7 +880,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Organizar as cerimônias dos banquetes e as festas de Loja.',
       'Preparar os pães e vinhos do Tronco.',
       'Cuidar apenas da limpeza do Templo.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Supervisiona as ceias ritualísticas de solstício/equinócio e momentos de confraternização comestível.'
@@ -893,7 +893,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Verificar a identidade dos obreiros e guardar a entrada do Templo.',
       'Fazer a incensação do Templo.',
       'Conferir as esferas de votação.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 0,
     explanation: 'O guarda de portal externo, obstando aproximação audível de profanos e intrusos no limiar.'
@@ -906,7 +906,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Dirigir Colunas, manter silêncio, instruir obreiros e substituir o Mestre.',
       'Apenas cobrar mensalidades.',
       'Fazer o policiamento das ruas próximas ao Templo.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Eles co-administram a oficina, dão instrução aos seus pupilos e herdam a liderança na ausência do Venerável.'
@@ -919,7 +919,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Zelar pelo cumprimento das leis, comentar regularidade e conferir o Tronco.',
       'Traçar as atas das sessões.',
       'Conceder a palavra no Oriente.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 0,
     explanation: 'Guardião-geral da Constituição e leis maçônicas, fiscalizador dos ritos e oráculo oficial das atas.'
@@ -932,7 +932,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Traçar balaústres, organizar correspondência e o arquivo da Loja.',
       'Pagar as contas da oficina.',
       'Examinar visitantes no átrio.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 0,
     explanation: 'O redator histórico dos eventos em templo (balaústres) e intermediador da correspondência interna e externa.'
@@ -945,7 +945,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Presidir, nomear oficiais, conferir graus e coordenar todas as atividades.',
       'Ficar sempre em silêncio durante o ritual.',
       'Cuidar pessoalmente da limpeza das colunas.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 0,
     explanation: 'A suprema autoridade da Loja, responsável pela condução geral administrativa e esotérica do corpo.'
@@ -958,7 +958,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O Pavimento Mosaico, a Estrela Rutilante e a Orla Dentada.',
       'As flores e tapetes usados no Oriente.',
       'As medalhas dos Mestres Instalados.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 0,
     explanation: 'Formalmente denominam-se ornamentos o Pavimento de Mosaico, a Estrela Rutilante e a Orla Dentada.'
@@ -971,7 +971,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O Livro da Lei, o Compasso e o Esquadro.',
       'Os aventais e as luvas brancas.',
       'As espadas dos oficiais.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 1,
     explanation: 'Os paramentos de um Maçom em sua farda tradicional consistem no Avental e luvas brancas.'
@@ -984,7 +984,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Seis insígnias: três fixas e três móveis.',
       'Pedras preciosas guardadas no Tesouro.',
       'Os filhos dos maçons.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 0,
     explanation: 'As joias dividem-se em seis insígnias intelectuais: três fixas e três classificadas de móveis.'
@@ -997,7 +997,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O Sol, Glória do Criador, e a virtude da Caridade.',
       'O início da noite de trabalho.',
       'A luz da razão profana.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 0,
     explanation: 'A Estrela Rutilante representa o Sol da Sabedoria, a Glória excelsa do Criador e o dom da Caridade.'
@@ -1010,7 +1010,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A Verdade inspirada por Deus e o código moral de cada maçom.',
       'A constituição civil do país.',
       'Um livro de história antiga.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Livro da Lei personifica o código moral revelado de retidão ética e os ensinos revelados por Deus.'
@@ -1023,7 +1023,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A justa medida e retidão que devem presidir todas as nossas ações.',
       'Ferramentas para desenhar plantas.',
       'Símbolos de opressão e força.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 0,
     explanation: 'Simbolizam a ponderação sã, autodomínio perfeito e limiares éticos de nossas interações sociais.'
@@ -1036,7 +1036,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Porque o Aprendiz apenas desbasta a Pedra Bruta e ainda não domina a perfeição.',
       'Por uma questão estética de simetria.',
       'Para não ferir as mãos dos obreiros.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Indica que a matéria/fatos imediatos do Aprendiz prevalecem sobre as aspirações espirituais não domadas.'
@@ -1062,7 +1062,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A Prancheta, a Pedra Bruta e a Pedra Cúbica.',
       'O Esquadro, o Nível e o Prumo.',
       'O Sol, a Lua e o Delta.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 0,
     explanation: 'As joias fixas situam-se sobre o mobiliário moral: a Prancheta, a Pedra Bruta e a Pedra Cúbica.'
@@ -1075,7 +1075,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A Pedra Bruta e a Pedra Cúbica.',
       'O Esquadro, o Nível e o Prumo.',
       'Os malhetes dos vigilantes.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 1,
     explanation: 'Denominam-se móveis pois se movem e passam de oficial a oficial: o Esquadro, o Nível e o Prumo.'
@@ -1114,7 +1114,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A inteligência inata e o caráter despolido do homem primitivo.',
       'O fim da jornada de aprendizado.',
       'A perfeição já alcançada na iniciação.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 0,
     explanation: 'Simboliza as rudes faculdades originais de caráter rude que aguardam burilamento virtuoso.'
@@ -1127,7 +1127,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'No Sul, junto ao 1º Vigilante.',
       'No Norte, em frente ao Altar do 2º Vigilante.',
       'No Oriente, junto ao Trono.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 1,
     explanation: 'A Pedra Bruta assenta-se no Norte, nas proximidades do Altar do Segundo Vigilante.'
@@ -1140,7 +1140,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'As mais antigas leis ou limites que regem a Maçonaria Universal.',
       'Livros de atas das lojas inglesas.',
       'Medalhas de honra ao mérito.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 0,
     explanation: 'Marcos de imutabilidade jurídica moral que formam a coluna vertebral da Maçonaria Universal.'
@@ -1153,7 +1153,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Processos de reconhecimento, lenda do 3º grau e crença em Deus.',
       'Pagamento de taxas, uso de terno e silêncio.',
       'Festa de São João, churrasco e viagens.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 0,
     explanation: 'Mecanismos de identificação fraterna, apego doutrinário ao Grau 3 e fidedignidade teísta (crer em Deus).'
@@ -1166,7 +1166,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Maçonaria baseada na lenda de Adonhiram, vinda do Rito de Héredom.',
       'Um rito criado exclusivamente no Brasil em 1973.',
       'Um rito que não admite o uso de espadas.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 0,
     explanation: 'Sua base mitológica assenta-se sobre a liderança de Adonhiram (diretor florestal do templo do Rei Salomão).'
@@ -1192,7 +1192,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Em 1973 no Instituto Maçônico Conselheiro Macedo Soares.',
       'Em 1822 no Rio de Janeiro.',
       'Em 1717 em Londres.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'A consolidação formal do órgão deliberativo consumou-se em 1973 em dependências da jurisdição.'
@@ -1205,7 +1205,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'José Bonifácio.',
       'O Irmão Aylton de Menezes.',
       'O Barão de Tschoudy.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 1,
     explanation: 'O Irmão Eminente Aylton de Menezes capitaneou as resoluções daquela assembleia solene.'
@@ -1218,7 +1218,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Na lenda e comemoração de Adonhiram.',
       'Apenas em obras sociais modernas.',
       'No misticismo puramente político.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Foca prioritariamente a lenda e virtudes administrativas descritas na gerência moral de Adonhiram.'
@@ -1231,7 +1231,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Mestre dos Mestres.',
       '"Consagrado ao Senhor" ou Divino Hiram.',
       'O arquiteto traído.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 1,
     explanation: 'Vem do termo transliterado significando "Meu Senhor Altíssimo" ou "Consagrado ao Senhor".'
@@ -1244,7 +1244,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Para absorver as energias benéficas que emanam dos corpos organizados.',
       'Para esconder a sujeira do trabalho manual.',
       'Porque é a cor da morte definitiva.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 0,
     explanation: 'Usa-se a veste escura para neutralizar interferências externas e absorver energias em egrégora.'
@@ -1257,7 +1257,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A candura da alma e a pureza de nossas ações.',
       'A proteção contra o frio no Templo.',
       'O desapego aos metais.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 0,
     explanation: 'Testemunham que as mãos rituais do obreiro se encontram isentas de mácula, crimes ou maledicências.'
@@ -1270,7 +1270,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Régua e Compasso.',
       'O Maço e o Cinzel.',
       'A Trolha e o Nível.',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 1,
     explanation: 'No catecismo simplificado, as ferramentas ativas de polimento moral são o Maço e o Cinzel.'
@@ -1283,7 +1283,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A inteligência e a força dirigida e controlada pela razão.',
       'A força bruta sem nenhum controle.',
       'A autoridade do Venerável Mestre apenas.',
-      'Opinião do Obreiro.'
+      'Atividade desempenhada exclusivamente no encerramento dos trabalhos.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Maço simboliza a energia motriz, força ativa disciplinada e guiada retamente pelo intelecto.'
@@ -1296,7 +1296,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Que a educação e perseverança são indispensáveis para a perfeição.',
       'O corte das relações com o mundo profano.',
       'O instrumento de punição dos traidores.',
-      'Opinião do Obreiro.'
+      'Instrução ministrada aos neófitos antes da iniciação.'
     ],
     correctOptionIndex: 0,
     explanation: 'O Cinzel representa os conceitos refinados da educação e da perseverança moral.'
@@ -1309,7 +1309,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'É o número do Aprendiz, ligado à bateria, marcha e idade.',
       'Representa os três vigilantes da porta.',
       'É apenas um número da sorte.',
-      'Opinião do Obreiro.'
+      'Uso exclusivo nas sessões magnas de posse.'
     ],
     correctOptionIndex: 0,
     explanation: 'É o quantum de evolução do Aprendiz, pautando sua idade mística (3 anos), pancadas e passos.'
@@ -1322,7 +1322,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Porque simboliza a dualidade, a dúvida e o antagonismo.',
       'Porque representa a morte.',
       'Because indica a ausência de Deus.',
-      'Opinião do Obreiro.'
+      'Instrução reservada ao grau de Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'O dois cinde a unidade em debate, personificando as hesitações, antagonismo ou lutas morais.'
@@ -1335,7 +1335,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Emblema da manifestação e da perfeição (Pai, Filho e Espírito Santo).',
       'O número de vezes que se deve faltar às sessões.',
       'A representação da dualidade resolvida em conflito.',
-      'Opinião do Obreiro.'
+      'Símbolo de autoridade profana exterior.'
     ],
     correctOptionIndex: 0,
     explanation: 'A união virtuosa que resolve conflitos e sintetiza a manifestação cósmica perfeita.'
@@ -1374,7 +1374,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Que o Aprendiz passou pelas quatro provas dos Elementos.',
       'O nome do imperador do Brasil.',
       'As quatro colunas do Oriente.',
-      'Opinião do Obreiro.'
+      'Prerrogativa exclusiva do Venerável Mestre.'
     ],
     correctOptionIndex: 0,
     explanation: 'Recorda e evoca as quatro grandes provações iniciáticas atravessadas (Terra, Ar, Água e Fogo).'
@@ -1387,7 +1387,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'A grande Evolução ou "o que existe e o que existia".',
       'O nome secreto do 2º Vigilante.',
       'Justiça e Equidade em latim.',
-      'Opinião do Obreiro.'
+      'Regra específica de ritos não reconhecidos.'
     ],
     correctOptionIndex: 0,
     explanation: 'Significa "Ele É/Será", compreendendo o ser absoluto atemporal que existe por si só.'
@@ -1400,7 +1400,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'As seis faces dos corpos (como as de um cubo).',
       'Vitória sobre o mal.',
       'Vontade absoluta.',
-      'Opinião do Obreiro.'
+      'Símbolo do trabalho no mundo exterior profano.'
     ],
     correctOptionIndex: 0,
     explanation: 'Tem a correspondência da consolidação dimensional de seis faces representadas no cubo perfeito.'
@@ -1413,7 +1413,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'Dinheiro, influência e silêncio.',
       'Vontade, Amor e Sabedoria (ou Inteligência).',
       'Força, Saúde e União.',
-      'Opinião do Obreiro.'
+      'Atribuição do Guarda do Templo durante a cobrição.'
     ],
     correctOptionIndex: 1,
     explanation: 'A união virtuosa do vigor d\'alma (Vontade), benevolência (Amor) e tirocínio analítico (Sabedoria).'
@@ -1426,7 +1426,7 @@ export const APRENDIZ_QUESTIONS: QuestionnaireQuestion[] = [
       'O Venerável Mestre apenas.',
       'O Pavilhão Nacional.',
       'Somente ao Gr.-. Arq∴ do Uni∴',
-      'Opinião do Obreiro.'
+      'Representação da iluminação interior na Câmara de Reflexões.'
     ],
     correctOptionIndex: 2,
     explanation: 'Reconhece o Divino Princípulo Inteligente e Criador Supremo (Grande Arquiteto do Universo).'

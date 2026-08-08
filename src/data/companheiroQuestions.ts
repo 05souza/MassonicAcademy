@@ -287,18 +287,18 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 1,
     explanation: 'Diz-se que cinco formam ou constituem a Loja em consideração direta às cinco ordens fundamentais de arquitetura clássica: Dórica, Jônica, Coríntia, Toscana e Compósita.'
   },
-  {
+    {
     id: 'q2-23',
     questionText: 'A que alude a lenda da Escada em Caracol? Como a interpretais?',
     category: 'Filosofia e Doutrina',
     options: [
-      'Alude à subida aos céus; perseverança.',
-      'Alude ao conhecimento científico; estudo.',
-      'Alude ao esforço do iniciado para subir em busca da luz; fé.',
-      'Opinião do Obreiro.'
+      'Ao esforço gradual do Companheiro para ascender na busca da sabedoria, das artes liberais e alcançar a Câmara do Meio.',
+      'À subida literal ao topo do Templo para vigiar os trabalhadores.',
+      'À sucessão temporal dos Reis de Israel e suas linhagens dinásticas.',
+      'Ao caminho percorrido pelos profanos durante as viagens da iniciação.'
     ],
-    correctOptionIndex: 3,
-    explanation: 'A interpretação subjetiva da subida pelos degraus da Escada em Caracol varia individualmente, mantendo a resposta em aberto como uma reflexão pessoal.'
+    correctOptionIndex: 0,
+    explanation: 'A Escada em Caracol simboliza a jornada difícil e gradativa do Companheiro, que sobe pelos degraus do conhecimento humano e das artes liberais para atingir a iluminação na Câmara do Meio.'
   },
   {
     id: 'q2-24',
@@ -352,18 +352,18 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 2,
     explanation: 'Os símbolos depositados formam a Tetraktys pitagórica (pontos em arranjo 1, 2, 3, 4), expressando o desabrochar progressivo das formas universais.'
   },
-  {
+    {
     id: 'q2-28',
     questionText: 'O que é, em vosso entender, ser Companheiro?',
     category: 'Filosofia e Doutrina',
     options: [
-      'É ser um auxiliar dos mestres.',
-      'É aprender a usar o esquadro.',
-      'Opinião do Obreiro.',
-      'É frequentar as sessões com assiduidade.'
+      'É ser um auxiliar passivo dos mestres sem voz nas decisões.',
+      'É aprender a usar o esquadro sem estudar os outros instrumentos.',
+      'É ser um trabalhador ativo que domina o intelecto, estuda as ciências e serve à fraternidade na edificação moral.',
+      'É frequentar as sessões com assiduidade sem compromisso de estudo.'
     ],
     correctOptionIndex: 2,
-    explanation: 'Definir intimamente o que é caminhar sob o título de Companheiro Maçom é uma prerrogativa individual e interpretativa.'
+    explanation: 'Ser Companheiro Maçom significa atuar ativamente no desbaste da pedra e na edificação moral, aplicando a inteligência e o estudo das ciências e artes liberais.'
   },
   {
     id: 'q2-29',
@@ -378,31 +378,31 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 1,
     explanation: 'O objetivo do labor do Companheiro é instruir-se devidamente nas pautas intelectuais da Arte Real e dedicar-se ao estudo de ciências e filosofias de aperfeiçoamento.'
   },
-  {
+    {
     id: 'q2-30',
     questionText: 'Qual é o vosso conceito de Vida?',
     category: 'Filosofia e Doutrina',
     options: [
       'É o sopro divino na matéria.',
-      'É um ciclo de renascimentos.',
-      'Opinião do Obreiro.',
-      'É a manifestação da energia universal.'
+      'É um ciclo puramente biológico sem transcendência espiritual.',
+      'É a manifestação sagrada da criação, unindo a matéria e o espírito para o constante aperfeiçoamento moral.',
+      'É o acúmulo temporário de bens materiais e glórias profanas.'
     ],
     correctOptionIndex: 2,
-    explanation: 'O mistério sublime da existência e do sopro vital recebe resposta estritamente íntima de cada iniciante.'
+    explanation: 'Na filosofia maçônica, a Vida é concebida como a manifestação do Grande Arquiteto do Universo, onde o espírito dinamiza a matéria em busca da constante evolução.'
   },
-  {
+    {
     id: 'q2-31',
     questionText: 'Como concebeis o Tetragrama?',
     category: 'Filosofia e Doutrina',
     options: [
       'Como o nome secreto da Ordem.',
       'Como as quatro provas da iniciação.',
-      'Opinião do Obreiro.',
-      'Como a união dos quatro elementos.'
+      'Como a representação sagrada do nome inefável do Criador (YHVH), simbolizando a essência e a harmonia universal.',
+      'Como a união simples dos quatro elementos físicos da natureza.'
     ],
     correctOptionIndex: 2,
-    explanation: 'A significação transcendente das quatro letras sagradas hebraicas que formam o nome inefável do Criador é respondida filosoficamente de modo individual.'
+    explanation: 'O Tetragrama (YHVH) representa o nome inefável de Deus, simbolizando a eternidade, a causa primeira e a harmonia sublime de todo o Universo.'
   },
   {
     id: 'q2-32',
@@ -417,18 +417,18 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 1,
     explanation: 'A faculdade genial consiste no ápice coordenado de nossa imaginação profunda, faculdades de cognição intelectual e clarividência intuitiva.'
   },
-  {
+    {
     id: 'q2-33',
     questionText: 'Dai vossa interpretação esotérica do Esquadro.',
     category: 'Filosofia e Doutrina',
     options: [
-      'É a ferramenta do mestre.',
-      'É a medida do mundo físico.',
-      'Opinião do Obreiro.',
-      'É o equilíbrio entre o vertical e o horizontal.'
+      'É a ferramenta exclusiva de punição do Venerável Mestre.',
+      'É a medida do mundo físico desprovida de sentido moral.',
+      'Simboliza a retidão de caráter, a equidade e a justa ação do homem pautada na moral e na consciência.',
+      'É o equilíbrio entre o vertical e o horizontal apenas nas construções profanas.'
     ],
     correctOptionIndex: 2,
-    explanation: 'As lições geométricas e as implicações esotéricas que o Esquadro encarna são interpretadas de maneira livre e pessoal.'
+    explanation: 'Esotericamente, o Esquadro é o emblema da retidão moral, ensinando que nossas ações em relação ao próximo devem ser sempre pautadas pela justiça e equidade.'
   },
   {
     id: 'q2-34',
@@ -456,18 +456,18 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 2,
     explanation: 'As consoantes fundamentais da grafia mister do Divino são Yodh, He, Waw, He (Iod, He, Vau, He).'
   },
-  {
+    {
     id: 'q2-36',
-    questionText: 'Analisai a luz da numerologia vosso nome profano e histórico.',
+    questionText: 'Analisai a luz da numerologia o simbolismo numérico do Grau de Companheiro.',
     category: 'Filosofia e Doutrina',
     options: [
-      'Nome 1: criativo; Nome 2: líder.',
-      'Nome 1: equilibrado; Nome 2: sonhador.',
-      'Opinião do Obreiro.',
-      'Nome 1: prático; Nome 2: místico.'
+      'O número 3 rege o Grau de Companheiro, ligado às 3 pancadas e 3 anos.',
+      'O número 7 rege o Grau de Companheiro, ligado aos 7 planetas clássicos.',
+      'O número 5 rege o Grau de Companheiro, simbolizando os 5 sentidos, 5 degraus, 5 ordens de arquitetura e a Estrela Pentagramática.',
+      'O número 12 rege o Grau de Companheiro, representando as 12 tribos.'
     ],
     correctOptionIndex: 2,
-    explanation: 'O cálculo onomástico de identificação numérica vibratória de vossa alcunha pessoal é, naturalmente, individual.'
+    explanation: 'A simbologia numérica central do Grau de Companheiro é o número 5 (cinco sentidos, cinco ordens de arquitetura, cinco degraus da escada e a Estrela Rutilante de 5 pontas).'
   },
   {
     id: 'q2-37',
@@ -755,30 +755,30 @@ export const COMPANHEIRO_QUESTIONS: QuestionnaireQuestion[] = [
     correctOptionIndex: 1,
     explanation: 'O trono se situa no Oriente em alusão ao nascente do Sol, representando a fonte de instrução moral, iluminação e sabedoria.'
   },
-  {
+    {
     id: 'q2-59',
     questionText: 'Por que, esotericamente, no vosso entender, o Cobridor tem assento junto à porta do Templo?',
     category: 'Filosofia e Doutrina',
     options: [
-      'Para impedir a entrada de correntes de ar.',
-      'Porque o guarda deve estar no limite entre o sagrado e o profano.',
-      'Opinião do Obreiro.',
-      'Para conferir as luvas dos irmãos.'
+      'Para impedir a entrada de correntes de ar frio.',
+      'Porque o guarda deve estar no limite entre o recinto sagrado e o mundo profano, protegendo a Loja contra pensamentos indiscretos.',
+      'Para efetuar o recolhimento das contribuições financeiras na entrada.',
+      'Para conferir as luvas dos irmãos que chegam atrasados.'
     ],
-    correctOptionIndex: 2,
-    explanation: 'A justificativa para o Cobridor assentar-se rente à entrada do Templo recebe livre interpretação íntima e pessoal de cada Companheiro.'
+    correctOptionIndex: 1,
+    explanation: 'O Cobridor guarda a fronteira sagrada do Templo, garantindo a cobrição dos trabalhos contra interferências e contaminações do mundo profano.'
   },
-  {
+    {
     id: 'q2-60',
     questionText: 'Dai vossa interpretação do 2° Grau e expressai vossos comentários sobre o mesmo.',
     category: 'Filosofia e Doutrina',
     options: [
-      'É um grau de transição sem importância real.',
-      'É a fase de maior estudo das ciências.',
-      'É o grau que molda o maçom do futuro.',
-      'Opinião do Obreiro.'
+      'É um grau de transição administrativa sem importância ritualística.',
+      'É a fase de estudo das ciências, artes liberais e aprimoramento do trabalho para a elevação do espírito.',
+      'É o grau que autoriza o Obreiro a presidir administrativamente a Loja.',
+      'É uma etapa de repetição dos símbolos aprendidos no Primeiro Grau.'
     ],
-    correctOptionIndex: 3,
-    explanation: 'As impressões particulares e os comentários analíticos sobre a vivência do segundo grau consagram-se como uma prerrogativa de reflexão pessoal.'
+    correctOptionIndex: 1,
+    explanation: 'O Segundo Grau (Companheiro) foca no trabalho consciente, no aprimoramento do intelecto através das artes liberais e no estudo da natureza para servir à humanidade.'
   }
 ];

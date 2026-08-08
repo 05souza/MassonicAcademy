@@ -29,28 +29,10 @@ import { Questionnaire, QuestionnaireQuestion, SimulationAttempt, AccessUser, Ex
 import { getDegreeLabel } from '../utils/degrees';
 import { initializeFirebase, cleanObjectForFirestore } from '../firebase';
 import { doc, collection, getDocs, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { DEFAULT_QUESTIONNAIRES } from '../data/defaultQuestionnaires';
 import { APRENDIZ_QUESTIONS } from '../data/aprendizQuestions';
 import { COMPANHEIRO_QUESTIONS } from '../data/companheiroQuestions';
-
-// Initial default questionnaires to seed the database
-const DEFAULT_QUESTIONNAIRES: Questionnaire[] = [
-  {
-    id: 'quiz-grau-1',
-    title: 'Grau 1 - Aprendiz Maçom',
-    degreeRequired: 1,
-    approvalScore: 70,
-    status: 'Ativo',
-    questions: APRENDIZ_QUESTIONS
-  },
-  {
-    id: 'quiz-grau-2',
-    title: 'Grau 2 - Companheiro Maçom',
-    degreeRequired: 2,
-    approvalScore: 70,
-    status: 'Ativo',
-    questions: COMPANHEIRO_QUESTIONS
-  }
-];
+import { GRAU_1_RITUALISTICA_QUESTIONS } from '../data/grau1RitualisticaQuestions';
 
 interface QuestionnairesViewProps {
   currentUser: AccessUser;
@@ -202,17 +184,24 @@ export default function QuestionnairesView({
       if (localQuizzes) {
         loadedQuizzes = JSON.parse(localQuizzes);
         let updatedLocal = false;
-        // Force-upgrade check for quiz-grau-1 questions if it contains old/fewer questions (less than 110):
+        // Force-upgrade check for quiz-grau-1 questions if it contains old/fewer questions:
         const g1 = loadedQuizzes.find(q => q.id === 'quiz-grau-1');
-        if (g1 && g1.questions.length < 110) {
+        if (g1 && (g1.questions.length < 110 || g1.questions.some(qu => qu.options?.some(opt => /opinião|resposta pessoal/i.test(opt))))) {
           g1.questions = APRENDIZ_QUESTIONS;
           updatedLocal = true;
         }
-        // Force-upgrade check for quiz-grau-2 questions if it contains old/fewer questions (less than 60):
+        // Force-upgrade check for quiz-grau-2 questions if it contains old/fewer questions:
         const g2 = loadedQuizzes.find(q => q.id === 'quiz-grau-2');
-        if (g2 && (!g2.questions || g2.questions.length < 60)) {
+        if (g2 && (!g2.questions || g2.questions.length < 60 || g2.questions.some(qu => qu.options?.some(opt => /opinião|resposta pessoal/i.test(opt))))) {
           g2.questions = COMPANHEIRO_QUESTIONS;
           updatedLocal = true;
+        }
+        // Ensure all DEFAULT_QUESTIONNAIRES exist in loadedQuizzes
+        for (const defQ of DEFAULT_QUESTIONNAIRES) {
+          if (!loadedQuizzes.some(q => q.id === defQ.id)) {
+            loadedQuizzes.push(defQ);
+            updatedLocal = true;
+          }
         }
         if (updatedLocal) {
           localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(loadedQuizzes));
@@ -255,6 +244,15 @@ export default function QuestionnairesView({
                 // Save upgraded quiz back to Firestore
                 setDoc(doc(db, 'questionnaires', 'quiz-grau-2'), cleanObjectForFirestore(g2))
                   .catch(err => console.warn('Error upgrading firestore quiz-grau-2:', err));
+              }
+
+              for (const defQ of DEFAULT_QUESTIONNAIRES) {
+                if (!cloudQuizzes.some(q => q.id === defQ.id)) {
+                  const qToAdd = { ...defQ, lodgeId: 'lodge-cavaleiros' };
+                  cloudQuizzes.push(qToAdd);
+                  setDoc(doc(db, 'questionnaires', defQ.id), cleanObjectForFirestore(qToAdd))
+                    .catch(err => console.warn('Error adding default quiz to firestore:', err));
+                }
               }
             }
 
@@ -519,7 +517,7 @@ export default function QuestionnairesView({
       }
     });
 
-    const totalQuizQuestions = currentQuiz?.questions?.length || activeQuestions.length || 1;
+    const totalQuizQuestions = activeQuestions.length || 1;
     const scorePct = (correctCount / totalQuizQuestions) * 100;
     const isApproved = scorePct >= (currentQuiz?.approvalScore || 70);
 

@@ -739,6 +739,7 @@ export default function ProfileView({
           let owner = '';
           let nivelCurso = 1;
           let status: 'Ativo' | 'Inativo' = 'Ativo';
+          let itemType: 'curso' | 'trilha' = 'curso';
           let summary = '';
           let tags: string[] = [];
           let material1Link = '';

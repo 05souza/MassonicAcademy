@@ -124,7 +124,34 @@ export default function App() {
 
   const [questionnaires, setQuestionnaires] = useState<Questionnaire[]>(() => {
     const saved = localStorage.getItem('masonic_questionnaires_v1');
-    return saved ? JSON.parse(saved) : DEFAULT_QUESTIONNAIRES;
+    if (saved) {
+      try {
+        let parsed: Questionnaire[] = JSON.parse(saved);
+        let updated = false;
+        parsed = parsed.map(q => {
+          const defMatch = DEFAULT_QUESTIONNAIRES.find(dq => dq.id === q.id);
+          const hasOldOptions = q.questions?.some(qu => qu.options?.some(opt => /opinião|resposta pessoal/i.test(opt)));
+          if (defMatch && (hasOldOptions || q.questions?.length !== defMatch.questions.length)) {
+            updated = true;
+            return { ...q, questions: defMatch.questions };
+          }
+          return q;
+        });
+        for (const defQ of DEFAULT_QUESTIONNAIRES) {
+          if (!parsed.some(q => q.id === defQ.id)) {
+            parsed.push(defQ);
+            updated = true;
+          }
+        }
+        if (updated) {
+          localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(parsed));
+        }
+        return parsed;
+      } catch (e) {
+        return DEFAULT_QUESTIONNAIRES;
+      }
+    }
+    return DEFAULT_QUESTIONNAIRES;
   });
 
   const [accessLogs, setAccessLogs] = useState<any[]>(() => {
@@ -832,6 +859,11 @@ export default function App() {
               questionnairesSnapshot.forEach(docSnap => {
                 loadedQuizzes.push(docSnap.data() as Questionnaire);
               });
+              for (const defQ of DEFAULT_QUESTIONNAIRES) {
+                if (!loadedQuizzes.some(q => q.id === defQ.id)) {
+                  loadedQuizzes.push(defQ);
+                }
+              }
               setQuestionnaires(loadedQuizzes);
               localStorage.setItem('masonic_questionnaires_v1', JSON.stringify(loadedQuizzes));
             }

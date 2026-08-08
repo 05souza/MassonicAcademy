@@ -1,6 +1,7 @@
 import { Questionnaire } from '../types';
 import { APRENDIZ_QUESTIONS } from './aprendizQuestions';
 import { COMPANHEIRO_QUESTIONS } from './companheiroQuestions';
+import { GRAU_1_RITUALISTICA_QUESTIONS } from './grau1RitualisticaQuestions';
 
 export const DEFAULT_QUESTIONNAIRES: Questionnaire[] = [
   {
@@ -10,6 +11,14 @@ export const DEFAULT_QUESTIONNAIRES: Questionnaire[] = [
     approvalScore: 70,
     status: 'Ativo',
     questions: APRENDIZ_QUESTIONS
+  },
+  {
+    id: 'quiz-grau-1-ritualistica',
+    title: 'Grau 1 - Ritualística',
+    degreeRequired: 1,
+    approvalScore: 70,
+    status: 'Ativo',
+    questions: GRAU_1_RITUALISTICA_QUESTIONS
   },
   {
     id: 'quiz-grau-2',
