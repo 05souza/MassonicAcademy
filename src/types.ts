@@ -53,6 +53,7 @@ export interface AccessUser {
   name: string;
   email: string;
   allowedReportIds: string;
+  blockedReportIds?: string;
   status: 'Ativo' | 'Inativo';
   tipoUsuario?: 'admin' | 'padrao';
   password?: string;

@@ -303,6 +303,7 @@ export default function ProfileView({
   const [userFormEmail, setUserFormEmail] = useState('');
   const [userFormUserAcesso, setUserFormUserAcesso] = useState('');
   const [userFormAllowedReports, setUserFormAllowedReports] = useState('');
+  const [userFormBlockedReports, setUserFormBlockedReports] = useState('');
   const [userFormStatus, setUserFormStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
   const [userFormTipoUsuario, setUserFormTipoUsuario] = useState<'admin' | 'padrao'>('padrao');
   const [userFormNivelAcesso, setUserFormNivelAcesso] = useState('');
@@ -1058,6 +1059,7 @@ export default function ProfileView({
           let potencia = '';
           let cidadeLoja = '';
           let allowedReportIds = '*';
+          let blockedReportIds = '';
 
           Object.keys(row).forEach(key => {
             const k = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -1085,6 +1087,8 @@ export default function ProfileView({
               cidadeLoja = val;
             } else if (k === 'acesso' || k === 'acessos' || k === 'cursos' || kNoSpaces === 'allowedreportids' || kNoSpaces === 'acessoaoscursos' || kNoSpaces === 'acessoaoscursos(listadeidsou*paratodos)') {
               allowedReportIds = val || '*';
+            } else if (kNoSpaces === 'blockedreportids' || kNoSpaces === 'cursosbloqueados' || kNoSpaces === 'naoliberados' || kNoSpaces === 'bloqueados') {
+              blockedReportIds = val || '';
             }
           });
 
@@ -1119,6 +1123,7 @@ export default function ProfileView({
             potencia: isMaster ? (potencia || undefined) : (matchedLodge?.potencia || undefined),
             cidadeLoja: isMaster ? (cidadeLoja || undefined) : (matchedLodge?.cidade || undefined),
             allowedReportIds: allowedReportIds,
+            blockedReportIds: blockedReportIds || undefined,
             status: 'Ativo',
             tipoUsuario: 'padrao',
             lodgeId: isMaster ? undefined : userLodgeId
@@ -1986,7 +1991,8 @@ export default function ProfileView({
     setUserFormName(user.name);
     setUserFormEmail(user.email);
     setUserFormUserAcesso(user.userAcesso || '');
-    setUserFormAllowedReports(user.allowedReportIds);
+    setUserFormAllowedReports(user.allowedReportIds || '*');
+    setUserFormBlockedReports(user.blockedReportIds || '');
     setUserFormStatus(user.status);
     setUserFormTipoUsuario(user.tipoUsuario || 'padrao');
     setUserFormNivelAcesso(user.nivelAcesso || '');
@@ -2012,7 +2018,8 @@ export default function ProfileView({
     setUserFormName('');
     setUserFormEmail('');
     setUserFormUserAcesso('');
-    setUserFormAllowedReports('');
+    setUserFormAllowedReports('*');
+    setUserFormBlockedReports('');
     setUserFormStatus('Inativo');
     setUserFormTipoUsuario('padrao');
     setUserFormNivelAcesso('');
@@ -2080,7 +2087,8 @@ export default function ProfileView({
       id: isCreatingNewUser ? `usr-${Math.floor(100 + Math.random() * 900)}` : (editUserId || ''),
       name: userFormName.trim(),
       email: emailToUse,
-      allowedReportIds: userFormAllowedReports.trim(),
+      allowedReportIds: userFormAllowedReports.trim() || '*',
+      blockedReportIds: userFormBlockedReports.trim() || undefined,
       status: userFormStatus,
       tipoUsuario: userFormTipoUsuario,
       nivelAcesso: userFormNivelAcesso.trim(),
@@ -4286,7 +4294,15 @@ export default function ProfileView({
                               </span>
                             )}
                             <span className="text-[9px] font-mono text-[#99907c] truncate">
-                              {user.allowedReportIds ? `${user.allowedReportIds.split(',').length} Curso(s)` : 'Sem acesso'}
+                              {user.blockedReportIds && user.blockedReportIds.trim() ? (
+                                <span className="text-rose-400 font-bold bg-rose-950/40 px-1 py-0.5 rounded border border-rose-900/50">
+                                  🚫 {user.blockedReportIds.split(',').map(s => s.trim()).filter(Boolean).length} Bloqueado(s)
+                                </span>
+                              ) : (
+                                <span className="text-[#66d9cc]">
+                                  ✓ Liberado no Grau
+                                </span>
+                              )}
                             </span>
                           </div>
                           <h4 className="font-sans font-bold text-[#d4e5f2] truncate text-[11px]">
@@ -4629,86 +4645,64 @@ export default function ProfileView({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">IDs de Títulos Permitidos (Separados por Vírgula)</label>
+                      <label className="block text-[10px] font-mono text-[#9cbfd5] mb-1 uppercase tracking-wider">
+                        Cursos e/ou Materiais Não Liberados (Bloqueados para este Aluno)
+                      </label>
                       <input
                         type="text"
-                        placeholder="Ex: rep-estrategia-segmentos, rep-visao-uso-rm"
-                        value={userFormAllowedReports}
-                        onChange={(e) => setUserFormAllowedReports(e.target.value)}
+                        placeholder="Ex: rep-estrategia-segmentos, senda-da-virtude"
+                        value={userFormBlockedReports}
+                        onChange={(e) => setUserFormBlockedReports(e.target.value)}
                         className="w-full bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2.5 rounded text-[#d4e5f2] focus:outline-none focus:border-[#E8C349] font-mono placeholder:text-gray-600"
                       />
                       <p className="text-[9px] font-mono text-[#98907b] mt-1.5 leading-relaxed italic">
-                        Insira os códigos ID exatos que este usuário está autorizado a consultar de forma independente. Ex: <code>rep-estrategia-segmentos, rep-visao-uso-rm</code>.
+                        Os novos cursos e materiais do grau correspondente já são liberados automaticamente para todos os alunos. Informe aqui os IDs dos cursos ou materiais que você deseja <strong>bloquear</strong> especificamente para este aluno.
                       </p>
                     </div>
 
-                    {/* Auto Injection Quick Picker helper inside UI! */}
-                    <div className="bg-[#04141d]/55 p-3 rounded-lg border border-[#1c2c36] space-y-2">
+                    {/* Quick Picker for Blocking Courses and Materials */}
+                    <div className="bg-[#04141d]/55 p-3 rounded-lg border border-[#1c2c36] space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="block text-[9px] font-mono text-[#99907c] uppercase">Seletor Rápido de IDs de Títulos Ativos:</span>
+                        <span className="block text-[9px] font-mono text-[#99907c] uppercase font-bold">
+                          Seletor Rápido de Cursos e Materiais para Bloquear:
+                        </span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => {
                               const allIds = reports.map(r => r.id).join(', ');
-                              setUserFormAllowedReports(allIds);
+                              setUserFormBlockedReports(allIds);
                             }}
-                            className="text-[9px] font-mono text-[#E9C349] hover:underline cursor-pointer bg-transparent border-none p-0 focus:outline-none"
+                            className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer bg-transparent border-none p-0 focus:outline-none font-bold"
                           >
-                            Selecionar todos
+                            Bloquear todos
                           </button>
                           <span className="text-[9px] text-[#1c2c36] font-mono">|</span>
                           <button
                             type="button"
                             onClick={() => {
-                              setUserFormAllowedReports('');
+                              setUserFormBlockedReports('');
                             }}
-                            className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer bg-transparent border-none p-0 focus:outline-none"
+                            className="text-[9px] font-mono text-[#66d9cc] hover:underline cursor-pointer bg-transparent border-none p-0 focus:outline-none font-bold"
                           >
-                            Limpar
+                            Limpar bloqueios
                           </button>
                         </div>
                       </div>
-                      
-                      {/* Checkbox for Acesso a todos do Grau */}
-                      <div className="flex items-center gap-2 pb-1.5 border-b border-[#1c2c36]/50 mb-1">
-                        <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-mono text-[#E9C349]">
-                          <input
-                            type="checkbox"
-                            checked={(userFormAllowedReports || '').split(',').map(s => s.trim().toLowerCase()).includes('todos_do_grau')}
-                            onChange={(e) => {
-                              let list = (userFormAllowedReports || '')
-                                .split(',')
-                                .map(s => s.trim())
-                                .filter(Boolean);
-                              const idx = list.findIndex(s => (s || '').toLowerCase() === 'todos_do_grau');
-                              if (e.target.checked) {
-                                if (idx === -1) {
-                                  list.push('todos_do_grau');
-                                }
-                              } else {
-                                if (idx > -1) {
-                                  list.splice(idx, 1);
-                                }
-                              }
-                              setUserFormAllowedReports(list.join(', '));
-                            }}
-                            className="w-3.5 h-3.5 accent-[#E9C349] rounded border-[#1c2c36] bg-[#04141d] cursor-pointer"
-                          />
-                          <span className="font-bold uppercase tracking-wider text-[8px] sm:text-[9px]">Acesso a Todos os Cursos do Grau</span>
-                        </label>
-                      </div>
 
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1 pt-1">
                         {reports.map((r) => {
-                          const currentList = (userFormAllowedReports || '').split(',').map(s => s.trim().toLowerCase());
-                          const isSelected = currentList.includes((r.id || '').toLowerCase());
+                          const currentBlocked = (userFormBlockedReports || '')
+                            .split(',')
+                            .map(s => s.trim().toLowerCase())
+                            .filter(Boolean);
+                          const isBlocked = currentBlocked.includes((r.id || '').toLowerCase());
                           return (
                             <button
                               type="button"
                               key={r.id}
                               onClick={() => {
-                                const list = (userFormAllowedReports || '')
+                                let list = (userFormBlockedReports || '')
                                   .split(',')
                                   .map(s => s.trim())
                                   .filter(Boolean);
@@ -4718,16 +4712,21 @@ export default function ProfileView({
                                 } else {
                                   list.push(r.id);
                                 }
-                                setUserFormAllowedReports(list.join(', '));
+                                setUserFormBlockedReports(list.join(', '));
                               }}
-                              className={`text-[9px] font-mono px-2 py-1 rounded border transition-colors flex items-center gap-1 cursor-pointer ${
-                                isSelected 
-                                  ? 'bg-[#E9C349]/20 border-[#E9C349] text-[#E9C349] font-bold'
-                                  : 'bg-[#11212b] border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2]'
+                              className={`text-[9.5px] font-mono px-2.5 py-1.5 rounded border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                isBlocked 
+                                  ? 'bg-rose-950/40 border-rose-800 text-rose-300 font-bold shadow-sm'
+                                  : 'bg-[#11212b] border-[#1c2c36] text-[#99907c] hover:text-[#d4e5f2] hover:border-[#2a3f4d]'
                               }`}
                             >
-                              <span>{r.id}</span>
-                              {isSelected ? '✓' : '+'}
+                              <span className="font-sans font-medium">{r.title || r.id}</span>
+                              <span className="text-[8px] opacity-70 font-mono">({r.id})</span>
+                              {isBlocked ? (
+                                <span className="text-rose-400 font-bold bg-rose-900/40 px-1 rounded text-[8px]">Bloqueado 🚫</span>
+                              ) : (
+                                <span className="text-emerald-400 font-bold text-[8px]">Liberado ✓</span>
+                              )}
                             </button>
                           );
                         })}

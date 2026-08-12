@@ -171,20 +171,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
               </div>
               <h3 
                 className="font-sans font-bold text-base md:text-lg text-slate-800 dark:text-[#d4e5f2] leading-tight hover:text-blue-600 dark:hover:text-[#ffe088] transition-colors cursor-pointer text-left" 
-                onClick={(e) => {
-                  if (report.customAccessUrl) {
-                    handleAccessClick(e, true, report.customAccessUrl);
-                    if (!e.isDefaultPrevented()) {
-                      if (onOpenSecureViewer) {
-                        onOpenSecureViewer(report.customAccessUrl, report.title);
-                      } else {
-                        window.open(report.customAccessUrl, '_blank', 'noopener,noreferrer');
-                      }
-                    }
-                  } else {
-                    handleAccessClick(e, false);
-                  }
-                }}
+                onClick={(e) => handleAccessClick(e, false)}
               >
                 <InlineEditable
                   value={report.title}
@@ -291,32 +278,15 @@ export const ReportCard: React.FC<ReportCardProps> = ({
                 <Lock className="w-3.5 h-3.5 text-amber-500" />
                 <span>BLOQUEADO</span>
               </button>
-            ) : (report.customAccessUrl || report.htmlContent) ? (
-              <a
-                id={`access-btn-${report.id}`}
-                href={report.customAccessUrl || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  handleAccessClick(e, true, report.customAccessUrl || 'html-content');
-                  if (!e.isDefaultPrevented() && onOpenSecureViewer) {
-                    e.preventDefault();
-                    onOpenSecureViewer(report.customAccessUrl || '', report.title, report.htmlContent);
-                  }
-                }}
-                className="flex items-center gap-1.5 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] font-mono text-center text-xs font-bold px-4 py-2 rounded-xl transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer"
-              >
-                <span>ACESSAR</span>
-              </a>
             ) : (
               <button
                 id={`access-btn-${report.id}`}
                 onClick={(e) => {
                   handleAccessClick(e, false);
                 }}
-                className="flex items-center gap-1.5 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] font-mono text-center text-xs font-bold px-4 py-2 rounded-xl transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center"
+                className="flex items-center gap-1.5 border border-blue-500/30 text-blue-600 hover:bg-blue-50/40 dark:border-[#E9C349]/40 dark:text-[#E9C349] dark:hover:bg-[#E9C349]/10 font-mono text-center text-xs font-bold px-5 py-2 rounded-xl transition-all transform active:scale-95 shadow-sm w-full md:w-auto justify-center cursor-pointer uppercase tracking-wider"
               >
-                <span>ACESSAR</span>
+                <span>DETALHES</span>
               </button>
             )}
           </div>
@@ -473,39 +443,13 @@ export const ReportCard: React.FC<ReportCardProps> = ({
             <Lock className="w-3 h-3 text-amber-500" />
             <span>BLOQUEADO</span>
           </button>
-        ) : (report.customAccessUrl || report.htmlContent) ? (
-          <div className="flex items-center gap-2 w-full">
-            <button
-              onClick={(e) => handleAccessClick(e, false)}
-              className="flex-1 border border-blue-500/30 text-blue-600 hover:bg-blue-50/40 dark:border-[#1ea296]/45 dark:text-[#66d9cc] dark:hover:bg-[#66d9cc]/10 py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
-            >
-              Detalhes
-            </button>
-            <a
-              id={`access-btn-${report.id}`}
-              href={report.customAccessUrl || '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                handleAccessClick(e, true, report.customAccessUrl || 'html-content');
-                if (!e.isDefaultPrevented() && onOpenSecureViewer) {
-                  e.preventDefault();
-                  onOpenSecureViewer(report.customAccessUrl || '', report.title, report.htmlContent);
-                }
-              }}
-              className="flex-1 bg-[#2f55cc] hover:bg-[#2544a5] dark:bg-[#E9C349] dark:hover:bg-[#ffe088] text-white dark:text-[#241a00] py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
-            >
-              <span>Acessar</span>
-              <span className="text-[10px]">↗</span>
-            </a>
-          </div>
         ) : (
           <button
             id={`access-btn-${report.id}`}
             onClick={(e) => handleAccessClick(e, false)}
             className="w-full flex items-center justify-center border border-blue-500/30 text-blue-600 hover:bg-blue-50/40 dark:border-[#E9C349]/40 dark:text-[#E9C349] dark:hover:bg-[#E9C349]/10 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer text-center font-sans uppercase tracking-wider"
           >
-            Mostrar detalhes
+            <span>DETALHES</span>
           </button>
         )}
       </div>

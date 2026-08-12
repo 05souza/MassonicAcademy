@@ -300,23 +300,25 @@ export default function ReportDetail({
 
   const requiredMaterials = [
     ...(report.htmlContent ? [{ key: 'htmlContent', link: report.htmlContent, label: 'Curso Interativo HTML' }] : []),
-    { key: 'material1', link: report.material1Link, label: report.material1Name || 'Material 1' },
-    { key: 'material2', link: report.material2Link, label: report.material2Name || 'Material 2' },
-    { key: 'material3', link: report.material3Link, label: report.material3Name || 'Material 3' },
-    { key: 'material4', link: report.material4Link, label: report.material4Name || 'Material 4' },
-    { key: 'material5', link: report.material5Link, label: report.material5Name || 'Material 5' },
-    { key: 'material6', link: report.material6Link, label: report.material6Name || 'Material 6' },
+    ...(report.customAccessUrl ? [{ key: 'customAccessUrl', link: report.customAccessUrl, label: 'Conteúdo Principal' }] : []),
+    { key: 'material1', link: report.material1Link || (report.material1Name ? 'has_name' : ''), label: report.material1Name || 'Material 1' },
+    { key: 'material2', link: report.material2Link || (report.material2Name ? 'has_name' : ''), label: report.material2Name || 'Material 2' },
+    { key: 'material3', link: report.material3Link || (report.material3Name ? 'has_name' : ''), label: report.material3Name || 'Material 3' },
+    { key: 'material4', link: report.material4Link || (report.material4Name ? 'has_name' : ''), label: report.material4Name || 'Material 4' },
+    { key: 'material5', link: report.material5Link || (report.material5Name ? 'has_name' : ''), label: report.material5Name || 'Material 5' },
+    { key: 'material6', link: report.material6Link || (report.material6Name ? 'has_name' : ''), label: report.material6Name || 'Material 6' },
     ...(report.linkedQuestionnaireId ? [{ key: 'linked_questionnaire', link: report.linkedQuestionnaireId, label: 'Questionário' }] : [])
   ].filter(m => !!m.link);
 
   const onlyMaterials = [
     ...(report.htmlContent ? [{ key: 'htmlContent', link: report.htmlContent, label: 'Curso Interativo HTML' }] : []),
-    { key: 'material1', link: report.material1Link, label: report.material1Name || 'Material 1' },
-    { key: 'material2', link: report.material2Link, label: report.material2Name || 'Material 2' },
-    { key: 'material3', link: report.material3Link, label: report.material3Name || 'Material 3' },
-    { key: 'material4', link: report.material4Link, label: report.material4Name || 'Material 4' },
-    { key: 'material5', link: report.material5Link, label: report.material5Name || 'Material 5' },
-    { key: 'material6', link: report.material6Link, label: report.material6Name || 'Material 6' },
+    ...(report.customAccessUrl ? [{ key: 'customAccessUrl', link: report.customAccessUrl, label: 'Conteúdo Principal' }] : []),
+    { key: 'material1', link: report.material1Link || (report.material1Name ? 'has_name' : ''), label: report.material1Name || 'Material 1' },
+    { key: 'material2', link: report.material2Link || (report.material2Name ? 'has_name' : ''), label: report.material2Name || 'Material 2' },
+    { key: 'material3', link: report.material3Link || (report.material3Name ? 'has_name' : ''), label: report.material3Name || 'Material 3' },
+    { key: 'material4', link: report.material4Link || (report.material4Name ? 'has_name' : ''), label: report.material4Name || 'Material 4' },
+    { key: 'material5', link: report.material5Link || (report.material5Name ? 'has_name' : ''), label: report.material5Name || 'Material 5' },
+    { key: 'material6', link: report.material6Link || (report.material6Name ? 'has_name' : ''), label: report.material6Name || 'Material 6' },
   ].filter(m => !!m.link);
 
   const materialsCompleted = onlyMaterials.every(m => completedMaterials[m.key]);
@@ -630,46 +632,73 @@ export default function ReportDetail({
             </div>
           )}
 
-          {/* Link Personalizado do Botão ACESSAR (URL) - Visível apenas para Administradores de acordo com a solicitação */}
-          {isAdmin && report.customAccessUrl && (
+          {/* Link Personalizado do Botão ACESSAR (URL) */}
+          {report.customAccessUrl && (
             <div className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
-                  <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Link Personalizado do Botão ACESSAR (URL)</span>
-                  <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.customAccessUrl}>
-                    {report.customAccessUrl}
-                  </span>
+                  <span className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Conteúdo Principal do Curso</span>
+                  {isAdmin ? (
+                    <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.customAccessUrl}>
+                      {report.customAccessUrl}
+                    </span>
+                  ) : (
+                    <span className="block text-[11px] font-mono text-[#a5b8c7] tracking-wider font-bold">Conteúdo do Curso</span>
+                  )}
                 </div>
               </div>
-              <a
-                href={report.customAccessUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  if (onOpenSecureViewer) {
-                    e.preventDefault();
-                    onOpenSecureViewer(report.customAccessUrl || '', report.title);
-                  }
-                }}
-                className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-2 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-              >
-                ACESSAR
-              </a>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                <button
+                  onClick={() => toggleMaterialCompletion('customAccessUrl')}
+                  className={`flex items-center gap-1.5 text-[11px] font-mono font-bold px-3 py-1.5 rounded border transition-all cursor-pointer select-none ${
+                    completedMaterials['customAccessUrl']
+                      ? 'bg-[#185347]/40 text-[#66d9cc] border-[#185347]'
+                      : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:border-[#E9C349]'
+                  }`}
+                >
+                  {completedMaterials['customAccessUrl'] ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#66d9cc]" />
+                      <span>CONCLUÍDO</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-3.5 h-3.5 rounded border border-[#99907c] flex items-center justify-center text-[8px]" />
+                      <span>CONCLUIR</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={report.customAccessUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    markAsAccessed('customAccessUrl');
+                    if (onOpenSecureViewer) {
+                      e.preventDefault();
+                      onOpenSecureViewer(report.customAccessUrl || '', report.title);
+                    }
+                  }}
+                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-4 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                >
+                  ACESSAR CONTEÚDO
+                </a>
+              </div>
             </div>
           )}
 
           {/* Link do Material 1 / Referência Direta (URL) */}
-          {report.material1Link && (
+          {(report.material1Link || report.material1Name) && (
             <div id={`detail-material1-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material1Name ? `Link: ${report.material1Name}` : 'Link do Material 1 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material1Link}>
-                        {report.material1Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material1Name ? `Material 1: ${report.material1Name}` : 'Material 1 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material1Link || ''}>
+                        {report.material1Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -698,36 +727,38 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material1Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material1');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material1Link || '', `${report.title} - ${report.material1Name || 'Material 1'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material1Link && (
+                  <a
+                    href={report.material1Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material1');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material1Link || '', `${report.title} - ${report.material1Name || 'Material 1'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {/* Link do Material 2 / Referência Direta (URL) */}
-          {report.material2Link && (
+          {(report.material2Link || report.material2Name) && (
             <div id={`detail-material2-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material2Name ? `Link: ${report.material2Name}` : 'Link do Material 2 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material2Link}>
-                        {report.material2Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material2Name ? `Material 2: ${report.material2Name}` : 'Material 2 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material2Link || ''}>
+                        {report.material2Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -756,36 +787,38 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material2Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material2');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material2Link || '', `${report.title} - ${report.material2Name || 'Material 2'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material2Link && (
+                  <a
+                    href={report.material2Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material2');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material2Link || '', `${report.title} - ${report.material2Name || 'Material 2'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {/* Link do Material 3 / Referência Direta (URL) */}
-          {report.material3Link && (
+          {(report.material3Link || report.material3Name) && (
             <div id={`detail-material3-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material3Name ? `Link: ${report.material3Name}` : 'Link do Material 3 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material3Link}>
-                        {report.material3Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material3Name ? `Material 3: ${report.material3Name}` : 'Material 3 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material3Link || ''}>
+                        {report.material3Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -814,36 +847,38 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material3Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material3');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material3Link || '', `${report.title} - ${report.material3Name || 'Material 3'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material3Link && (
+                  <a
+                    href={report.material3Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material3');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material3Link || '', `${report.title} - ${report.material3Name || 'Material 3'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {/* Link do Material 4 / Referência Direta (URL) */}
-          {report.material4Link && (
+          {(report.material4Link || report.material4Name) && (
             <div id={`detail-material4-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material4Name ? `Link: ${report.material4Name}` : 'Link do Material 4 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material4Link}>
-                        {report.material4Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material4Name ? `Material 4: ${report.material4Name}` : 'Material 4 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material4Link || ''}>
+                        {report.material4Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -872,36 +907,38 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material4Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material4');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material4Link || '', `${report.title} - ${report.material4Name || 'Material 4'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material4Link && (
+                  <a
+                    href={report.material4Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material4');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material4Link || '', `${report.title} - ${report.material4Name || 'Material 4'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {/* Link do Material 5 / Referência Direta (URL) */}
-          {report.material5Link && (
+          {(report.material5Link || report.material5Name) && (
             <div id={`detail-material5-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material5Name ? `Link: ${report.material5Name}` : 'Link do Material 5 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material5Link}>
-                        {report.material5Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material5Name ? `Material 5: ${report.material5Name}` : 'Material 5 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material5Link || ''}>
+                        {report.material5Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -930,36 +967,38 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material5Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material5');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material5Link || '', `${report.title} - ${report.material5Name || 'Material 5'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material5Link && (
+                  <a
+                    href={report.material5Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material5');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material5Link || '', `${report.title} - ${report.material5Name || 'Material 5'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}
 
           {/* Link do Material 6 / Referência Direta (URL) */}
-          {report.material6Link && (
+          {(report.material6Link || report.material6Name) && (
             <div id={`detail-material6-block`} className="bg-[#11212b] border border-[#1c2c36] rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 <LinkIcon className="w-4 h-4 text-[#E9C349] shrink-0" />
                 <div className="text-left min-w-0">
                   {isAdmin ? (
                     <>
-                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material6Name ? `Link: ${report.material6Name}` : 'Link do Material 6 / Referência Direta (URL)'}</span>
-                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material6Link}>
-                        {report.material6Link}
+                      <span className="block text-[10px] font-mono text-[#9cbfd5] uppercase tracking-wider">{report.material6Name ? `Material 6: ${report.material6Name}` : 'Material 6 / Referência Direta'}</span>
+                      <span className="text-[11px] font-mono text-[#a5b8c7] block truncate max-w-xs md:max-w-md" title={report.material6Link || ''}>
+                        {report.material6Link || 'Sem link informado'}
                       </span>
                     </>
                   ) : (
@@ -988,21 +1027,23 @@ export default function ReportDetail({
                     </>
                   )}
                 </button>
-                <a
-                  href={report.material6Link}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => {
-                    markAsAccessed('material6');
-                    if (onOpenSecureViewer) {
-                      e.preventDefault();
-                      onOpenSecureViewer(report.material6Link || '', `${report.title} - ${report.material6Name || 'Material 6'}`);
-                    }
-                  }}
-                  className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
-                >
-                  Acessar Conteúdo
-                </a>
+                {report.material6Link && (
+                  <a
+                    href={report.material6Link}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      markAsAccessed('material6');
+                      if (onOpenSecureViewer) {
+                        e.preventDefault();
+                        onOpenSecureViewer(report.material6Link || '', `${report.title} - ${report.material6Name || 'Material 6'}`);
+                      }
+                    }}
+                    className="text-xs font-mono font-bold text-[#241a00] hover:bg-[#ffe088] bg-[#E9C349] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition-all w-full sm:w-auto text-center justify-center shrink-0 cursor-pointer"
+                  >
+                    Acessar Conteúdo
+                  </a>
+                )}
               </div>
             </div>
           )}

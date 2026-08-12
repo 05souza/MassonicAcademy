@@ -297,6 +297,8 @@ export default function App() {
   const [trilhaFormCourses, setTrilhaFormCourses] = useState<string[]>([]);
   const [trilhaFormStatus, setTrilhaFormStatus] = useState<'Ativo' | 'Inativo' | 'Em Construção'>('Ativo');
   const [isSavingTrilha, setIsSavingTrilha] = useState(false);
+  const [trilhaToDelete, setTrilhaToDelete] = useState<any | null>(null);
+  const [isDeletingTrilha, setIsDeletingTrilha] = useState(false);
 
   // Custom access level verification state for degree lock screen modal
   const [accessBlockedCourseTitle, setAccessBlockedCourseTitle] = useState<string | null>(null);
@@ -1065,6 +1067,11 @@ export default function App() {
   }, [currentUser]);
 
   // Cloud sync helpers
+  const saveTrilhasState = (newList: Trilha[]) => {
+    setTrilhas(newList);
+    localStorage.setItem('masonic_trilhas_v1', JSON.stringify(newList));
+  };
+
   const syncTrilhaToCloud = async (trilha: Trilha) => {
     const { db } = initializeFirebase();
     if (!db) return;
@@ -1333,8 +1340,18 @@ export default function App() {
         status: trilhaFormStatus
       };
 
-      // 2. Save Trilha to Firestore
+      // 2. Save Trilha to Firestore & Local State
       await syncTrilhaToCloud(updatedTrilha);
+
+      const existingIdx = trilhas.findIndex(t => t.id === tId || (oldName && t.name.trim().toLowerCase() === oldName.trim().toLowerCase()));
+      let newTrilhasList: Trilha[] = [];
+      if (existingIdx >= 0) {
+        newTrilhasList = [...trilhas];
+        newTrilhasList[existingIdx] = updatedTrilha;
+      } else {
+        newTrilhasList = [...trilhas, updatedTrilha];
+      }
+      saveTrilhasState(newTrilhasList);
 
       // 3. Update all courses (reports) in this sequence
       // We set their category to the newName, and we chains their prerequisiteId accordingly!
@@ -1418,25 +1435,51 @@ export default function App() {
     }
   };
 
-  const handleDeleteTrilhaClick = async (trilhaItem: any) => {
-    const confirmDelete = window.confirm(`Tem certeza que deseja deletar a trilha "${trilhaItem.name}"? Os cursos não serão deletados, apenas voltarão para a categoria Geral.`);
-    if (!confirmDelete) return;
+  const handleDeleteTrilhaClick = (trilhaItem: any) => {
+    setTrilhaToDelete(trilhaItem);
+  };
+
+  const executeDeleteTrilha = async (trilhaItem: any) => {
+    if (!trilhaItem) return;
+    setIsDeletingTrilha(true);
 
     try {
+      const targetNameNorm = (trilhaItem.name || '').trim().toLowerCase();
+      const matchedCustomTrilha = trilhas.find(t => t.id === trilhaItem.id || t.name.trim().toLowerCase() === targetNameNorm);
+      
+      const trilhaIdToDelete = matchedCustomTrilha?.id || trilhaItem.id;
+
       // 1. Delete Trilha doc from cloud
-      if (trilhaItem.isCustom) {
-        await deleteTrilhaFromCloud(trilhaItem.id);
+      if (trilhaIdToDelete && !trilhaIdToDelete.startsWith('dyn-')) {
+        await deleteTrilhaFromCloud(trilhaIdToDelete);
       }
 
-      // 2. Set category of courses inside this Trilha back to "Geral"
+      // 2. Remove from local trilhas state
+      const updatedTrilhas = trilhas.filter(t => t.id !== trilhaIdToDelete && t.name.trim().toLowerCase() !== targetNameNorm);
+      saveTrilhasState(updatedTrilhas);
+
+      // 3. Reset all courses associated with this Trilha back to "Geral"
       const currentCourses = getTrilhaCourses(trilhaItem.name);
       const reportsMap = new Map<string, ExecutiveReport>();
       for (const r of reports) {
         reportsMap.set(r.id, { ...r });
       }
 
+      const affectedCourseIds = new Set<string>();
       for (const course of currentCourses) {
-        const rDoc = reportsMap.get(course.id);
+        affectedCourseIds.add(course.id);
+      }
+      if (matchedCustomTrilha?.courseIds) {
+        matchedCustomTrilha.courseIds.forEach(id => affectedCourseIds.add(id));
+      }
+      for (const r of reports) {
+        if ((r.category || 'Geral').trim().toLowerCase() === targetNameNorm) {
+          affectedCourseIds.add(r.id);
+        }
+      }
+
+      for (const cId of affectedCourseIds) {
+        const rDoc = reportsMap.get(cId);
         if (rDoc) {
           rDoc.category = 'Geral';
           rDoc.prerequisiteId = '';
@@ -1458,6 +1501,11 @@ export default function App() {
         ));
       }
 
+      // 4. If this trilha was currently selected in view, clear selection
+      if (selectedTrilha && selectedTrilha.trim().toLowerCase() === targetNameNorm) {
+        setSelectedTrilha(null);
+      }
+
       // Add a system alert logging the deletion
       const newAlert: SystemAlert = {
         id: `alert-trilha-del-${Date.now()}`,
@@ -1470,9 +1518,12 @@ export default function App() {
       };
       saveAlertsState([newAlert, ...alerts]);
       await syncAlertToCloud(newAlert);
+      setTrilhaToDelete(null);
     } catch (err) {
       console.error("Error deleting trilha:", err);
       alert("Erro ao deletar a Trilha.");
+    } finally {
+      setIsDeletingTrilha(false);
     }
   };
 
@@ -2205,21 +2256,39 @@ export default function App() {
     if (isAdmin(currentUser.email)) {
       return true; // Root administrative privileges
     }
-    if (!currentUser.allowedReportIds) return false;
-    const allowedList = currentUser.allowedReportIds
-      .split(',')
-      .map(id => id.trim().toLowerCase())
-      .filter(Boolean);
-    
-    const hasAllOfDegreeAccess = allowedList.includes('todos_do_grau') || allowedList.includes('all_of_degree');
-    if (hasAllOfDegreeAccess) {
-      const userDegree = Number(currentUser.nivelAcesso || '1');
-      if (report.nivelCurso === userDegree) {
+
+    const reportIdLower = (report.id || '').toLowerCase();
+
+    // 1. Explicitly blocked for this specific user/student
+    if (currentUser.blockedReportIds) {
+      const blockedList = currentUser.blockedReportIds
+        .split(',')
+        .map(id => id.trim().toLowerCase())
+        .filter(Boolean);
+      if (blockedList.includes(reportIdLower)) {
+        return false;
+      }
+    }
+
+    // 2. Default rule: Courses in or up to the user's degree (course level <= user degree) are automatically allowed
+    const userDegree = parseInt(String(currentUser.nivelAcesso || '1'), 10);
+    const courseDegree = parseInt(String(report.nivelCurso || '1'), 10);
+    if (courseDegree <= userDegree) {
+      return true;
+    }
+
+    // 3. Backward compatibility or explicit access for higher-degree courses
+    if (currentUser.allowedReportIds) {
+      const allowedList = currentUser.allowedReportIds
+        .split(',')
+        .map(id => id.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedList.includes('*') || allowedList.includes('todos_do_grau') || allowedList.includes('all_of_degree') || allowedList.includes(reportIdLower)) {
         return true;
       }
     }
 
-    return allowedList.includes((report.id || '').toLowerCase());
+    return false;
   }).filter((report) => {
     if (itemTypeFilter !== 'todos') {
       const type = report.itemType || 'curso';
@@ -2745,14 +2814,24 @@ export default function App() {
                                   {isAdmin(currentUser?.email) && (
                                     <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                                       <button
-                                        onClick={() => handleOpenTrilhaForm(trilhaItem)}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          handleOpenTrilhaForm(trilhaItem);
+                                        }}
                                         title="Editar Trilha"
                                         className="p-1.5 bg-[#1c2c36]/60 border border-[#1c2c36] hover:border-[#00D2FF] text-[#9cbfd5] hover:text-[#00D2FF] rounded transition-all cursor-pointer"
                                       >
                                         <Edit className="w-3 h-3" />
                                       </button>
                                       <button
-                                        onClick={() => handleDeleteTrilhaClick(trilhaItem)}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          handleDeleteTrilhaClick(trilhaItem);
+                                        }}
                                         title="Deletar Trilha"
                                         className="p-1.5 bg-[#1c2c36]/60 border border-red-500/20 hover:border-red-500 text-[#9cbfd5] hover:text-red-400 rounded transition-all cursor-pointer"
                                       >
@@ -2955,14 +3034,15 @@ export default function App() {
                                             <div className="space-y-2">
                                               {[
                                                 { key: 'htmlContent', label: 'Curso Interativo HTML', link: course.htmlContent },
-                                                { key: 'material1', label: course.material1Name || 'Material 1', link: course.material1Link },
-                                                { key: 'material2', label: course.material2Name || 'Material 2', link: course.material2Link },
-                                                { key: 'material3', label: course.material3Name || 'Material 3', link: course.material3Link },
-                                                { key: 'material4', label: course.material4Name || 'Material 4', link: course.material4Link },
-                                                { key: 'material5', label: course.material5Name || 'Material 5', link: course.material5Link },
-                                                { key: 'material6', label: course.material6Name || 'Material 6', link: course.material6Link },
+                                                { key: 'customAccessUrl', label: 'Conteúdo Principal', link: course.customAccessUrl },
+                                                { key: 'material1', label: course.material1Name || 'Material 1', link: course.material1Link || (course.material1Name ? 'has_name' : undefined) },
+                                                { key: 'material2', label: course.material2Name || 'Material 2', link: course.material2Link || (course.material2Name ? 'has_name' : undefined) },
+                                                { key: 'material3', label: course.material3Name || 'Material 3', link: course.material3Link || (course.material3Name ? 'has_name' : undefined) },
+                                                { key: 'material4', label: course.material4Name || 'Material 4', link: course.material4Link || (course.material4Name ? 'has_name' : undefined) },
+                                                { key: 'material5', label: course.material5Name || 'Material 5', link: course.material5Link || (course.material5Name ? 'has_name' : undefined) },
+                                                { key: 'material6', label: course.material6Name || 'Material 6', link: course.material6Link || (course.material6Name ? 'has_name' : undefined) },
                                                 { key: 'linked_questionnaire', label: 'Questionário de Avaliação', link: course.linkedQuestionnaireId ? 'quiz' : undefined },
-                                              ].filter(item => item.link).map((item, idx) => {
+                                              ].filter(item => !!item.link).map((item, idx) => {
                                                 const isItemCompleted = (() => {
                                                   const saved = localStorage.getItem(`masonic_completed_${currentUser?.email || 'guest'}_${course.id}`);
                                                   if (!saved) return false;
@@ -3668,6 +3748,51 @@ export default function App() {
                     <Check className="w-4 h-4" />
                     <span>Salvar Trilha</span>
                   </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Trilha Confirmation Modal */}
+      {trilhaToDelete && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-[#0b1924] border border-red-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="font-sans font-bold text-lg text-white">Excluir Trilha</h3>
+            </div>
+
+            <p className="text-xs font-sans text-[#9cbfd5] leading-relaxed">
+              Tem certeza que deseja excluir a trilha <strong className="text-white">"{trilhaToDelete.name}"</strong>?
+              Os cursos contidos nesta trilha não serão apagados, apenas retornarão para a categoria <span className="text-[#00D2FF]">Geral</span>.
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setTrilhaToDelete(null)}
+                disabled={isDeletingTrilha}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#9cbfd5] hover:text-white hover:bg-[#1c2c36] transition-all cursor-pointer font-sans"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteTrilha(trilhaToDelete)}
+                disabled={isDeletingTrilha}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-red-500 hover:bg-red-600 text-white transition-all shadow-md flex items-center gap-2 cursor-pointer font-sans"
+              >
+                {isDeletingTrilha ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Excluindo...</span>
+                  </>
+                ) : (
+                  <span>Confirmar Exclusão</span>
                 )}
               </button>
             </div>
