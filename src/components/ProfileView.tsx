@@ -5761,18 +5761,11 @@ export default function ProfileView({
             const totalCourseAccess = allLogs.filter(l => l.type === 'course').length;
             const totalBookAccess = allLogs.filter(l => l.type === 'book').length;
             
-            // Count unique users who either have logs or have active status (active sessions)
-            const loggedEmails = allLogs.map(l => (l.userEmail || '').toLowerCase().trim());
-            const activeUserEmails = accessUsers
-              .filter(u => u.status === 'Ativo')
-              .map(u => (u.email || '').toLowerCase().trim())
-              .filter(email => {
-                if (!searchLogUser) return true;
-                const query = searchLogUser.toLowerCase();
-                const u = accessUsers.find(user => (user.email || '').toLowerCase().trim() === email);
-                return u && ((u.name || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query));
-              });
-            const allActiveEmails = new Set([...loggedEmails, ...activeUserEmails]);
+            // Count unique users who have logs in the selected period
+            const loggedEmails = allLogs
+              .map(l => (l.userEmail || '').toLowerCase().trim())
+              .filter(Boolean);
+            const allActiveEmails = new Set(loggedEmails);
             const uniqueUsers = allActiveEmails.size;
 
             return (
@@ -5911,36 +5904,17 @@ export default function ProfileView({
                            (log.userEmail || '').toLowerCase().includes(searchLogUser.toLowerCase());
                   });
 
-                  // Group by email
+                  // Group by email (only users who had logins in the period)
                   const groupedMap: Record<string, { name: string; email: string; count: number; lastAccess: string }> = {};
-                  
-                  // Pre-populate with all active users (users with active sessions) so they are tracked
-                  accessUsers.forEach(u => {
-                    if (u.status === 'Ativo') {
-                      const key = (u.email || '').toLowerCase().trim();
-                      if (!key) return;
-                      if (searchLogUser) {
-                        const query = searchLogUser.toLowerCase();
-                        if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
-                          return;
-                        }
-                      }
-                      groupedMap[key] = {
-                        name: u.name || 'Sem Nome',
-                        email: u.email || '',
-                        count: 0,
-                        lastAccess: ''
-                      };
-                    }
-                  });
 
                   filtered.forEach(log => {
                     const key = (log.userEmail || '').toLowerCase().trim();
                     if (!key) return;
                     if (!groupedMap[key]) {
+                      const registeredUser = accessUsers.find(u => (u.email || '').toLowerCase().trim() === key);
                       groupedMap[key] = {
-                        name: log.userName || 'Sem Nome',
-                        email: log.userEmail || '',
+                        name: registeredUser?.name || log.userName || 'Sem Nome',
+                        email: registeredUser?.email || log.userEmail || '',
                         count: 0,
                         lastAccess: log.timestamp || ''
                       };
@@ -5951,7 +5925,9 @@ export default function ProfileView({
                     }
                   });
 
-                  const groupedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                  const groupedList = Object.values(groupedMap)
+                    .filter(u => u.count > 0)
+                    .sort((a, b) => b.count - a.count);
                   const maxCount = groupedList.length > 0 ? Math.max(...groupedList.map(g => g.count)) : 1;
 
                   if (groupedList.length === 0) {
@@ -6167,37 +6143,18 @@ export default function ProfileView({
                       </div>
                     );
                   } else {
-                    // Group by User
+                    // Group by User (only users who accessed courses in the period)
                     const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
-                    
-                    // Pre-populate with all active users (users with active sessions) so they are tracked
-                    accessUsers.forEach(u => {
-                      if (u.status === 'Ativo') {
-                        const key = (u.email || '').toLowerCase().trim();
-                        if (!key) return;
-                        if (searchLogUser) {
-                          const query = searchLogUser.toLowerCase();
-                          if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
-                            return;
-                          }
-                        }
-                        groupedMap[key] = {
-                          name: u.name || 'Sem Nome',
-                          email: u.email || '',
-                          count: 0,
-                          items: {}
-                        };
-                      }
-                    });
 
                     filtered.forEach(log => {
                       const key = (log.userEmail || '').toLowerCase().trim();
                       if (!key) return;
                       const courseTitle = log.targetTitle || 'Curso Sem Título';
                       if (!groupedMap[key]) {
+                        const registeredUser = accessUsers.find(u => (u.email || '').toLowerCase().trim() === key);
                         groupedMap[key] = {
-                          name: log.userName || 'Sem Nome',
-                          email: log.userEmail || '',
+                          name: registeredUser?.name || log.userName || 'Sem Nome',
+                          email: registeredUser?.email || log.userEmail || '',
                           count: 0,
                           items: {}
                         };
@@ -6206,7 +6163,9 @@ export default function ProfileView({
                       groupedMap[key].items[courseTitle] = (groupedMap[key].items[courseTitle] || 0) + 1;
                     });
 
-                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                    const sortedList = Object.values(groupedMap)
+                      .filter(u => u.count > 0)
+                      .sort((a, b) => b.count - a.count);
 
                     return (
                       <div className="space-y-3">
@@ -6406,37 +6365,18 @@ export default function ProfileView({
                       </div>
                     );
                   } else {
-                    // Group by User
+                    // Group by User (only users who accessed materials in the period)
                     const groupedMap: Record<string, { name: string; email: string; count: number; items: Record<string, number> }> = {};
-                    
-                    // Pre-populate with all active users (users with active sessions) so they are tracked
-                    accessUsers.forEach(u => {
-                      if (u.status === 'Ativo') {
-                        const key = (u.email || '').toLowerCase().trim();
-                        if (!key) return;
-                        if (searchLogUser) {
-                          const query = searchLogUser.toLowerCase();
-                          if (!(u.name || '').toLowerCase().includes(query) && !(u.email || '').toLowerCase().includes(query)) {
-                            return;
-                          }
-                        }
-                        groupedMap[key] = {
-                          name: u.name || 'Sem Nome',
-                          email: u.email || '',
-                          count: 0,
-                          items: {}
-                        };
-                      }
-                    });
 
                     filtered.forEach(log => {
                       const key = (log.userEmail || '').toLowerCase().trim();
                       if (!key) return;
                       const bookTitle = log.targetTitle || 'Obra Virtual';
                       if (!groupedMap[key]) {
+                        const registeredUser = accessUsers.find(u => (u.email || '').toLowerCase().trim() === key);
                         groupedMap[key] = {
-                          name: log.userName || 'Sem Nome',
-                          email: log.userEmail || '',
+                          name: registeredUser?.name || log.userName || 'Sem Nome',
+                          email: registeredUser?.email || log.userEmail || '',
                           count: 0,
                           items: {}
                         };
@@ -6445,7 +6385,9 @@ export default function ProfileView({
                       groupedMap[key].items[bookTitle] = (groupedMap[key].items[bookTitle] || 0) + 1;
                     });
 
-                    const sortedList = Object.values(groupedMap).sort((a, b) => b.count - a.count);
+                    const sortedList = Object.values(groupedMap)
+                      .filter(u => u.count > 0)
+                      .sort((a, b) => b.count - a.count);
 
                     return (
                       <div className="space-y-3">
