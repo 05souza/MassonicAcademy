@@ -1507,6 +1507,9 @@ export default function QuestionnairesView({
                       .filter(q => q.status !== 'Inativo')
                       .filter(q => {
                         if (isGlobalAdmin) return true;
+                        const userDegree = parseInt(String(currentUser?.nivelAcesso || '1'), 10);
+                        const qDegree = q.degreeRequired || 1;
+                        if (qDegree > userDegree && q.id !== selectedQuizId) return false;
                         // For students, hide questionnaires that are linked/tied to a course, 
                         // unless it is the currently selected one itself.
                         const isTied = reports ? reports.some(r => r.linkedQuestionnaireId === q.id) : false;

@@ -270,7 +270,7 @@ export default function App() {
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('TODOS');
-  const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados' | 'meu-grau'>('todos');
+  const [progressFilter, setProgressFilter] = useState<'todos' | 'concluidos' | 'andamento' | 'não-iniciados'>('todos');
   const [itemTypeFilter, setItemTypeFilter] = useState<'todos' | 'curso' | 'trilha'>('todos');
   const [selectedReport, setSelectedReport] = useState<ExecutiveReport | null>(null);
 
@@ -2078,7 +2078,37 @@ export default function App() {
     return rLodge === userLodgeId;
   });
 
+  const isCourseAllowedForUser = (report: ExecutiveReport) => {
+    if (!currentUser) return false;
+    if (report.status === 'Inativo' && !isAdmin(currentUser.email)) return false;
+    if (isAdmin(currentUser.email)) return true;
+
+    const reportIdLower = (report.id || '').toLowerCase();
+    if (currentUser.blockedReportIds) {
+      const blockedList = currentUser.blockedReportIds
+        .split(',')
+        .map(id => id.trim().toLowerCase())
+        .filter(Boolean);
+      if (blockedList.includes(reportIdLower)) {
+        return false;
+      }
+    }
+
+    const userDegree = parseInt(String(currentUser.nivelAcesso || '1'), 10);
+    const courseDegree = parseInt(String(report.nivelCurso || '1'), 10);
+    return courseDegree <= userDegree;
+  };
+
   const getTrilhaCourses = (trilhaName: string) => {
+    const isUserAdmin = isAdmin(currentUser?.email);
+    const filterByDegreeAndStatus = (r: ExecutiveReport) => {
+      if (r.status === 'Inativo' && !isUserAdmin) return false;
+      if (!isUserAdmin) {
+        return isCourseAllowedForUser(r);
+      }
+      return true;
+    };
+
     // Check if there is a custom trilha with custom course sequencing
     const matchedTrilha = trilhas.find(t => t.name.trim().toLowerCase() === trilhaName.trim().toLowerCase());
     if (matchedTrilha && matchedTrilha.courseIds && matchedTrilha.courseIds.length > 0) {
@@ -2087,6 +2117,7 @@ export default function App() {
 
       // Get courses matching either the category display name OR present in courseIds
       const baseCourses = lodgeReports.filter(r => 
+        filterByDegreeAndStatus(r) &&
         ((r.category || 'Geral').trim().toLowerCase() === trilhaName.trim().toLowerCase() || courseIdToIndex.has(r.id))
       );
 
@@ -2099,6 +2130,7 @@ export default function App() {
 
     // 1. Get base courses directly under this category/trilha
     const baseCourses = lodgeReports.filter(r => 
+      filterByDegreeAndStatus(r) &&
       (r.category || 'Geral').trim().toLowerCase() === trilhaName.trim().toLowerCase()
     );
 
@@ -2110,7 +2142,7 @@ export default function App() {
 
     const addPrerequisites = (course: ExecutiveReport) => {
       if (course.prerequisiteId) {
-        const prereq = lodgeReports.find(r => r.id === course.prerequisiteId);
+        const prereq = lodgeReports.find(r => r.id === course.prerequisiteId && filterByDegreeAndStatus(r));
         if (prereq && !allCoursesMap.has(prereq.id)) {
           allCoursesMap.set(prereq.id, prereq);
           addPrerequisites(prereq);
@@ -2161,11 +2193,14 @@ export default function App() {
       customTrilhasMap.set(t.name.trim().toLowerCase(), t);
     }
 
+    const isUserAdmin = isAdmin(currentUser?.email);
+
     const dynamicCategories = Array.from(new Set<string>(
       lodgeReports
         .filter(r => {
           // Inactive courses must not appear on the home screen ("inicio"), even for admins
           if (r.status === 'Inativo') return false;
+          if (!isUserAdmin && !isCourseAllowedForUser(r)) return false;
           return true;
         })
         .map(r => (r.category || 'Geral').trim())
@@ -2176,10 +2211,16 @@ export default function App() {
     
     // First, add all defined custom trilhas
     for (const t of trilhas) {
-      const isUserAdmin = isAdmin(currentUser?.email);
       // Inactive trilhas must not appear for non-admin users
       if (!isUserAdmin && t.status === 'Inativo') {
         continue;
+      }
+      // For non-admin users, only show custom trilhas that have at least one allowed course (or are "Em Construção")
+      if (!isUserAdmin && t.status !== 'Em Construção') {
+        const allowedInTrilha = getTrilhaCourses(t.name);
+        if (allowedInTrilha.length === 0) {
+          continue;
+        }
       }
       combined.push({
         id: t.id,
@@ -2221,7 +2262,12 @@ export default function App() {
   });
 
   // Compute unique categories from reports dynamics
-  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(lodgeReports.map(r => (r.category || '').trim()).filter(Boolean)))];
+  const availableCategories: string[] = ['TODOS', ...Array.from(new Set<string>(
+    lodgeReports
+      .filter(r => r.status !== 'Inativo' && (isAdmin(currentUser?.email) || isCourseAllowedForUser(r)))
+      .map(r => (r.category || '').trim())
+      .filter(Boolean)
+  ))];
 
   // Filter computation logic (Search string + Active Category tab selection)
   const filteredReports = lodgeReports.filter((report) => {
@@ -2253,52 +2299,11 @@ export default function App() {
       return false;
     }
 
-    if (isAdmin(currentUser.email)) {
-      return true; // Root administrative privileges
-    }
-
-    const reportIdLower = (report.id || '').toLowerCase();
-
-    // 1. Explicitly blocked for this specific user/student
-    if (currentUser.blockedReportIds) {
-      const blockedList = currentUser.blockedReportIds
-        .split(',')
-        .map(id => id.trim().toLowerCase())
-        .filter(Boolean);
-      if (blockedList.includes(reportIdLower)) {
-        return false;
-      }
-    }
-
-    // 2. Default rule: Courses in or up to the user's degree (course level <= user degree) are automatically allowed
-    const userDegree = parseInt(String(currentUser.nivelAcesso || '1'), 10);
-    const courseDegree = parseInt(String(report.nivelCurso || '1'), 10);
-    if (courseDegree <= userDegree) {
-      return true;
-    }
-
-    // 3. Backward compatibility or explicit access for higher-degree courses
-    if (currentUser.allowedReportIds) {
-      const allowedList = currentUser.allowedReportIds
-        .split(',')
-        .map(id => id.trim().toLowerCase())
-        .filter(Boolean);
-      if (allowedList.includes('*') || allowedList.includes('todos_do_grau') || allowedList.includes('all_of_degree') || allowedList.includes(reportIdLower)) {
-        return true;
-      }
-    }
-
-    return false;
+    return isCourseAllowedForUser(report);
   }).filter((report) => {
     if (itemTypeFilter !== 'todos') {
       const type = report.itemType || 'curso';
       if (type !== itemTypeFilter) return false;
-    }
-
-    if (progressFilter === 'meu-grau') {
-      const userLevel = currentUser ? parseInt(String(currentUser.nivelAcesso || '1'), 10) : 1;
-      const reportLevel = parseInt(String(report.nivelCurso || '1'), 10);
-      return reportLevel <= userLevel;
     }
 
     if (progressFilter === 'todos') return true;
@@ -2608,7 +2613,6 @@ export default function App() {
                         <span className="text-[#99907c] mr-1 uppercase select-none font-bold text-[10px] ml-1">Status:</span>
                         {[
                           { id: 'todos', label: 'Todos os Títulos' },
-                          { id: 'meu-grau', label: 'Do meu grau' },
                           { id: 'concluidos', label: 'Concluídos' },
                           { id: 'andamento', label: 'Em Andamento' },
                           { id: 'não-iniciados', label: 'Não Iniciados' }

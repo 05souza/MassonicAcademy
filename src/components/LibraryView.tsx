@@ -37,6 +37,13 @@ export default function LibraryView({
     ? parseInt(String(currentUser.nivelAcesso || (isAdmin ? '33' : '1')), 10) 
     : 1;
 
+  // Filter books accessible to user's degree (Admins see all degrees, non-admins see up to their degree)
+  const accessibleBooks = books.filter(b => {
+    if (b.status !== 'Ativo') return false;
+    if (!isAdmin && b.nivelAcesso > userLevel) return false;
+    return true;
+  });
+
   // Helper for degree labels
   const getDegreeLabel = (level: number) => {
     return getGlobalDegreeLabel(level);
@@ -44,26 +51,25 @@ export default function LibraryView({
 
   // 2. Identify all categories and count of active materials
   const categoriesMap: Record<string, number> = {
-    'Todos os materiais': books.length
+    'Todos os materiais': accessibleBooks.length
   };
 
   // Identify all degrees and count of active books
   const degreesMap: Record<number, number> = {};
 
-  books.forEach(b => {
-    if (b.status === 'Ativo') {
-      const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
-      bookCats.forEach(cat => {
-        if (cat) {
-          categoriesMap[cat] = (categoriesMap[cat] || 0) + 1;
-        }
-      });
-      degreesMap[b.nivelAcesso] = (degreesMap[b.nivelAcesso] || 0) + 1;
-    }
+  accessibleBooks.forEach(b => {
+    const bookCats = b.categories && b.categories.length > 0 ? b.categories : [b.category];
+    bookCats.forEach(cat => {
+      if (cat) {
+        categoriesMap[cat] = (categoriesMap[cat] || 0) + 1;
+      }
+    });
+    degreesMap[b.nivelAcesso] = (degreesMap[b.nivelAcesso] || 0) + 1;
   });
 
   const uniqueDegrees = Object.keys(degreesMap)
     .map(Number)
+    .filter(level => isAdmin || level <= userLevel)
     .sort((a, b) => a - b);
 
   const categories = Object.keys(categoriesMap).sort((a, b) => {
@@ -73,10 +79,7 @@ export default function LibraryView({
   });
 
   // 3. Filter books
-  const filteredBooks = books.filter(book => {
-    // Check status
-    if (book.status !== 'Ativo') return false;
-
+  const filteredBooks = accessibleBooks.filter(book => {
     const bookCats = book.categories && book.categories.length > 0 ? book.categories : [book.category];
 
     // Category filter (Left Sidebar menu)
@@ -209,7 +212,7 @@ export default function LibraryView({
             <div className="space-y-2">
               <label className="block text-[10px] font-mono text-[#99907c] uppercase tracking-wider">Categorias de Materiais</label>
               <p className="text-[9px] font-mono text-[#99907c]/80 leading-snug">
-                Disponível: <span className="text-[#66d9cc] font-bold">{categories.filter(cat => cat !== 'Todos os materiais').length}</span> categorias com <span className="text-[#E9C349] font-bold">{books.filter(b => b.status === 'Ativo').length}</span> materiais ativos.
+                Disponível: <span className="text-[#66d9cc] font-bold">{categories.filter(cat => cat !== 'Todos os materiais').length}</span> categorias com <span className="text-[#E9C349] font-bold">{accessibleBooks.length}</span> materiais ativos.
               </p>
               <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 pt-1">
                 {categories.filter(cat => cat !== 'Todos os materiais').map(cat => (
