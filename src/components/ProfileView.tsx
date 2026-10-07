@@ -107,10 +107,6 @@ export default function ProfileView({
       .toUpperCase();
   };
 
-  const getLogsToRender = () => {
-    return accessLogs || [];
-  };
-
   const nameToDisplay = currentUser?.name || 'Administrador';
   const initials = getInitials(nameToDisplay) || 'AD';
   const emailToDisplay = currentUser?.email || 'dani.nanda.lucas@gmail.com';
@@ -348,6 +344,59 @@ export default function ProfileView({
   const [reportsTab, setReportsTab] = useState<'logins' | 'courses' | 'books'>('logins');
   const [reportsGrouping, setReportsGrouping] = useState<'by-item' | 'by-user'>('by-item');
   const [searchLogUser, setSearchLogUser] = useState('');
+  const [logDatePreset, setLogDatePreset] = useState<'current-month' | 'last-month' | 'all' | 'custom'>('current-month');
+  const [logStartDate, setLogStartDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}-01`;
+  });
+  const [logEndDate, setLogEndDate] = useState(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    return `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+  });
+
+  const handleSelectLogDatePreset = (preset: 'current-month' | 'last-month' | 'all' | 'custom') => {
+    setLogDatePreset(preset);
+    const now = new Date();
+    if (preset === 'current-month') {
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+      setLogStartDate(`${y}-${m}-01`);
+      setLogEndDate(`${y}-${m}-${String(lastDay).padStart(2, '0')}`);
+    } else if (preset === 'last-month') {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const y = prev.getFullYear();
+      const m = String(prev.getMonth() + 1).padStart(2, '0');
+      const lastDay = new Date(y, prev.getMonth() + 1, 0).getDate();
+      setLogStartDate(`${y}-${m}-01`);
+      setLogEndDate(`${y}-${m}-${String(lastDay).padStart(2, '0')}`);
+    } else if (preset === 'all') {
+      setLogStartDate('');
+      setLogEndDate('');
+    }
+  };
+
+  const getLogsToRender = () => {
+    const rawLogs = accessLogs || [];
+    if (!logStartDate && !logEndDate) return rawLogs;
+
+    const startMs = logStartDate ? new Date(`${logStartDate}T00:00:00`).getTime() : null;
+    const endMs = logEndDate ? new Date(`${logEndDate}T23:59:59.999`).getTime() : null;
+
+    return rawLogs.filter(log => {
+      if (!log.timestamp) return false;
+      const logMs = new Date(log.timestamp).getTime();
+      if (isNaN(logMs)) return false;
+      if (startMs !== null && logMs < startMs) return false;
+      if (endMs !== null && logMs > endMs) return false;
+      return true;
+    });
+  };
 
   // Firebase Database Configuration State
   const initialFb = getFirebaseConfig();
@@ -5600,32 +5649,100 @@ export default function ProfileView({
         <div className="space-y-6 animate-fade-in text-left">
           
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0c1d27] p-5 rounded-xl border border-[#1c2c36]">
-            <div>
-              <h3 className="font-sans font-bold text-lg text-[#d4e5f2] flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-[#66d9cc]" /> Relatórios de Acessos & Atividades
-              </h3>
-              <p className="text-xs font-mono text-[#99907c] mt-1">
-                Análise em tempo real de logins de usuários, visualizações de cursos e acessos a materiais.
-              </p>
+          <div className="bg-[#0c1d27] p-5 rounded-xl border border-[#1c2c36] space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-sans font-bold text-lg text-[#d4e5f2] flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[#66d9cc]" /> Relatórios de Acessos & Atividades
+                </h3>
+                <p className="text-xs font-mono text-[#99907c] mt-1">
+                  Análise em tempo real de logins de usuários, visualizações de cursos e acessos a materiais.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-initial">
+                  <input
+                    type="text"
+                    placeholder="Filtrar por Usuário..."
+                    value={searchLogUser}
+                    onChange={(e) => setSearchLogUser(e.target.value)}
+                    className="w-full sm:w-64 bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 pl-9 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
+                  {searchLogUser && (
+                    <button
+                      onClick={() => setSearchLogUser('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#99907c] hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-initial">
-                <input
-                  type="text"
-                  placeholder="Filtrar por Usuário..."
-                  value={searchLogUser}
-                  onChange={(e) => setSearchLogUser(e.target.value)}
-                  className="w-full sm:w-64 bg-[#04141d] border border-[#1c2c36] text-xs px-3 py-2 pl-9 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#99907c]" />
-                {searchLogUser && (
+
+            {/* Date Filter Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-3 border-t border-[#1c2c36]/60">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase font-bold flex items-center gap-1.5 mr-1">
+                  <Calendar className="w-3.5 h-3.5 text-[#E9C349]" /> Período:
+                </span>
+                {[
+                  { id: 'current-month', label: 'Mês Atual' },
+                  { id: 'last-month', label: 'Mês Anterior' },
+                  { id: 'all', label: 'Todo o Período' }
+                ].map((preset) => {
+                  const active = logDatePreset === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleSelectLogDatePreset(preset.id as any)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all cursor-pointer border ${
+                        active
+                          ? 'bg-[#E9C349]/15 text-[#E9C349] border-[#E9C349]/50 shadow-xs'
+                          : 'bg-[#04141d] text-[#99907c] border-[#1c2c36] hover:text-[#d4e5f2] hover:bg-[#11212b]'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase">De:</span>
+                  <input
+                    type="date"
+                    value={logStartDate}
+                    onChange={(e) => {
+                      setLogStartDate(e.target.value);
+                      setLogDatePreset('custom');
+                    }}
+                    className="bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-1.5 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase">Até:</span>
+                  <input
+                    type="date"
+                    value={logEndDate}
+                    onChange={(e) => {
+                      setLogEndDate(e.target.value);
+                      setLogDatePreset('custom');
+                    }}
+                    className="bg-[#04141d] border border-[#1c2c36] text-xs px-2.5 py-1.5 rounded-lg text-[#d4e5f2] focus:outline-none focus:border-[#E9C349] font-mono"
+                  />
+                </div>
+                {logDatePreset !== 'current-month' && (
                   <button
-                    onClick={() => setSearchLogUser('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#99907c] hover:text-white"
+                    type="button"
+                    onClick={() => handleSelectLogDatePreset('current-month')}
+                    className="text-[10px] font-mono text-[#66d9cc] hover:underline px-2 py-1 cursor-pointer"
                   >
-                    <X className="w-3 h-3" />
+                    Voltar ao Mês Atual
                   </button>
                 )}
               </div>
