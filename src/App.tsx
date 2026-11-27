@@ -1,9 +1,12 @@
+/// <reference types="vite/client" />
+import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import AcademyChat from './components/AcademyChat';
 import React, { useState, useEffect, useMemo } from 'react';
 import { INITIAL_REPORTS, INITIAL_ALERTS, INITIAL_BOOKS } from './data';
 import { SENDA_VIRTUDE_COURSE } from './data/sendaVirtudeCourse';
 import { ExecutiveReport, SystemAlert, AccessUser, Book, Lodge, Trilha, Questionnaire } from './types';
 import { getDegreeLabel, getDegreeName } from './utils/degrees';
-import { initializeFirebase, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
+import { initializeFirebase, initializeFirebaseAuth, handleFirestoreError, OperationType, cleanObjectForFirestore } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import Header from './components/Header';
 import ReportCard from './components/ReportCard';
@@ -184,6 +187,21 @@ export default function App() {
   const [sortBy, setSortBy] = useState<'id' | 'titulo' | 'grau' | 'atualizacao'>('grau');
 
   // Simulated active user & accesses database
+  const chatEndpoint = import.meta.env.VITE_ACADEMY_CHAT_URL?.trim();
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  useEffect(() => {
+    if (!chatEndpoint) return;
+    const auth = initializeFirebaseAuth();
+    if (!auth) {
+      setAuthReady(true);
+      return;
+    }
+    return onAuthStateChanged(auth, user => {
+      setFirebaseUser(user);
+      setAuthReady(true);
+    });
+  }, [chatEndpoint]);
   const [currentUser, setCurrentUser] = useState<AccessUser | null>(null);
   const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
@@ -1218,7 +1236,11 @@ export default function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (chatEndpoint) {
+      const auth = initializeFirebaseAuth();
+      if (auth) await signOut(auth);
+    }
     setCurrentUser(null);
     localStorage.removeItem('masonic_current_user_v1');
     sessionStorage.removeItem('masonic_logged_this_session');
@@ -2410,7 +2432,7 @@ export default function App() {
     }
   };
 
-  if (!isSessionLoaded) {
+  if (!isSessionLoaded || (chatEndpoint && !authReady)) {
     return (
       <div className="min-h-screen bg-[#05151e] text-[#d4e5f2] flex flex-col items-center justify-center font-sans">
         <div className="space-y-4 text-center">
@@ -2421,9 +2443,15 @@ export default function App() {
     );
   }
 
-  if (!currentUser) {
+  const isChatSession = Boolean(
+    firebaseUser?.email &&
+    currentUser?.status === 'Ativo' &&
+    firebaseUser.email.toLowerCase() === currentUser.email.toLowerCase()
+  );
+  if (!currentUser || (chatEndpoint && !isChatSession)) {
     return (
       <LoginGate
+        secureLogin={Boolean(chatEndpoint)}
         onLogin={handleSelectUser}
         accessUsers={accessUsers}
         onAddAccessUser={handleAddAccessUser}
@@ -2452,6 +2480,10 @@ export default function App() {
         isAdminUser={isAdmin(currentUser.email)}
         logoUrl={lodges.find(l => l.id === (currentUser?.lodgeId || 'lodge-cavaleiros'))?.logoUrl}
       />
+
+      {chatEndpoint && firebaseUser && isChatSession && (
+        <AcademyChat endpoint={chatEndpoint} user={firebaseUser} />
+      )}
 
       {/* Main Container Content */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 space-y-4">

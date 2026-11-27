@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { initializeFirebaseAuth } from '../firebase';
 import { AccessUser } from '../types';
 import { Shield, Lock, Mail, User, UserPlus, CheckCircle, AlertCircle, LogIn, ChevronRight } from 'lucide-react';
 
 interface LoginGateProps {
+  secureLogin: boolean;
   onLogin: (user: AccessUser) => void;
   accessUsers: AccessUser[];
   onAddAccessUser: (newUser: AccessUser) => void;
 }
 
-export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: LoginGateProps) {
+export default function LoginGate({ secureLogin, onLogin, accessUsers, onAddAccessUser }: LoginGateProps) {
   const [emailInput, setEmailInput] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successUser, setSuccessUser] = useState<AccessUser | null>(null);
   
@@ -39,13 +43,38 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
     }
   ];
 
-  const handleValidateEmail = (e: React.FormEvent) => {
+  const handleValidateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
     const emailClean = emailInput.trim().toLowerCase();
     if (!emailClean) {
       setErrorMsg('Por favor, informe seu e-mail ou User de Acesso.');
+      return;
+    }
+
+    if (secureLogin) {
+      const profile = [...masterAdmins, ...accessUsers].find(user =>
+        user.email.toLowerCase() === emailClean ||
+        user.userAcesso?.toLowerCase() === emailClean
+      );
+      const auth = initializeFirebaseAuth();
+      if (isSigningIn) return;
+      if (!auth || !profile || profile.status !== 'Ativo' || !loginPassword) {
+        setErrorMsg('Credenciais inv?lidas ou acesso indispon?vel.');
+        return;
+      }
+
+      setIsSigningIn(true);
+      try {
+        await signInWithEmailAndPassword(auth, profile.email, loginPassword);
+        const { password: _password, ...sessionProfile } = profile;
+        onLogin(sessionProfile);
+      } catch {
+        setErrorMsg('Credenciais inv?lidas ou acesso indispon?vel.');
+      } finally {
+        setIsSigningIn(false);
+      }
       return;
     }
 
@@ -219,7 +248,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
 
               <div className="space-y-2">
                 <label className="block text-xs font-mono font-bold text-[#99907c] uppercase tracking-wider">
-                  Senha de Acesso (se cadastrada):
+                  {secureLogin ? 'Senha de acesso' : 'Senha de Acesso (se cadastrada):'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#99907c]">
@@ -227,6 +256,8 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
                   </div>
                   <input
                     type="password"
+                    required={secureLogin}
+                    autoComplete="current-password"
                     placeholder="Sua senha de acesso"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -246,6 +277,7 @@ export default function LoginGate({ onLogin, accessUsers, onAddAccessUser }: Log
 
               <button
                 type="submit"
+                disabled={isSigningIn}
                 className="w-full bg-[#E9C349] hover:bg-[#ffe088] text-[#241a00] font-sans font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer border-none active:scale-95 transform"
               >
                 <LogIn className="w-4 h-4" /> VALIDAR E ACESSAR ÁREA DE ENSINO
