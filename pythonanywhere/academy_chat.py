@@ -24,7 +24,8 @@ def create_app():
     @lru_cache(maxsize=1)
     def load_bot():
         bot = importlib.import_module(os.environ["ACADEMY_BOT_MODULE"])
-        bot.load_vector_store()
+        loader = getattr(bot, "load_vector_store", None) or bot.load_vector_store_from_url
+        loader()
         if not bot.vector_store:
             raise RuntimeError("Base de documentos indisponível.")
         return bot
